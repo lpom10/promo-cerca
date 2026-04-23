@@ -63,6 +63,8 @@ const Registro = () => {
         categoria: tipo === 'empresa' ? form.categoria : '',
         direccion: tipo === 'empresa' ? form.direccion : '',
         ruc: tipo === 'empresa' ? form.ruc : '',
+        // Estado según tipo de usuario
+        estado: tipo === 'empresa' ? 'pendiente' : 'aprobado',
         createdAt: new Date(),
       });
       console.log('Datos guardados en Firestore exitosamente');
@@ -87,14 +89,28 @@ const Registro = () => {
         <div className="registro-card exito">
           <div className="exito-icon">🎉</div>
           <h2>¡Cuenta creada con éxito!</h2>
-          <p>
-            {tipo === 'empresa'
-              ? `Tu negocio "${form.negocio}" ha sido registrado. Pronto podrás publicar tus promociones.`
-              : `Bienvenido, ${form.nombre}. Ya puedes explorar las mejores promociones cerca de ti.`}
-          </p>
-          <Link to={tipo === 'empresa' ? '/' : '/locales'} className="exito-btn">
-            {tipo === 'empresa' ? 'Ir al inicio' : 'Ver promociones'}
-          </Link>
+          {tipo === 'empresa' ? (
+            <>
+              <p>
+                Tu negocio <strong>"{form.negocio}"</strong> ha sido registrado y está <strong>pendiente de aprobación</strong>.
+              </p>
+              <p className="info-texto">
+                Un administrador revisará tu solicitud en breve. Recibirás una notificación cuando sea aprobada.
+              </p>
+              <Link to="/" className="exito-btn">
+                Ir al inicio
+              </Link>
+            </>
+          ) : (
+            <>
+              <p>
+                Bienvenido, <strong>{form.nombre}</strong>. Ya puedes explorar las mejores promociones cerca de ti.
+              </p>
+              <Link to="/cliente/dashboard" className="exito-btn">
+                Ver promociones
+              </Link>
+            </>
+          )}
         </div>
       </div>
     );
@@ -262,7 +278,7 @@ const Registro = () => {
           </button>
         </form>
 
-        <p>¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link></p>
+        <p>¿Ya tienes cuenta? <Link to="/login-tipo">Inicia sesión</Link></p>
       </div>
     </div>
   );

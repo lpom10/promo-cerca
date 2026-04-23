@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Routes, Route, Link, NavLink } from "react-router-dom";
+import { Routes, Route, Link, NavLink, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import TextField from "./components/TextField.jsx";
@@ -7,11 +7,15 @@ import Locales from "./components/Locales.jsx";
 import Mapa from "./components/Mapa.jsx";
 import Registro from "./components/Registro.jsx";
 import Login from "./components/Login.jsx";
-//importando los modulos de firebase
+import LoginTypeSelector from "./components/LoginTypeSelector.jsx";
+import ClienteDashboard from "./components/ClienteDashboard.jsx";
+import EmpresaDashboard from "./components/EmpresaDashboard.jsx";
+import AdminDashboard from "./components/AdminDashboard.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 function AppContent() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, userType, logout } = useAuth();
   const close = () => setMenuOpen(false);
 
   return (
@@ -43,27 +47,38 @@ function AppContent() {
                 Mapa
               </NavLink>
             </li>
-            <li>
-              <NavLink to="/registro" onClick={close}>
-                Registrarse
-              </NavLink>
-            </li>
             {user ? (
-              <li>
-                <button
-                  onClick={() => {
-                    logout();
-                    close();
-                  }}
-                  className="logout-btn"
-                >
-                  Cerrar Sesión
-                </button>
-              </li>
+              <>
+                <li>
+                  <NavLink 
+                    to={
+                      userType === 'admin' 
+                        ? '/admin/dashboard' 
+                        : userType === 'empresa' 
+                        ? '/empresa/dashboard' 
+                        : '/cliente/dashboard'
+                    } 
+                    onClick={close}
+                  >
+                    {userType === 'admin' ? '⚙️' : userType === 'empresa' ? '🏢' : '👤'} Dashboard
+                  </NavLink>
+                </li>
+                <li>
+                  <button
+                    onClick={() => {
+                      logout();
+                      close();
+                    }}
+                    className="logout-btn"
+                  >
+                    Cerrar Sesión
+                  </button>
+                </li>
+              </>
             ) : (
               <>
                 <li>
-                  <NavLink to="/login" onClick={close}>
+                  <NavLink to="/login-tipo" onClick={close}>
                     Iniciar Sesión
                   </NavLink>
                 </li>
@@ -83,7 +98,39 @@ function AppContent() {
         <Route path="/locales" element={<Locales />} />
         <Route path="/mapa" element={<Mapa />} />
         <Route path="/registro" element={<Registro />} />
+        <Route path="/login-tipo" element={<LoginTypeSelector />} />
         <Route path="/login" element={<Login />} />
+        
+        {/* Rutas protegidas por tipo de usuario */}
+        <Route 
+          path="/cliente/dashboard" 
+          element={
+            <ProtectedRoute requiredUserType="cliente">
+              <ClienteDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/empresa/dashboard" 
+          element={
+            <ProtectedRoute requiredUserType="empresa">
+              <EmpresaDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/admin/dashboard" 
+          element={
+            <ProtectedRoute requiredUserType="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Ruta por defecto */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );

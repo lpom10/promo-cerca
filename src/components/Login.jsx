@@ -3,34 +3,106 @@ import { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider, db } from '../firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
+  const [searchParams] = useSearchParams();
+  const userType = searchParams.get('tipo') || 'cliente';
+  
   const [form, setForm] = useState({ email: '', password: '' });
   const [errores, setErrores] = useState({});
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userType: authUserType, userStatus } = useAuth();
 
-  // Si ya está logueado, redirigir
+  // Si ya está logueado, redirigir al dashboard correspondiente
   useEffect(() => {
-    if (user) {
-      navigate('/locales');
+    if (user && authUserType) {
+      redirectByUserType(authUserType);
     }
-  }, [user, navigate]);
+  }, [user, authUserType]);
+
+  const redirectByUserType = (tipo) => {
+    switch (tipo) {
+      case 'admin':
+        navigate('/admin/dashboard');
+        break;
+      case 'empresa':
+        navigate('/empresa/dashboard');
+        break;
+      case 'cliente':
+      default:
+        navigate('/cliente/dashboard');
+    }
+  };
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const validateLoginByType = async (firebaseUser, tipo) => {
+    try {
+      const userDocRef = doc(db, 'usuarios', firebaseUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (!userDocSnap.exists()) {
+        setErrores({ general: 'Usuario no encontrado en el sistema' });
+        return false;
+      }
+
+      const userData = userDocSnap.data();
+
+      // Validar que el tipo de usuario coincida
+      if (userData.tipo !== tipo) {
+        setErrores({ general: `Este usuario es de tipo "${userData.tipo}", no "${tipo}"` });
+        return false;
+      }
+
+      // Validar estado según tipo
+      if (tipo === 'admin') {
+        // Solo admins con permisos
+        if (!userData.puedeAprobar) {
+          setErrores({ general: 'No tienes permisos de administrador' });
+          return false;
+        }
+      } else if (tipo === 'empresa') {
+        // Empresas deben estar aprobadas
+        if (userData.estado === 'pendiente') {
+          setErrores({ general: 'Tu solicitud aún está pendiente de aprobación' });
+          return false;
+        } else if (userData.estado === 'rechazado') {
+          setErrores({ 
+            general: `Tu solicitud fue rechazada${userData.motivoRechazo ? ': ' + userData.motivoRechazo : ''}` 
+          });
+          return false;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error validating user:', error);
+      setErrores({ general: 'Error al validar usuario' });
+      return false;
+    }
+  };
 
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setErrores({});
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, form.email, form.password);
-      navigate('/locales');
+      const userCredential = await signInWithEmailAndPassword(auth, form.email, form.password);
+      const isValid = await validateLoginByType(userCredential.user, userType);
+      
+      if (isValid) {
+        redirectByUserType(userType);
+      }
     } catch (error) {
-      setErrores({ general: 'Credenciales incorrectas' });
+      console.error('Login error:', error);
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        setErrores({ general: 'Correo o contraseña incorrectos' });
+      } else {
+        setErrores({ general: error.message });
+      }
     }
     setLoading(false);
   };
@@ -40,26 +112,30 @@ const Login = () => {
     setLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      console.log('Usuario Google:', user.uid);
-      // Verificar si el usuario existe en Firestore, si no, crearlo como cliente
-      const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
+      const firebaseUser = result.user;
+
+      // Para Google login, solo permitir clientes
+      if (userType !== 'cliente') {
+        await auth.currentUser.delete();
+        setErrores({ general: 'Google login solo disponible para clientes' });
+        setLoading(false);
+        return;
+      }
+
+      const userDoc = await getDoc(doc(db, 'usuarios', firebaseUser.uid));
       if (!userDoc.exists()) {
-        console.log('Creando documento en Firestore...');
-        await setDoc(doc(db, 'usuarios', user.uid), {
-          nombre: user.displayName || 'Usuario Google',
-          email: user.email,
+        await setDoc(doc(db, 'usuarios', firebaseUser.uid), {
+          nombre: firebaseUser.displayName || 'Usuario Google',
+          email: firebaseUser.email,
           tipo: 'cliente',
           telefono: '',
+          estado: 'aprobado',
           createdAt: new Date(),
         });
-        console.log('Documento creado exitosamente');
-      } else {
-        console.log('Usuario ya existe en Firestore');
       }
-      navigate('/locales');
+      redirectByUserType('cliente');
     } catch (error) {
-      console.error('Error detallado:', error.code, error.message);
+      console.error('Google login error:', error);
       setErrores({ general: `Error: ${error.message}` });
     }
     setLoading(false);
@@ -67,47 +143,61 @@ const Login = () => {
 
   return (
     <>
-      {user ? (
+      {user && authUserType ? (
         <div style={{ padding: '20px', textAlign: 'center' }}>Redirigiendo...</div>
       ) : (
         <div className="login-page">
           <div className="registro-card">
-            <h2>Iniciar Sesión</h2>
-            <p>Accede a tu cuenta para explorar promociones.</p>
+            <h2>Iniciar Sesión - {userType === 'admin' ? 'Administrador' : userType === 'empresa' ? 'Empresa' : 'Cliente'}</h2>
+            <p>
+              {userType === 'admin' && 'Acceso exclusivo para administradores'}
+              {userType === 'empresa' && 'Gestiona tus promociones y negocio'}
+              {userType === 'cliente' && 'Accede a tu cuenta para explorar promociones'}
+            </p>
 
             <form onSubmit={handleEmailLogin}>
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Contraseña</label>
-            <input
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          {errores.general && <p className="error">{errores.general}</p>}
-          <button type="submit" disabled={loading}>
-            {loading ? 'Cargando...' : 'Iniciar Sesión'}
-          </button>
-        </form>
+              <div className="form-group">
+                <label>Email</label>
+                <input
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Contraseña</label>
+                <input
+                  name="password"
+                  type="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              {errores.general && <p className="error">{errores.general}</p>}
+              <button type="submit" disabled={loading}>
+                {loading ? 'Cargando...' : 'Iniciar Sesión'}
+              </button>
+            </form>
 
-        <div className="divider">O</div>
-        <button onClick={handleGoogleLogin} className="google-btn" disabled={loading}>
-          🔵 Iniciar con Google
-        </button>
+            {userType === 'cliente' && (
+              <>
+                <div className="divider">O</div>
+                <button onClick={handleGoogleLogin} className="google-btn" disabled={loading}>
+                  🔵 Iniciar con Google
+                </button>
+              </>
+            )}
 
-        <p>¿No tienes cuenta? <Link to="/registro">Regístrate</Link></p>
+            <p>
+              ¿No tienes cuenta?{' '}
+              <Link to={`/registro?tipo=${userType}`}>Regístrate</Link>
+            </p>
+            <p>
+              <Link to="/login-tipo" className="back-link">← Cambiar tipo de usuario</Link>
+            </p>
           </div>
         </div>
       )}
