@@ -1,0 +1,844 @@
+/* ============================================================
+   PROMO CERCA — Auth Pages (Login + Registro)
+   Font: Plus Jakarta Sans (Google Fonts)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* ---------- CSS Variables ---------- */
+:root {
+  --auth-orange: #ff6b00;
+  --auth-orange-deep: #d95800;
+  --auth-orange-light: #fff3ea;
+  --auth-orange-glow: rgba(255, 107, 0, 0.25);
+
+  --auth-empresa: #1e4fc2;
+  --auth-empresa-deep: #163aa0;
+  --auth-empresa-light: #eef2ff;
+  --auth-empresa-glow: rgba(30, 79, 194, 0.22);
+
+  --auth-bg: #f7f4f0;
+  --auth-card: #ffffff;
+  --auth-text: #1a1a1a;
+  --auth-text-muted: #7a7a8a;
+  --auth-border: #e8e3de;
+  --auth-input-bg: #faf9f7;
+
+  --auth-shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+  --auth-shadow-md: 0 8px 32px rgba(0,0,0,0.10);
+  --auth-shadow-lg: 0 20px 60px rgba(0,0,0,0.14);
+
+  --auth-radius: 20px;
+  --auth-radius-sm: 12px;
+  --auth-radius-xs: 8px;
+
+  --auth-font: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+/* ============================================================
+   LAYOUT BASE — Split Panel
+   ============================================================ */
+
+.auth-page {
+  font-family: var(--auth-font);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+  background: var(--auth-bg);
+  overflow: hidden;
+}
+
+/* Pantallas pequeñas: una columna */
+@media (max-width: 860px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+  .auth-panel-brand {
+    display: none !important;
+  }
+}
+
+/* ============================================================
+   PANEL IZQUIERDO — Branding
+   ============================================================ */
+
+.auth-panel-brand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+  overflow: hidden;
+  background: linear-gradient(150deg, #ff6b00 0%, #d95800 60%, #a84200 100%);
+  color: white;
+}
+
+/* Variante empresa: azul */
+.auth-page[data-type="empresa"] .auth-panel-brand {
+  background: linear-gradient(150deg, #2563eb 0%, #1e4fc2 55%, #163aa0 100%);
+}
+
+/* Decoración geométrica fondo */
+.auth-panel-brand::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -80px;
+  width: 340px; height: 340px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  pointer-events: none;
+}
+.auth-panel-brand::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; left: -60px;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  pointer-events: none;
+}
+
+.brand-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 340px;
+  animation: brandFadeIn 0.7s ease both;
+}
+
+@keyframes brandFadeIn {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.brand-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo-icon {
+  font-size: 38px;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
+}
+
+.brand-logo-text {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.brand-tagline {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  opacity: 0.95;
+}
+
+.brand-desc {
+  font-size: 14px;
+  opacity: 0.78;
+  line-height: 1.6;
+}
+
+.brand-features {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.brand-feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: var(--auth-radius-xs);
+  padding: 12px 16px;
+  font-size: 13.5px;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+}
+
+.brand-feature-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   PANEL DERECHO — Formulario
+   ============================================================ */
+
+.auth-panel-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+  background: var(--auth-bg);
+  /* Patrón sutil de puntos */
+  background-image: radial-gradient(circle, #dbd5cc 1px, transparent 1px);
+  background-size: 24px 24px;
+  overflow-y: auto;
+}
+
+.auth-form-container {
+  width: 100%;
+  max-width: 420px;
+  animation: formSlideIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes formSlideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   TARJETA DEL FORMULARIO
+   ============================================================ */
+
+.auth-card {
+  background: var(--auth-card);
+  border-radius: var(--auth-radius);
+  padding: 40px 36px;
+  box-shadow: var(--auth-shadow-lg);
+  border: 1px solid rgba(255,255,255,0.8);
+}
+
+/* Mobile: sin panel brand, la card lleva el color */
+@media (max-width: 860px) {
+  .auth-panel-form {
+    padding: 24px 16px;
+    min-height: 100vh;
+    align-items: flex-start;
+    padding-top: 40px;
+  }
+  .auth-card {
+    padding: 32px 24px;
+  }
+}
+
+/* ---------- Cabecera del formulario ---------- */
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.auth-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 100px;
+  margin-bottom: 14px;
+  background: var(--auth-orange-light);
+  color: var(--auth-orange);
+}
+
+.auth-page[data-type="empresa"] .auth-type-badge {
+  background: var(--auth-empresa-light);
+  color: var(--auth-empresa);
+}
+
+.auth-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--auth-text);
+  margin: 0 0 8px;
+  letter-spacing: -0.5px;
+}
+
+.auth-subtitle {
+  font-size: 14px;
+  color: var(--auth-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ============================================================
+   CAMPOS DE FORMULARIO
+   ============================================================ */
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--auth-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.auth-label .optional {
+  font-weight: 400;
+  color: var(--auth-text-muted);
+  font-size: 12px;
+}
+
+.auth-label .required-tag {
+  font-weight: 600;
+  color: var(--auth-orange);
+  font-size: 11px;
+}
+
+.auth-input {
+  padding: 12px 16px;
+  border: 1.5px solid var(--auth-border);
+  border-radius: var(--auth-radius-sm);
+  font-size: 15px;
+  font-family: var(--auth-font);
+  color: var(--auth-text);
+  background: var(--auth-input-bg);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.auth-input::placeholder {
+  color: #b8b4ae;
+}
+
+.auth-input:focus {
+  border-color: var(--auth-orange);
+  background: #fff;
+  box-shadow: 0 0 0 3px var(--auth-orange-glow);
+}
+
+.auth-page[data-type="empresa"] .auth-input:focus {
+  border-color: var(--auth-empresa);
+  box-shadow: 0 0 0 3px var(--auth-empresa-glow);
+}
+
+.auth-input.is-error {
+  border-color: #e53935;
+  background: #fff5f5;
+}
+
+.auth-field-error {
+  font-size: 12px;
+  color: #e53935;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---------- Divider de sección ---------- */
+
+.auth-section-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 4px;
+}
+
+.auth-section-divider hr {
+  flex: 1;
+  border: none;
+  border-top: 1px solid var(--auth-border);
+}
+
+.auth-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--auth-orange);
+  white-space: nowrap;
+}
+
+.auth-page[data-type="empresa"] .auth-section-label {
+  color: var(--auth-empresa);
+}
+
+/* ============================================================
+   BOTONES PRINCIPALES
+   ============================================================ */
+
+.auth-btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--auth-orange) 0%, var(--auth-orange-deep) 100%);
+  color: white;
+  font-family: var(--auth-font);
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--auth-radius-sm);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+  margin-top: 6px;
+  letter-spacing: 0.01em;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-page[data-type="empresa"] .auth-btn-primary {
+  background: linear-gradient(135deg, var(--auth-empresa) 0%, var(--auth-empresa-deep) 100%);
+}
+
+.auth-btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(255,255,255,0.15), transparent);
+  pointer-events: none;
+}
+
+.auth-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--auth-orange-glow);
+}
+
+.auth-page[data-type="empresa"] .auth-btn-primary:hover:not(:disabled) {
+  box-shadow: 0 8px 24px var(--auth-empresa-glow);
+}
+
+.auth-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.auth-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ---------- Botón Google ---------- */
+
+.auth-divider-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+}
+
+.auth-divider-or hr {
+  flex: 1;
+  border: none;
+  border-top: 1px solid var(--auth-border);
+}
+
+.auth-divider-or span {
+  font-size: 12px;
+  color: var(--auth-text-muted);
+  font-weight: 600;
+}
+
+.auth-btn-google {
+  width: 100%;
+  padding: 12px;
+  background: white;
+  color: var(--auth-text);
+  font-family: var(--auth-font);
+  font-size: 14px;
+  font-weight: 600;
+  border: 1.5px solid var(--auth-border);
+  border-radius: var(--auth-radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.auth-btn-google:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #ccc;
+  transform: translateY(-1px);
+}
+
+.auth-btn-google:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.google-logo {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   SELECTOR DE TIPO (Registro)
+   ============================================================ */
+
+.auth-tipo-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.auth-tipo-btn {
+  padding: 14px 12px;
+  border-radius: var(--auth-radius-sm);
+  border: 2px solid var(--auth-border);
+  background: var(--auth-input-bg);
+  font-family: var(--auth-font);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--auth-text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.auth-tipo-btn .tipo-icon {
+  font-size: 22px;
+}
+
+.auth-tipo-btn:hover {
+  border-color: var(--auth-orange);
+  color: var(--auth-orange);
+  background: var(--auth-orange-light);
+}
+
+.auth-tipo-btn.active {
+  border-color: var(--auth-orange);
+  background: var(--auth-orange-light);
+  color: var(--auth-orange);
+  box-shadow: 0 4px 14px var(--auth-orange-glow);
+}
+
+/* ============================================================
+   MENSAJES DE ERROR GENERAL
+   ============================================================ */
+
+.auth-alert-error {
+  background: #fff0f0;
+  border: 1.5px solid #f5c0c0;
+  border-radius: var(--auth-radius-xs);
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #c62828;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.auth-alert-error::before {
+  content: '⚠️';
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   FOOTER DE FORMULARIO — Links
+   ============================================================ */
+
+.auth-footer {
+  text-align: center;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-footer p {
+  font-size: 13.5px;
+  color: var(--auth-text-muted);
+  margin: 0;
+}
+
+.auth-link {
+  color: var(--auth-orange);
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.auth-link:hover {
+  color: var(--auth-orange-deep);
+  text-decoration: underline;
+}
+
+.auth-page[data-type="empresa"] .auth-link {
+  color: var(--auth-empresa);
+}
+
+.auth-back-link {
+  font-size: 13px;
+  color: var(--auth-text-muted);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s;
+}
+
+.auth-back-link:hover {
+  color: var(--auth-text);
+}
+
+/* ============================================================
+   PANTALLA DE ÉXITO (Registro)
+   ============================================================ */
+
+.auth-success {
+  text-align: center;
+  padding: 48px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.auth-success-icon {
+  font-size: 64px;
+  animation: popIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes popIn {
+  from { transform: scale(0.4); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.auth-success h2 {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--auth-text);
+  margin: 0;
+}
+
+.auth-success p {
+  font-size: 15px;
+  color: var(--auth-text-muted);
+  line-height: 1.6;
+  margin: 0;
+  max-width: 320px;
+}
+
+.auth-success .info-box {
+  background: var(--auth-orange-light);
+  border: 1px solid rgba(255,107,0,0.2);
+  border-radius: var(--auth-radius-sm);
+  padding: 14px 18px;
+  font-size: 13.5px;
+  color: #a04200;
+  text-align: left;
+  line-height: 1.5;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.auth-page[data-type="empresa"] .auth-success .info-box {
+  background: var(--auth-empresa-light);
+  border-color: rgba(30, 79, 194, 0.2);
+  color: #163aa0;
+}
+
+.auth-success-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: linear-gradient(135deg, var(--auth-orange), var(--auth-orange-deep));
+  color: white;
+  font-family: var(--auth-font);
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: var(--auth-radius-sm);
+  text-decoration: none;
+  transition: transform 0.15s, box-shadow 0.15s;
+  margin-top: 4px;
+}
+
+.auth-success-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--auth-orange-glow);
+}
+
+/* ============================================================
+   LOADING REDIRECT
+   ============================================================ */
+
+.auth-redirecting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: var(--auth-font);
+  color: var(--auth-text-muted);
+  gap: 12px;
+  font-size: 16px;
+}
+
+.auth-redirecting::before {
+  content: '';
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 3px solid #eee;
+  border-top-color: var(--auth-orange);
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   LOGIN TYPE SELECTOR — Rediseño
+   ============================================================ */
+
+.lts-page {
+  font-family: var(--auth-font);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--auth-bg);
+  background-image: radial-gradient(circle, #dbd5cc 1px, transparent 1px);
+  background-size: 24px 24px;
+  padding: 24px;
+}
+
+.lts-card {
+  background: white;
+  border-radius: var(--auth-radius);
+  box-shadow: var(--auth-shadow-lg);
+  padding: 48px 40px;
+  max-width: 560px;
+  width: 100%;
+  text-align: center;
+  animation: formSlideIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lts-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.lts-brand-icon { font-size: 32px; }
+.lts-brand-name {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--auth-text);
+  letter-spacing: -0.5px;
+}
+.lts-brand-name span { color: var(--auth-orange); }
+
+.lts-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--auth-text);
+  margin: 0 0 6px;
+}
+
+.lts-subtitle {
+  font-size: 14px;
+  color: var(--auth-text-muted);
+  margin: 0 0 36px;
+}
+
+.lts-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.lts-option {
+  padding: 28px 20px;
+  border: 2px solid var(--auth-border);
+  border-radius: var(--auth-radius-sm);
+  background: var(--auth-input-bg);
+  cursor: pointer;
+  transition: all 0.25s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.lts-option:hover {
+  border-color: var(--auth-orange);
+  background: var(--auth-orange-light);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px var(--auth-orange-glow);
+}
+
+.lts-option.active {
+  border-color: var(--auth-orange);
+  background: var(--auth-orange-light);
+  box-shadow: 0 8px 24px var(--auth-orange-glow);
+}
+
+.lts-option-icon { font-size: 40px; }
+
+.lts-option h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--auth-text);
+  margin: 0;
+}
+
+.lts-option p {
+  font-size: 13px;
+  color: var(--auth-text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.lts-option.active h3 { color: var(--auth-orange-deep); }
+
+.lts-continue-btn {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, var(--auth-orange), var(--auth-orange-deep));
+  color: white;
+  font-family: var(--auth-font);
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--auth-radius-sm);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  margin-bottom: 20px;
+  letter-spacing: 0.01em;
+}
+
+.lts-continue-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px var(--auth-orange-glow);
+}
+
+.lts-register {
+  font-size: 14px;
+  color: var(--auth-text-muted);
+}
+
+.lts-register a {
+  color: var(--auth-orange);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.lts-register a:hover { text-decoration: underline; }
