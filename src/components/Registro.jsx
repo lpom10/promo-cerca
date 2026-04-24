@@ -352,11 +352,12 @@ const Registro = () => {
                       name="categoria" value={form.categoria} onChange={handleChange}
                     >
                       <option value="">Selecciona una categoría...</option>
-                      <option value="restaurantes">🍽️ Restaurante</option>
-                      <option value="cafeterias">☕ Cafetería</option>
-                      <option value="tiendas">🛍️ Tienda</option>
-                      <option value="servicios">🔧 Servicios</option>
-                      <option value="salud">💊 Salud</option>
+                      <option value="grestaurantes">Gastronomia</option>
+                      <option value="moda_accesorios">Moda y Accesorios</option>
+                      <option value="salud_belleza"> Salud Y Belleza</option>
+                      <option value="tecnologia">Tecnologia</option>
+                      <option value="entretenimiento">Entretenimiento</option>
+                      <option value="servicios">Servicios</option>
                     </select>
                     {errores.categoria && <span className="auth-field-error">{errores.categoria}</span>}
                   </div>
