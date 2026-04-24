@@ -917,12 +917,17 @@ a {
 }
 
 .registro-card {
-  background: white;
-  border-radius: 20px;
-  padding: 40px 36px;
-  max-width: 480px;
-  width: 100%;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgb(255, 255, 255);
+    border-radius: 20px;
+    padding: 40px 36px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin: auto; 
 }
 
 .registro-card h2 {

@@ -48,38 +48,8 @@ const TextField = () => {
           </button>
         </form>
 
-        <div className="hero-btns">
-          <button
-            className="selectionButton cliente"
-            onClick={() => navigate('/locales')}
-          >
-            <span className="icon">👤</span>
-            Soy Cliente
-          </button>
-          <button
-            className="selectionButton empresa"
-            onClick={() => navigate('/registro?tipo=empresa')}
-          >
-            <span className="icon">🏢</span>
-            Soy Empresa
-          </button>
-        </div>
-        <div className="hero-stats">
-          <div className="stat-item">
-            <strong>50+</strong>
-            <span>Negocios</span>
-          </div>
-          <div className="stat-divider" />
-          <div className="stat-item">
-            <strong>200+</strong>
-            <span>Promociones</span>
-          </div>
-          <div className="stat-divider" />
-          <div className="stat-item">
-            <strong>1,000+</strong>
-            <span>Usuarios</span>
-          </div>
-        </div>        
+        
+               
       </div>
       <div className="hero-img-wrap">
         <img src={empresaImg} alt="Negocios locales" className="hero-img" />
