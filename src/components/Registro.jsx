@@ -1,10 +1,20 @@
 // src/components/Registro.jsx
 import { useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { doc, setDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
+import { auth, db, googleProvider } from '../firebase';
 import '../styles/auth.css';
+
+/* SVG logo de Google inline */
+const GoogleIcon = () => (
+  <svg className="google-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+  </svg>
+);
 
 const Registro = () => {
   const [searchParams] = useSearchParams();
@@ -28,7 +38,7 @@ const Registro = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'cedula' || name === 'ruc') {
+    if (name === 'cedula' || name === 'ruc' || name === 'telefono') {
       const numericValue = value.replace(/\D/g, '');
       setForm((f) => ({ ...f, [name]: numericValue }));
       return;
@@ -40,8 +50,23 @@ const Registro = () => {
     const e = {};
     if (!form.nombre.trim())             e.nombre = 'El nombre es requerido';
     if (!form.email.includes('@'))       e.email  = 'Correo no válido';
-    if (form.password.length < 8)       e.password = 'Mínimo 8 caracteres';
+    if (form.password.length < 8) {
+      e.password = 'Mínimo 8 caracteres';
+    } else {
+      const hasUpperCase = /[A-Z]/.test(form.password);
+      const hasLowerCase = /[a-z]/.test(form.password);
+      const hasNumbers = /\d/.test(form.password);
+      const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>\-_]/.test(form.password);
+      if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
+        e.password = 'Debe incluir al menos una mayúscula, minúscula, número y carácter especial';
+      }
+    }
     if (form.password !== form.confirmPassword) e.confirmPassword = 'Las contraseñas no coinciden';
+    if (!form.telefono) {
+      e.telefono = 'El teléfono es requerido';
+    } else if (form.telefono.length !== 10) {
+      e.telefono = 'El teléfono debe tener 10 dígitos';
+    }
     if (tipo === 'cliente') {
       if (!form.cedula) {
         e.cedula = 'La cédula es requerida';
@@ -132,6 +157,40 @@ const Registro = () => {
     setLoading(false);
   };
 
+  const handleGoogleRegister = async () => {
+    setErrores({});
+    setLoading(true);
+    try {
+      if (tipo !== 'cliente') {
+        setErrores({ general: 'El registro con Google solo está disponible para clientes' });
+        setLoading(false);
+        return;
+      }
+      const result = await signInWithPopup(auth, googleProvider);
+      const fbUser = result.user;
+      
+      const userDoc = await getDoc(doc(db, 'usuarios', fbUser.uid));
+      if (!userDoc.exists()) {
+        await setDoc(doc(db, 'usuarios', fbUser.uid), {
+          nombre: fbUser.displayName || 'Usuario Google',
+          email: fbUser.email,
+          tipo: 'cliente',
+          telefono: form.telefono || '',     // Utiliza lo que haya puesto o vacío
+          cedula: form.cedula || '',         // Utiliza lo que haya puesto o vacío
+          estado: 'aprobado',
+          createdAt: new Date(),
+        });
+        setStep(2);
+      } else {
+        // Ya existía
+        setErrores({ general: 'Esta cuenta ya está registrada. Por favor inicia sesión.' });
+      }
+    } catch (error) {
+      setErrores({ general: `Error: ${error.message}` });
+    }
+    setLoading(false);
+  };
+
   /* ── Pantalla de éxito ── */
   if (step === 2) {
     return (
@@ -167,14 +226,14 @@ const Registro = () => {
                     <div className="info-box">
                       📋 <strong>Próximo paso:</strong> Un administrador revisará tu solicitud en breve. Recibirás acceso una vez sea aprobada.
                     </div>
-                    <Link to="/" className="auth-success-btn">Ir al inicio →</Link>
+                    <a href="/" className="auth-success-btn">Ir al inicio →</a>
                   </>
                 ) : (
                   <>
                     <p>
                       Bienvenido, <strong>{form.nombre}</strong>. Tu cuenta está lista para explorar promociones cerca de ti.
                     </p>
-                    <Link to="/cliente/dashboard" className="auth-success-btn">Explorar promociones →</Link>
+                    <a href="/cliente/dashboard" className="auth-success-btn">Explorar promociones →</a>
                   </>
                 )}
               </div>
@@ -317,13 +376,15 @@ const Registro = () => {
               {/* Teléfono */}
               <div className="auth-field">
                 <label className="auth-label">
-                  Teléfono <span className="optional">(opcional)</span>
+                  Teléfono <span className="required-tag">obligatorio</span>
                 </label>
                 <input
-                  className="auth-input"
+                  className={`auth-input${errores.telefono ? ' is-error' : ''}`}
                   name="telefono" value={form.telefono} onChange={handleChange}
                   placeholder="0991234567"
+                  maxLength="10"
                 />
+                {errores.telefono && <span className="auth-field-error">{errores.telefono}</span>}
               </div>
 
               {/* Sección empresa */}
@@ -392,8 +453,21 @@ const Registro = () => {
               )}
 
               <button type="submit" className="auth-btn-primary" disabled={loading}>
-                {loading ? '⏳ Creando cuenta...' : `Crear cuenta ${tipo === 'empresa' ? 'de empresa' : 'gratis'}`}
+                {loading ? '⏳ Creando cuenta...' : `Crear cuenta ${tipo === 'empresa' ? 'de empresa' : 'e iniciar sesión'}`}
               </button>
+
+              {/* Registro con Google (solo clientes) */}
+              {tipo === 'cliente' && (
+                <>
+                  <div className="auth-divider-or">
+                    <hr /><span>o regístrate con</span><hr />
+                  </div>
+                  <button onClick={handleGoogleRegister} type="button" className="auth-btn-google" disabled={loading}>
+                    <GoogleIcon />
+                    Registrarse con Google
+                  </button>
+                </>
+              )}
             </form>
 
             <div className="auth-footer">

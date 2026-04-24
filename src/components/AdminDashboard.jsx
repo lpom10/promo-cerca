@@ -8,11 +8,13 @@ const AdminDashboard = () => {
   const { user, userDetails, logout } = useAuth();
   const navigate = useNavigate();
   const [solicitudes, setSolicitudes] = useState([]);
+  const [empresasAprobadas, setEmpresasAprobadas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('solicitudes');
 
   useEffect(() => {
     cargarSolicitudes();
+    cargarEmpresasAprobadas();
   }, []);
 
   const cargarSolicitudes = async () => {
@@ -34,6 +36,23 @@ const AdminDashboard = () => {
     setLoading(false);
   };
 
+  const cargarEmpresasAprobadas = async () => {
+    try {
+      const q = query(
+        collection(db, 'empresa'),
+        where('estado', '==', 'aprobado')
+      );
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setEmpresasAprobadas(data);
+    } catch (error) {
+      console.error('Error cargando empresas aprobadas:', error);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/');
@@ -44,7 +63,11 @@ const AdminDashboard = () => {
       await updateDoc(doc(db, 'empresa', empresaId), {
         estado: 'aprobado'
       });
+      const empresaAprobada = solicitudes.find(s => s.id === empresaId);
       setSolicitudes(solicitudes.filter(s => s.id !== empresaId));
+      if (empresaAprobada) {
+        setEmpresasAprobadas(prev => [...prev, { ...empresaAprobada, estado: 'aprobado' }]);
+      }
     } catch (error) {
       console.error('Error aprobando solicitud:', error);
     }
@@ -146,7 +169,26 @@ const AdminDashboard = () => {
         {activeTab === 'empresas' && (
           <div className="empresas-section">
             <h2>Empresas Aprobadas</h2>
-            <p>Aquí verás las empresas aprobadas</p>
+            {empresasAprobadas.length === 0 ? (
+              <p className="info-texto">No hay empresas aprobadas por el momento.</p>
+            ) : (
+              <div className="solicitudes-list">
+                {empresasAprobadas.map(empresa => (
+                  <div key={empresa.id} className="solicitud-card" style={{ borderLeftColor: '#4CAF50' }}>
+                    <div className="solicitud-info">
+                      <h3>{empresa.negocio}</h3>
+                      <p><strong>Propietario:</strong> {empresa.nombre}</p>
+                      <p><strong>Email:</strong> {empresa.email}</p>
+                      <p><strong>Teléfono:</strong> {empresa.telefono || 'No proporcionado'}</p>
+                      <p><strong>Categoría:</strong> {empresa.categoria}</p>
+                      <p><strong>Dirección:</strong> {empresa.direccion}</p>
+                      <p><strong>RUC:</strong> {empresa.ruc}</p>
+                      <p><strong>Aprobado desde:</strong> {empresa.createdAt ? new Date(empresa.createdAt.toDate()).toLocaleDateString() : 'N/A'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

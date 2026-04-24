@@ -1,13 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import GestorPromociones from './GestorPromociones';
 import GestorSuscripcion from './GestorSuscripcion';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const EmpresaDashboard = () => {
   const { user, userDetails, userStatus, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('inicio');
+
+  const [editMode, setEditMode] = useState(false);
+  const [formData, setFormData] = useState({
+    negocio: '',
+    categoria: '',
+    direccion: '',
+    telefono: '',
+    descripcion: '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (userDetails) {
+      setFormData({
+        negocio: userDetails.negocio || '',
+        categoria: userDetails.categoria || '',
+        direccion: userDetails.direccion || '',
+        telefono: userDetails.telefono || '',
+        descripcion: userDetails.descripcion || '',
+      });
+    }
+  }, [userDetails]);
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, 'empresa', user.uid), {
+        negocio: formData.negocio,
+        categoria: formData.categoria,
+        direccion: formData.direccion,
+        telefono: formData.telefono,
+        descripcion: formData.descripcion,
+      });
+      window.location.reload();
+    } catch (error) {
+      console.error('Error actualizando:', error);
+      alert('Hubo un error al guardar los datos.');
+    }
+    setSaving(false);
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -109,36 +152,96 @@ const EmpresaDashboard = () => {
 
             {activeTab === 'negocio' && (
               <div className="negocio-section">
-                <h2>Información de tu Negocio</h2>
-                <div className="negocio-info">
-                  <div className="info-group">
-                    <label>Nombre del Negocio:</label>
-                    <p>{userDetails?.negocio}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h2>Información de tu Negocio</h2>
+                  {!editMode && (
+                    <button className="btn-editar" onClick={() => setEditMode(true)}>
+                      ✏️ Editar Información
+                    </button>
+                  )}
+                </div>
+
+                <div className="negocio-info" style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
+                  <div className="perfil-avatar" style={{ flexBasis: '150px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '100px', lineHeight: '1', backgroundColor: '#e2e8f0', borderRadius: '50%', display: 'inline-block', width: '120px', height: '120px' }}>
+                      🏪
+                    </div>
                   </div>
-                  <div className="info-group">
-                    <label>Categoría:</label>
-                    <p>{userDetails?.categoria}</p>
-                  </div>
-                  <div className="info-group">
-                    <label>Dirección:</label>
-                    <p>{userDetails?.direccion}</p>
-                  </div>
-                  <div className="info-group">
-                    <label>RUC:</label>
-                    <p>{userDetails?.ruc}</p>
-                  </div>
-                  <div className="info-group">
-                    <label>Email:</label>
-                    <p>{userDetails?.email}</p>
-                  </div>
-                  <div className="info-group">
-                    <label>Teléfono:</label>
-                    <p>{userDetails?.telefono || 'No proporcionado'}</p>
+
+                  <div className="perfil-detalles" style={{ flex: '1', minWidth: '300px' }}>
+                    <div className="info-group">
+                      <label>Nombre del Negocio:</label>
+                      {editMode ? (
+                        <input className="auth-input" value={formData.negocio} onChange={e => setFormData({...formData, negocio: e.target.value})} />
+                      ) : (
+                        <p>{userDetails?.negocio}</p>
+                      )}
+                    </div>
+                    
+                    <div className="info-group">
+                      <label>Descripción:</label>
+                      {editMode ? (
+                        <textarea className="auth-input" value={formData.descripcion} onChange={e => setFormData({...formData, descripcion: e.target.value})} rows="3" placeholder="Ej: Restaurante de comida rápida..."></textarea>
+                      ) : (
+                        <p>{userDetails?.descripcion || 'No proporcionada'}</p>
+                      )}
+                    </div>
+
+                    <div className="info-group">
+                      <label>Categoría:</label>
+                      {editMode ? (
+                        <select className="auth-input" value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})}>
+                          <option value="gastronomia">Gastronomía</option>
+                          <option value="moda_accesorios">Moda y Accesorios</option>
+                          <option value="salud_belleza">Salud y Belleza</option>
+                          <option value="tecnologia">Tecnología</option>
+                          <option value="entretenimiento">Entretenimiento</option>
+                          <option value="servicios">Servicios</option>
+                        </select>
+                      ) : (
+                        <p>{userDetails?.categoria}</p>
+                      )}
+                    </div>
+
+                    <div className="info-group">
+                      <label>Dirección:</label>
+                      {editMode ? (
+                        <input className="auth-input" value={formData.direccion} onChange={e => setFormData({...formData, direccion: e.target.value})} />
+                      ) : (
+                        <p>{userDetails?.direccion || 'No proporcionada'}</p>
+                      )}
+                    </div>
+
+                    <div className="info-group">
+                      <label>Teléfono:</label>
+                      {editMode ? (
+                        <input className="auth-input" value={formData.telefono} onChange={e => setFormData({...formData, telefono: e.target.value.replace(/\D/g, '')})} maxLength="10" />
+                      ) : (
+                        <p>{userDetails?.telefono || 'No proporcionado'}</p>
+                      )}
+                    </div>
+
+                    <div className="info-group">
+                      <label>RUC (No editable):</label>
+                      <p>{userDetails?.ruc}</p>
+                    </div>
+                    <div className="info-group">
+                      <label>Email (No editable):</label>
+                      <p>{userDetails?.email}</p>
+                    </div>
+
+                    {editMode && (
+                      <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+                        <button className="auth-btn-primary" onClick={handleSaveProfile} disabled={saving} style={{ width: 'auto', padding: '10px 20px' }}>
+                          {saving ? 'Guardando...' : '💾 Guardar Cambios'}
+                        </button>
+                        <button className="auth-btn-google" onClick={() => setEditMode(false)} disabled={saving} style={{ width: 'auto', padding: '10px 20px', backgroundColor: '#f1f5f9', color: '#333' }}>
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <button className="btn-editar" disabled>
-                  ✏️ Editar Información (Próximamente)
-                </button>
               </div>
             )}
           </div>

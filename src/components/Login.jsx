@@ -149,14 +149,10 @@ const Login = () => {
       const fbUser = result.user;
       const userDoc = await getDoc(doc(db, 'usuarios', fbUser.uid));
       if (!userDoc.exists()) {
-        await setDoc(doc(db, 'usuarios', fbUser.uid), {
-          nombre: fbUser.displayName || 'Usuario Google',
-          email: fbUser.email,
-          tipo: 'cliente',
-          telefono: '',
-          estado: 'aprobado',
-          createdAt: new Date(),
-        });
+        await fbUser.delete();
+        setErrores({ general: 'Esta cuenta de Google no está registrada. Por favor regístrate primero en la pestaña de registro.' });
+        setLoading(false);
+        return;
       }
       redirectByUserType('cliente');
     } catch (error) {
