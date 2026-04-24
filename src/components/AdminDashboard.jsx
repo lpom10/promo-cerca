@@ -17,10 +17,9 @@ const AdminDashboard = () => {
 
   const cargarSolicitudes = async () => {
     try {
-      // Buscar empresas en estado 'pendiente'
+      // Buscar empresas en estado 'pendiente' en la colección empresa
       const q = query(
-        collection(db, 'usuarios'),
-        where('tipo', '==', 'empresa'),
+        collection(db, 'empresa'),
         where('estado', '==', 'pendiente')
       );
       const querySnapshot = await getDocs(q);
@@ -42,7 +41,7 @@ const AdminDashboard = () => {
 
   const aprobarSolicitud = async (empresaId) => {
     try {
-      await updateDoc(doc(db, 'usuarios', empresaId), {
+      await updateDoc(doc(db, 'empresa', empresaId), {
         estado: 'aprobado'
       });
       setSolicitudes(solicitudes.filter(s => s.id !== empresaId));
@@ -53,7 +52,7 @@ const AdminDashboard = () => {
 
   const rechazarSolicitud = async (empresaId, motivo) => {
     try {
-      await updateDoc(doc(db, 'usuarios', empresaId), {
+      await updateDoc(doc(db, 'empresa', empresaId), {
         estado: 'rechazado',
         motivoRechazo: motivo
       });

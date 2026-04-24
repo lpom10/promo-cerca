@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
 const Registro = () => {
@@ -19,12 +19,20 @@ const Registro = () => {
     categoria: '',
     direccion: '',
     ruc: '',
+    cedula: '',
   });
   const [errores, setErrores] = useState({});
   const navigate = useNavigate();
 
-  const handleChange = (e) =>
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'cedula' || name === 'ruc') {
+      const numericValue = value.replace(/\D/g, '');
+      setForm((f) => ({ ...f, [name]: numericValue }));
+      return;
+    }
+    setForm((f) => ({ ...f, [name]: value }));
+  };
 
   const validar = () => {
     const e = {};
@@ -32,9 +40,21 @@ const Registro = () => {
     if (!form.email.includes('@')) e.email = 'Correo no válido';
     if (form.password.length < 8) e.password = 'Mínimo 8 caracteres';
     if (form.password !== form.confirmPassword) e.confirmPassword = 'Las contraseñas no coinciden';
+    if (tipo === 'cliente') {
+      if (!form.cedula) {
+        e.cedula = 'La cédula es requerida';
+      } else if (form.cedula.length !== 10) {
+        e.cedula = 'La cédula debe tener 10 dígitos';
+      }
+    }
     if (tipo === 'empresa') {
       if (!form.negocio.trim()) e.negocio = 'El nombre del negocio es requerido';
       if (!form.categoria) e.categoria = 'Selecciona una categoría';      
+      if (!form.ruc) {
+        e.ruc = 'El RUC es requerido';
+      } else if (form.ruc.length !== 13) {
+        e.ruc = 'El RUC debe tener 13 dígitos';
+      }
     }
     return e;
   };
@@ -46,27 +66,55 @@ const Registro = () => {
     setErrores({});
     setLoading(true);
     try {
+      if (tipo === 'cliente') {
+        const q = query(collection(db, 'usuarios'), where('cedula', '==', form.cedula));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          setErrores({ cedula: 'Esta cédula ya está registrada' });
+          setLoading(false);
+          return;
+        }
+      } else if (tipo === 'empresa') {
+        const q = query(collection(db, 'empresa'), where('ruc', '==', form.ruc));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          setErrores({ ruc: 'Este RUC ya está registrado' });
+          setLoading(false);
+          return;
+        }
+      }
+
       console.log('Creando usuario en Auth...');
       // Crear usuario en Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
       const user = userCredential.user;
       console.log('Usuario Auth creado:', user.uid);
 
-      console.log('Guardando datos en Firestore...');
+      // Determinar colección según tipo
+      const coleccion = tipo === 'empresa' ? 'empresa' : 'usuarios';
+      
+      console.log(`Guardando datos en Firestore - colección: ${coleccion}...`);
       // Guardar datos adicionales en Firestore
-      await setDoc(doc(db, 'usuarios', user.uid), {
+      const datosUsuario = {
         nombre: form.nombre,
         email: form.email,
-        tipo,
         telefono: form.telefono || '',
-        negocio: tipo === 'empresa' ? form.negocio : '',
-        categoria: tipo === 'empresa' ? form.categoria : '',
-        direccion: tipo === 'empresa' ? form.direccion : '',
-        ruc: tipo === 'empresa' ? form.ruc : '',
         // Estado según tipo de usuario
         estado: tipo === 'empresa' ? 'pendiente' : 'aprobado',
         createdAt: new Date(),
-      });
+      };
+
+      // Agregar campos específicos según tipo
+      if (tipo === 'empresa') {
+        datosUsuario.negocio = form.negocio;
+        datosUsuario.categoria = form.categoria;
+        datosUsuario.direccion = form.direccion;
+        datosUsuario.ruc = form.ruc;
+      } else {
+        datosUsuario.cedula = form.cedula;
+      }
+
+      await setDoc(doc(db, coleccion, user.uid), datosUsuario);
       console.log('Datos guardados en Firestore exitosamente');
 
       setStep(2);
@@ -207,6 +255,21 @@ const Registro = () => {
             />
           </div>
 
+          {tipo === 'cliente' && (
+            <div className="form-group">
+              <label>Cédula <span className="obligatorio">(obligatorio)</span></label>
+              <input
+                name="cedula"
+                value={form.cedula}
+                onChange={handleChange}
+                placeholder="ingrese su cedula"
+                maxLength="10"
+                className={errores.cedula ? 'input-error' : ''}
+              />
+              {errores.cedula && <span className="campo-error">{errores.cedula}</span>}
+            </div>
+          )}
+
           
           {tipo === 'empresa' && (
             <>
@@ -258,14 +321,15 @@ const Registro = () => {
                 {errores.direccion && <span className="campo-error">{errores.direccion}</span>}
               </div>
               <div className="form-group">
-                <label>RUC:<span className="obligatorio">(obligatorio)</span></label>
+                <label>RUC: <span className="obligatorio">(obligatorio)</span></label>
                 <input
                     name="ruc"
                     value={form.ruc}
                     onChange={handleChange}
-                    placeholder='1234567890-001'
+                    placeholder='1234567890001'
+                    maxLength="13"
                     required
-                
+                    className={errores.ruc ? 'input-error' : ''}
                 />
                 {errores.ruc && <span className="campo-error">{errores.ruc}</span>}
 

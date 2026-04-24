@@ -20,13 +20,31 @@ export const AuthProvider = ({ children }) => {
       
       if (currentUser) {
         try {
-          // Obtener datos adicionales de Firestore
-          const userDocRef = doc(db, 'usuarios', currentUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
+          // Obtener datos adicionales de Firestore según el tipo
+          let userDocSnap = null;
+          let userType = null;
           
+          // Intentar buscar en colección usuarios (clientes)
+          userDocSnap = await getDoc(doc(db, 'usuarios', currentUser.uid));
           if (userDocSnap.exists()) {
+            userType = 'cliente';
+          } else {
+            // Intentar buscar en colección empresa
+            userDocSnap = await getDoc(doc(db, 'empresa', currentUser.uid));
+            if (userDocSnap.exists()) {
+              userType = 'empresa';
+            } else {
+              // Intentar buscar en colección admin
+              userDocSnap = await getDoc(doc(db, 'admin', currentUser.uid));
+              if (userDocSnap.exists()) {
+                userType = 'admin';
+              }
+            }
+          }
+          
+          if (userDocSnap && userDocSnap.exists()) {
             const data = userDocSnap.data();
-            setUserType(data.tipo);
+            setUserType(userType);
             setUserStatus(data.estado || 'aprobado');
             setUserDetails(data);
           }

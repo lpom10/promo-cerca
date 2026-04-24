@@ -41,7 +41,15 @@ const Login = () => {
 
   const validateLoginByType = async (firebaseUser, tipo) => {
     try {
-      const userDocRef = doc(db, 'usuarios', firebaseUser.uid);
+      // Determinar colección según tipo
+      let coleccion = 'usuarios'; // por defecto clientes
+      if (tipo === 'empresa') {
+        coleccion = 'empresa';
+      } else if (tipo === 'admin') {
+        coleccion = 'admin';
+      }
+
+      const userDocRef = doc(db, coleccion, firebaseUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (!userDocSnap.exists()) {
@@ -50,12 +58,6 @@ const Login = () => {
       }
 
       const userData = userDocSnap.data();
-
-      // Validar que el tipo de usuario coincida
-      if (userData.tipo !== tipo) {
-        setErrores({ general: `Este usuario es de tipo "${userData.tipo}", no "${tipo}"` });
-        return false;
-      }
 
       // Validar estado según tipo
       if (tipo === 'admin') {
