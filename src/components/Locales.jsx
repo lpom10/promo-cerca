@@ -30,7 +30,7 @@ const TicketModal = ({ local, onClose }) => {
         <button className="ticket-copiar" onClick={() => navigator.clipboard?.writeText(codigo)}>
           📋 Copiar código
         </button>
-        <Link to={`/mapa?id=${local.id}`} className="perfil-empresa-btn">
+        <Link to={`/PerfilEmpresas?id=${local.id}`} className="perfil-empresa-btn">
           Ver perfil de la empresa
         </Link>
       </div>
