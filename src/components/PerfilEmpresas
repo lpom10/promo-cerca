@@ -1,0 +1,28 @@
+const Promociones = () => {
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [catActiva, setCatActiva] = useState('todos');
+  const [ticketLocal, setTicketLocal] = useState(null);
+  const [promociones, setPromociones] = useState([]); 
+
+  useEffect(() => { 
+    const unsub = onSnapshot(collection(db, 'promociones'), (snapshot) => {
+      setLocales(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
+  }, []);
+
+  const localesFiltrados = useMemo(() => {
+    const q = search.toLowerCase();
+    return locales.filter((l) => {
+      const matchSearch =
+        !q ||
+        normalizarTexto(l.nombre).includes(q) ||
+        normalizarTexto(l.descripcion).includes(q) ||
+        normalizarTexto(l.promocion).includes(q) ||
+        normalizarTexto(l.direccion).includes(q);
+      const matchCat = catActiva === 'todos' || l.categoria === catActiva;
+      return matchSearch && matchCat;
+    });
+  }, [search, catActiva, locales]); 
+}

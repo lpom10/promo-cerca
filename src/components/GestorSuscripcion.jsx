@@ -76,9 +76,14 @@ const GestorSuscripcion = () => {
   ];
 
   const handlePlanSelect = async (plan) => {
+    const confirmacion = window.confirm(`Estás a punto de contratar el ${plan.nombre} por $${plan.precio}. ¿Confirmar pago simulado (Prueba)?`);
+    if (!confirmacion) return;
+
     setLoading(true);
     try {
-      // Crear simulación de suscripción (en fase posterior integrar con Stripe/MercadoPago)
+      // Simular tiempo de procesamiento de pasarela de pago
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       const fechaVencimiento = new Date();
       fechaVencimiento.setDate(fechaVencimiento.getDate() + plan.duracion);
 
@@ -98,6 +103,7 @@ const GestorSuscripcion = () => {
       await addDoc(collection(db, 'suscripciones'), nuevaSuscripcion);
       cargarSuscripciones();
       setSelectedPlan(null);
+      alert('¡Pago exitoso! Tu suscripción ha sido activada.');
     } catch (error) {
       console.error('Error al crear suscripción:', error);
     }

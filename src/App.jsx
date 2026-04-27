@@ -87,6 +87,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<TextField />} />
         <Route path="/locales" element={<Locales />} />
+        <Route path="/mapa" element={<Mapa />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         

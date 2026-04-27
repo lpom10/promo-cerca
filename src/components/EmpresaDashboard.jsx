@@ -5,6 +5,26 @@ import GestorPromociones from './GestorPromociones';
 import GestorSuscripcion from './GestorSuscripcion';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import iconUrl from 'leaflet/dist/images/marker-icon.png';
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
+
+const LocationMarker = ({ position, setPosition }) => {
+  useMapEvents({
+    click(e) {
+      setPosition(e.latlng);
+    },
+  });
+  return position === null ? null : (
+    <Marker position={position}></Marker>
+  );
+};
 
 const EmpresaDashboard = () => {
   const { user, userDetails, userStatus, logout } = useAuth();
@@ -18,6 +38,8 @@ const EmpresaDashboard = () => {
     direccion: '',
     telefono: '',
     descripcion: '',
+    lat: null,
+    lng: null,
   });
   const [saving, setSaving] = useState(false);
 
@@ -29,6 +51,8 @@ const EmpresaDashboard = () => {
         direccion: userDetails.direccion || '',
         telefono: userDetails.telefono || '',
         descripcion: userDetails.descripcion || '',
+        lat: userDetails.lat || null,
+        lng: userDetails.lng || null,
       });
     }
   }, [userDetails]);
@@ -43,6 +67,8 @@ const EmpresaDashboard = () => {
         direccion: formData.direccion,
         telefono: formData.telefono,
         descripcion: formData.descripcion,
+        lat: formData.lat,
+        lng: formData.lng,
       });
       window.location.reload();
     } catch (error) {
@@ -146,100 +172,132 @@ const EmpresaDashboard = () => {
               </div>
             )}
 
-            {activeTab === 'promociones' && <GestorPromociones />}
+            {activeTab === 'promociones' && <GestorPromociones onNavigateToSuscripcion={() => setActiveTab('suscripcion')} />}
 
             {activeTab === 'suscripcion' && <GestorSuscripcion />}
 
             {activeTab === 'negocio' && (
               <div className="negocio-section">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <h2>Información de tu Negocio</h2>
+                <div className="negocio-header">
+                  <h2>Perfil de la Empresa</h2>
                   {!editMode && (
-                    <button className="btn-editar" onClick={() => setEditMode(true)}>
+                    <button className="btn-editar-premium" onClick={() => setEditMode(true)}>
                       ✏️ Editar Información
                     </button>
                   )}
                 </div>
 
-                <div className="negocio-info" style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
-                  <div className="perfil-avatar" style={{ flexBasis: '150px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '100px', lineHeight: '1', backgroundColor: '#e2e8f0', borderRadius: '50%', display: 'inline-block', width: '120px', height: '120px' }}>
+                <div className="negocio-premium-card">
+                  <div className="negocio-banner"></div>
+                  <div className="negocio-avatar-wrapper">
+                    <div className="negocio-avatar">
                       🏪
                     </div>
                   </div>
 
-                  <div className="perfil-detalles" style={{ flex: '1', minWidth: '300px' }}>
-                    <div className="info-group">
-                      <label>Nombre del Negocio:</label>
-                      {editMode ? (
-                        <input className="auth-input" value={formData.negocio} onChange={e => setFormData({...formData, negocio: e.target.value})} />
-                      ) : (
-                        <p>{userDetails?.negocio}</p>
-                      )}
-                    </div>
-                    
-                    <div className="info-group">
-                      <label>Descripción:</label>
-                      {editMode ? (
-                        <textarea className="auth-input" value={formData.descripcion} onChange={e => setFormData({...formData, descripcion: e.target.value})} rows="3" placeholder="Ej: Restaurante de comida rápida..."></textarea>
-                      ) : (
-                        <p>{userDetails?.descripcion || 'No proporcionada'}</p>
-                      )}
-                    </div>
-
-                    <div className="info-group">
-                      <label>Categoría:</label>
-                      {editMode ? (
-                        <select className="auth-input" value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})}>
-                          <option value="gastronomia">Gastronomía</option>
-                          <option value="moda_accesorios">Moda y Accesorios</option>
-                          <option value="salud_belleza">Salud y Belleza</option>
-                          <option value="tecnologia">Tecnología</option>
-                          <option value="entretenimiento">Entretenimiento</option>
-                          <option value="servicios">Servicios</option>
-                        </select>
-                      ) : (
-                        <p>{userDetails?.categoria}</p>
-                      )}
-                    </div>
-
-                    <div className="info-group">
-                      <label>Dirección:</label>
-                      {editMode ? (
-                        <input className="auth-input" value={formData.direccion} onChange={e => setFormData({...formData, direccion: e.target.value})} />
-                      ) : (
-                        <p>{userDetails?.direccion || 'No proporcionada'}</p>
-                      )}
-                    </div>
-
-                    <div className="info-group">
-                      <label>Teléfono:</label>
-                      {editMode ? (
-                        <input className="auth-input" value={formData.telefono} onChange={e => setFormData({...formData, telefono: e.target.value.replace(/\D/g, '')})} maxLength="10" />
-                      ) : (
-                        <p>{userDetails?.telefono || 'No proporcionado'}</p>
-                      )}
-                    </div>
-
-                    <div className="info-group">
-                      <label>RUC (No editable):</label>
-                      <p>{userDetails?.ruc}</p>
-                    </div>
-                    <div className="info-group">
-                      <label>Email (No editable):</label>
-                      <p>{userDetails?.email}</p>
-                    </div>
-
-                    {editMode && (
-                      <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-                        <button className="auth-btn-primary" onClick={handleSaveProfile} disabled={saving} style={{ width: 'auto', padding: '10px 20px' }}>
-                          {saving ? 'Guardando...' : '💾 Guardar Cambios'}
-                        </button>
-                        <button className="auth-btn-google" onClick={() => setEditMode(false)} disabled={saving} style={{ width: 'auto', padding: '10px 20px', backgroundColor: '#f1f5f9', color: '#333' }}>
-                          Cancelar
-                        </button>
+                  <div className="negocio-body">
+                    <div className="negocio-info-grid">
+                      <div className="info-group-premium info-group-full">
+                        <label>Nombre del Negocio</label>
+                        {editMode ? (
+                          <input value={formData.negocio} onChange={e => setFormData({...formData, negocio: e.target.value})} placeholder="Nombre de tu empresa" />
+                        ) : (
+                          <p>{userDetails?.negocio}</p>
+                        )}
                       </div>
-                    )}
+                      
+                      <div className="info-group-premium info-group-full">
+                        <label>Descripción</label>
+                        {editMode ? (
+                          <textarea value={formData.descripcion} onChange={e => setFormData({...formData, descripcion: e.target.value})} rows="3" placeholder="Ej: Restaurante de comida rápida..."></textarea>
+                        ) : (
+                          <p>{userDetails?.descripcion || 'No proporcionada'}</p>
+                        )}
+                      </div>
+
+                      <div className="info-group-premium">
+                        <label>Categoría</label>
+                        {editMode ? (
+                          <select value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})}>
+                            <option value="gastronomia">Gastronomía</option>
+                            <option value="moda_accesorios">Moda y Accesorios</option>
+                            <option value="salud_belleza">Salud y Belleza</option>
+                            <option value="tecnologia">Tecnología</option>
+                            <option value="entretenimiento">Entretenimiento</option>
+                            <option value="servicios">Servicios</option>
+                          </select>
+                        ) : (
+                          <p>{userDetails?.categoria}</p>
+                        )}
+                      </div>
+
+                      <div className="info-group-premium">
+                        <label>Teléfono</label>
+                        {editMode ? (
+                          <input value={formData.telefono} onChange={e => setFormData({...formData, telefono: e.target.value.replace(/\D/g, '')})} maxLength="10" placeholder="0991234567" />
+                        ) : (
+                          <p>{userDetails?.telefono || 'No proporcionado'}</p>
+                        )}
+                      </div>
+
+                      <div className="info-group-premium info-group-full">
+                        <label>Dirección</label>
+                        {editMode ? (
+                          <input value={formData.direccion} onChange={e => setFormData({...formData, direccion: e.target.value})} placeholder="Av. Principal..." />
+                        ) : (
+                          <p>{userDetails?.direccion || 'No proporcionada'}</p>
+                        )}
+                      </div>
+
+                      <div className="info-group-premium info-group-full">
+                        <label>Ubicación en el mapa</label>
+                        {editMode ? (
+                          <div className="map-container-premium">
+                            <MapContainer center={formData.lat && formData.lng ? [formData.lat, formData.lng] : [-4.007, -79.211]} zoom={14} style={{ height: '100%', width: '100%' }}>
+                              <TileLayer
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                              />
+                              <LocationMarker 
+                                position={formData.lat && formData.lng ? { lat: formData.lat, lng: formData.lng } : null} 
+                                setPosition={(pos) => setFormData({ ...formData, lat: pos.lat, lng: pos.lng })} 
+                              />
+                            </MapContainer>
+                          </div>
+                        ) : (
+                          <div className="map-container-premium">
+                            <MapContainer center={userDetails?.lat && userDetails?.lng ? [userDetails.lat, userDetails.lng] : [-4.007, -79.211]} zoom={14} style={{ height: '100%', width: '100%' }}>
+                              <TileLayer
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                              />
+                              {userDetails?.lat && userDetails?.lng && (
+                                <Marker position={{ lat: userDetails.lat, lng: userDetails.lng }} />
+                              )}
+                            </MapContainer>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="info-group-premium">
+                        <label>RUC</label>
+                        <p>{userDetails?.ruc}</p>
+                      </div>
+
+                      <div className="info-group-premium">
+                        <label>Email</label>
+                        <p>{userDetails?.email}</p>
+                      </div>
+
+                      {editMode && (
+                        <div className="info-group-full" style={{ marginTop: '15px', display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
+                          <button className="auth-btn-google" onClick={() => setEditMode(false)} disabled={saving} style={{ width: 'auto', padding: '12px 24px', backgroundColor: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>
+                            Cancelar
+                          </button>
+                          <button className="auth-btn-primary" onClick={handleSaveProfile} disabled={saving} style={{ width: 'auto', padding: '12px 24px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>
+                            {saving ? '⏳ Guardando...' : '💾 Guardar Cambios'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

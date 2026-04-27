@@ -5,6 +5,15 @@ import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { doc, setDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
 import '../styles/auth.css';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import iconUrl from 'leaflet/dist/images/marker-icon.png';
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 
 /* SVG logo de Google inline */
 const GoogleIcon = () => (
@@ -15,6 +24,17 @@ const GoogleIcon = () => (
     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
   </svg>
 );
+
+const LocationMarker = ({ position, setPosition }) => {
+  useMapEvents({
+    click(e) {
+      setPosition(e.latlng);
+    },
+  });
+  return position === null ? null : (
+    <Marker position={position}></Marker>
+  );
+};
 
 const Registro = () => {
   const [searchParams] = useSearchParams();
@@ -32,6 +52,8 @@ const Registro = () => {
     direccion: '',
     ruc: '',
     cedula: '',
+    lat: null,
+    lng: null,
   });
   const [errores, setErrores] = useState({});
   const navigate = useNavigate();
@@ -81,6 +103,9 @@ const Registro = () => {
         e.ruc = 'El RUC es requerido';
       } else if (form.ruc.length !== 13) {
         e.ruc = 'El RUC debe tener 13 dígitos';
+      }
+      if (!form.lat || !form.lng) {
+        e.mapa = 'Debes seleccionar la ubicación en el mapa';
       }
     }
     return e;
@@ -137,6 +162,8 @@ const Registro = () => {
         datosUsuario.categoria = form.categoria;
         datosUsuario.direccion = form.direccion;
         datosUsuario.ruc = form.ruc;
+        datosUsuario.lat = form.lat;
+        datosUsuario.lng = form.lng;
       } else {
         datosUsuario.cedula = form.cedula;
       }
@@ -444,6 +471,25 @@ const Registro = () => {
                       placeholder="1234567890001"
                     />
                     {errores.ruc && <span className="auth-field-error">{errores.ruc}</span>}
+                  </div>
+
+                  <div className="auth-field">
+                    <label className="auth-label">
+                      Ubicación en el mapa <span className="required-tag">obligatorio</span>
+                    </label>
+                    <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 8px 0' }}>Haz clic en el mapa para fijar la ubicación de tu negocio.</p>
+                    <div style={{ height: '200px', width: '100%', borderRadius: '12px', overflow: 'hidden', border: errores.mapa ? '2px solid #e53935' : '1.5px solid var(--auth-border)', position: 'relative', zIndex: 1 }}>
+                      <MapContainer center={[-4.007, -79.211]} zoom={13} style={{ height: '100%', width: '100%' }}>
+                        <TileLayer
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        <LocationMarker 
+                          position={form.lat && form.lng ? { lat: form.lat, lng: form.lng } : null} 
+                          setPosition={(pos) => setForm({ ...form, lat: pos.lat, lng: pos.lng })} 
+                        />
+                      </MapContainer>
+                    </div>
+                    {errores.mapa && <span className="auth-field-error">{errores.mapa}</span>}
                   </div>
                 </>
               )}

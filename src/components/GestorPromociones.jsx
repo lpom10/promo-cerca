@@ -4,7 +4,7 @@ import { collection, addDoc, updateDoc, deleteDoc, getDocs, query, where, doc, g
 import { useAuth } from '../context/AuthContext';
 import '../styles/promociones.css';
 
-const GestorPromociones = () => {
+const GestorPromociones = ({ onNavigateToSuscripcion }) => {
   const { user, userDetails } = useAuth();
   const [promociones, setPromociones] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -108,6 +108,8 @@ const GestorPromociones = () => {
         imagen: form.imagen,
         empresaId: user.uid,
         empresaNombre: userDetails?.negocio,
+        lat: userDetails?.lat || 0,
+        lng: userDetails?.lng || 0,
         updatedAt: new Date(),
       };
 
@@ -361,7 +363,7 @@ const GestorPromociones = () => {
         <div className="suscripcion-requerida">
           <h3>Necesitas una suscripción activa</h3>
           <p>Para crear y gestionar promociones, necesitas tener una suscripción activa.</p>
-          <button className="btn-suscribirse">
+          <button className="btn-suscribirse" onClick={onNavigateToSuscripcion}>
             💳 Contratar Suscripción
           </button>
         </div>

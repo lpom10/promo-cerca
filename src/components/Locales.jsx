@@ -6,64 +6,71 @@ import { db } from '../firebase';
 
 const TicketModal = ({ local, onClose }) => {
   const codigo = `PROMO-${local.id}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  const catEmoji = categorias.find(c => c.id === local.categoria)?.emoji || '🏷️';
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>✕</button>
         <div className="ticket-header">
-          <span className="ticket-emoji">{local.emoji}</span>
-          <h2>{local.nombre}</h2>
+          <span className="ticket-emoji">{catEmoji}</span>
+          <h2>{local.empresaNombre || 'Negocio'}</h2>
         </div>
-        <div className="ticket-promo">{local.promocion}</div>
+        <div className="ticket-promo">{local.titulo}</div>
         <div className="ticket-codigo">
           <span className="ticket-codigo-label">Codigo de canje</span>
           <span className="ticket-codigo-valor">{codigo}</span>
         </div>
         <p className="ticket-instruccion">
-          Muestra este código en el establecimiento para obtener tu descuento.
+          Muestra este código en el establecimiento para obtener tu descuento del {local.descuento}%.
         </p>
         <div className="ticket-meta">
-          <span>📍 {local.direccion}</span>
-          <span>🕐 {local.horario}</span>
-          <span>📞 {local.telefono}</span>
+          <span>🗓️ Válido hasta: {local.fechaFin?.toDate ? new Date(local.fechaFin.toDate()).toLocaleDateString() : ''}</span>
         </div>
         <button className="ticket-copiar" onClick={() => navigator.clipboard?.writeText(codigo)}>
           📋 Copiar código
         </button>
+        <Link to={`/PerfilEmpresas?id=${local.empresaId}`} className="perfil-empresa-btn">
+          Ver perfil de la empresa
+        </Link>
       </div>
     </div>
   );
 };
 
-const LocalCard = ({ local, onTicket }) => (
-  <div className="local-card">
-    <div className="local-card-top" style={{ background: local.color + '22', borderBottom: `3px solid ${local.color}` }}>
-      <span className="local-emoji-big">{local.emoji}</span>
-      <span className="descuento-badge">{local.descuento}</span>
-    </div>
-    <div className="local-card-body">
-      <h3 className="local-nombre">{local.nombre}</h3>
-      <span className="local-cat-tag">{categorias.find(c => c.id === local.categoria)?.emoji} {categorias.find(c => c.id === local.categoria)?.label}</span>
-      <p className="local-desc">{local.descripcion}</p>
-      <div className="local-promo-box">
-        🏷️ {local.promocion}
+const LocalCard = ({ local, onTicket }) => {
+  const catEmoji = categorias.find(c => c.id === local.categoria)?.emoji || '🏷️';
+  const catLabel = categorias.find(c => c.id === local.categoria)?.label || 'Promoción';
+  const color = '#06b6d4';
+  const fechaFinStr = local.fechaFin?.toDate ? new Date(local.fechaFin.toDate()).toLocaleDateString() : '';
+
+  return (
+    <div className="local-card">
+      <div className="local-card-top" style={{ background: color + '22', borderBottom: `3px solid ${color}` }}>
+        <span className="local-emoji-big">{catEmoji}</span>
+        {local.descuento && <span className="descuento-badge">-{local.descuento}%</span>}
       </div>
-      <div className="local-meta">
-        <span>📍 {local.direccion}</span>
-        <span>🕐 {local.horario}</span>
-        <span>🗓️ {local.fecha}</span>
+      <div className="local-card-body">
+        <h3 className="local-nombre">{local.empresaNombre || 'Negocio'}</h3>
+        <span className="local-cat-tag">{catEmoji} {catLabel}</span>
+        <p className="local-desc">{local.descripcion}</p>
+        <div className="local-promo-box">
+          🏷️ {local.titulo}
+        </div>
+        <div className="local-meta">
+          <span>🗓️ Válido hasta: {fechaFinStr}</span>
+        </div>
+      </div>
+      <div className="local-card-footer">
+        <Link to={`/mapa?id=${local.id}`} className="btn-mapa">
+          🗺️ Ver en mapa
+        </Link>
+        <button className="btn-ticket" onClick={() => onTicket(local)}>
+          🎫 Obtener ticket
+        </button>
       </div>
     </div>
-    <div className="local-card-footer">
-      <Link to={`/mapa?id=${local.id}`} className="btn-mapa">
-        🗺️ Ver en mapa
-      </Link>
-      <button className="btn-ticket" onClick={() => onTicket(local)}>
-        🎫 Obtener ticket
-      </button>
-    </div>
-  </div>
-);
+  );
+};
 
 const normalizarTexto = (texto) => {
   if (!texto) return '';
@@ -81,7 +88,7 @@ const Locales = () => {
   const [locales, setLocales] = useState([]); 
 
   useEffect(() => { 
-    const unsub = onSnapshot(collection(db, 'locales'), (snapshot) => {
+    const unsub = onSnapshot(collection(db, 'promociones'), (snapshot) => {
       setLocales(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
     return () => unsub();
@@ -92,10 +99,9 @@ const Locales = () => {
     return locales.filter((l) => {
       const matchSearch =
         !q ||
-        normalizarTexto(l.nombre).includes(q) ||
+        normalizarTexto(l.empresaNombre).includes(q) ||
         normalizarTexto(l.descripcion).includes(q) ||
-        normalizarTexto(l.promocion).includes(q) ||
-        normalizarTexto(l.direccion).includes(q);
+        normalizarTexto(l.titulo).includes(q);
       const matchCat = catActiva === 'todos' || l.categoria === catActiva;
       return matchSearch && matchCat;
     });

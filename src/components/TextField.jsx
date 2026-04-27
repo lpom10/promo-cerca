@@ -1,19 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import Mapa from './Mapa';
+import { MapContainer, TileLayer, Marker, Tooltip } from 'react-leaflet';
+import L from 'leaflet';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+import { categorias } from '../data/categorias';
 import fondo from '../assets/fondo.png';
 import empresaImg from '../assets/empresa.png';
 import '../styles/homepage.css';
 
 const TextField = () => {
   const [search, setSearch] = useState('');
+  const [promociones, setPromociones] = useState([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'promociones'), (snapshot) => {
+      setPromociones(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
     const q = search.trim();
     navigate(q ? `/locales?search=${encodeURIComponent(q)}` : '/locales');
   };
+
+  const promoMap = promociones.filter(p => p.lat !== undefined && p.lng !== undefined && p.activa !== false);
+
+  const getEmoji = (categoriaId) => categorias.find(c => c.id === categoriaId)?.emoji || '🏷️';
 
   return (
     <>
@@ -55,8 +71,40 @@ const TextField = () => {
       <section className="mapa-section">
         <div className="mapa-container">
           <div className="mapa-box">
-            <div className="mapa-embedded">
-              <Mapa />
+            <div className="mapa-embedded" style={{ height: '400px', width: '100%', borderRadius: '16px', overflow: 'hidden' }}>
+              <MapContainer 
+                center={[-4.007, -79.211]} 
+                zoom={14} 
+                style={{ height: '100%', width: '100%' }}
+              >
+                <TileLayer
+                  url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                  attribution='&copy; <a href="https://carto.com/">Carto</a>'
+                />
+                {promoMap.map(promo => (
+                  <Marker 
+                    key={promo.id} 
+                    position={[Number(promo.lat), Number(promo.lng)]} 
+                    eventHandlers={{ click: () => navigate('/mapa') }}
+                  >
+                    <Tooltip direction="top" offset={[0, -40]} opacity={1}>
+                      <div style={{ width: '180px' }}>
+                        {promo.imagen && (
+                          <div style={{ margin: '-6px -6px 8px -6px' }}>
+                            <img src={promo.imagen} alt="Promo" style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '4px 4px 0 0' }} />
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '16px' }}>{getEmoji(promo.categoria)}</span>
+                          <strong style={{ fontSize: '13px', color: '#1e293b' }}>{promo.empresaNombre}</strong>
+                        </div>
+                        <div style={{ color: '#06b6d4', fontSize: '13px', fontWeight: 'bold', lineHeight: '1.2' }}>{promo.titulo}</div>
+                        <div style={{ fontSize: '10px', color: '#64748b', marginTop: '6px' }}>Clic para explorar mapa</div>
+                      </div>
+                    </Tooltip>
+                  </Marker>
+                ))}
+              </MapContainer>
             </div>
           </div>
 
@@ -91,7 +139,7 @@ const TextField = () => {
               </li>
             </ul>
 
-            <Link to="/locales" className="mapa-btn">
+            <Link to="/mapa" className="mapa-btn">
               Ver mapa completo →
             </Link>
           </div>
