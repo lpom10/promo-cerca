@@ -42,11 +42,6 @@ function AppContent() {
                 Locales
               </NavLink>
             </li>
-            <li>
-              <NavLink to="/mapa" onClick={close}>
-                Mapa
-              </NavLink>
-            </li>
             {user ? (
               <>
                 <li>
@@ -63,22 +58,18 @@ function AppContent() {
                     {userType === 'admin' ? '⚙️' : userType === 'empresa' ? '🏢' : '👤'} Dashboard
                   </NavLink>
                 </li>
-                <li>
-                  <button
-                    onClick={() => {
-                      logout();
-                      close();
-                    }}
-                    className="logout-btn"
-                  >
-                    Cerrar Sesión
-                  </button>
-                </li>
+                {userType === 'empresa' && (
+                  <li>
+                    <NavLink to="/empresa/gestionar-promociones" onClick={close}>
+                      📢 Gestionar Promociones
+                    </NavLink>
+                  </li>
+                )}
               </>
             ) : (
               <>
                 <li>
-                  <NavLink to="/login-tipo" onClick={close}>
+                  <NavLink to="/login" onClick={close}>
                     Iniciar Sesión
                   </NavLink>
                 </li>
@@ -96,10 +87,8 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<TextField />} />
         <Route path="/locales" element={<Locales />} />
-        <Route path="/mapa" element={<Mapa />} />
-        <Route path="/registro" element={<Registro />} />
-        <Route path="/login-tipo" element={<LoginTypeSelector />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/registro" element={<Registro />} />
         
         {/* Rutas protegidas por tipo de usuario */}
         <Route 

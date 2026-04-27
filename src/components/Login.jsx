@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider, db } from '../firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import '../styles/auth.css';
 
@@ -17,107 +17,277 @@ const GoogleIcon = () => (
   </svg>
 );
 
-/* Datos del panel de marca según tipo */
+/* Datos de marca para cada tipo */
 const brandData = {
   cliente: {
     badge: '👤 Cliente',
     title: 'Bienvenido de vuelta',
-    subtitle: 'Inicia sesión para explorar las mejores promociones cerca de ti',
+    subtitle: 'Inicia sesión para explorar las mejores promociones',
     features: [
       { icon: '🗺️', text: 'Promociones geolocalizadas a tu alrededor' },
       { icon: '🔖', text: 'Guarda tus favoritos y descuentos preferidos' },
-      { icon: '🔔', text: 'Recibe alertas de nuevas ofertas en tu zona' },
+      { icon: '🎟️', text: 'Genera y canjea tickets de promociones' },
     ],
   },
   empresa: {
     badge: '🏢 Empresa',
     title: 'Panel de empresa',
-    subtitle: 'Gestiona tus promociones y llega a más clientes locales',
+    subtitle: 'Gestiona tus promociones y llega a más clientes',
     features: [
-      { icon: '📈', text: 'Publica y administra tus promociones fácilmente' },
-      { icon: '📍', text: 'Aparece en el mapa para clientes cercanos' },
-      { icon: '📊', text: 'Monitorea el alcance de tus campañas' },
+      { icon: '📈', text: 'Publica y administra promociones' },
+      { icon: '📊', text: 'Monitorea el rendimiento de campañas' },
+      { icon: '🎯', text: 'Llega a más clientes de tu zona' },
     ],
   },
   admin: {
     badge: '🛡️ Admin',
     title: 'Acceso administrativo',
-    subtitle: 'Panel exclusivo para administradores del sistema',
+    subtitle: 'Panel exclusivo para administradores',
     features: [
-      { icon: '✅', text: 'Aprueba y gestiona empresas registradas' },
-      { icon: '👥', text: 'Administra usuarios de la plataforma' },
-      { icon: '⚙️', text: 'Configura y supervisa el sistema' },
+      { icon: '✅', text: 'Aprueba empresas registradas' },
+      { icon: '👥', text: 'Administra usuarios' },
+      { icon: '⚙️', text: 'Supervisa el sistema' },
     ],
   },
 };
 
 const Login = () => {
-  const [searchParams] = useSearchParams();
-  const userType = searchParams.get('tipo') || 'cliente';
-
   const [form, setForm] = useState({ email: '', password: '' });
   const [errores, setErrores] = useState({});
   const [loading, setLoading] = useState(false);
+  const [detectedUserType, setDetectedUserType] = useState('cliente');
   const navigate = useNavigate();
   const { user, userType: authUserType } = useAuth();
 
-  const brand = brandData[userType] || brandData.cliente;
+  const brand = brandData[detectedUserType] || brandData.cliente;
 
   useEffect(() => {
-    if (user && authUserType) redirectByUserType(authUserType);
+    if (user && authUserType) {
+      redirectByUserType(authUserType);
+    }
   }, [user, authUserType]);
 
   const redirectByUserType = (tipo) => {
     switch (tipo) {
-      case 'admin':   navigate('/admin/dashboard'); break;
-      case 'empresa': navigate('/empresa/dashboard'); break;
-      default:        navigate('/cliente/dashboard');
+      case 'admin':
+        navigate('/admin/dashboard');
+        break;
+      case 'empresa':
+        navigate('/empresa/dashboard');
+        break;
+      default:
+        navigate('/cliente/dashboard');
     }
   };
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const validateLoginByType = async (firebaseUser, tipo) => {
+  // Detectar tipo de usuario en la BD
+  const detectUserType = async (firebaseUser) => {
     try {
-      const userDocRef = doc(db, 'usuarios', firebaseUser.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (!userDocSnap.exists()) {
-        setErrores({ general: 'Usuario no encontrado en el sistema' });
-        return false;
-      }
-
-      const userData = userDocSnap.data();
-
-      // Validar que el tipo de usuario coincida
-      if (userData.tipo !== tipo) {
-        setErrores({ general: `Este usuario es de tipo "${userData.tipo}", no "${tipo}"` });
-        return false;
-      }
-
-      // Validar estado según tipo
-      if (tipo === 'admin') {
-        // Solo admins con permisos
-        if (!userData.puedeAprobar) {
-          setErrores({ general: 'No tienes permisos de administrador' });
-          return false;
+      // Intentar buscar en usuarios (cliente)
+      let userDocSnap = await getDoc(doc(db, 'usuarios', firebaseUser.uid));
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        if (userData.tipo !== 'cliente') {
+          setErrores({ general: 'Datos inconsistentes en la base de datos' });
+          return null;
         }
-      } else if (tipo === 'empresa') {
-        // Empresas deben estar aprobadas
+        // Validar estado del cliente
+        return { type: 'cliente', data: userData };
+      }
+
+      // Intentar buscar en empresa
+      userDocSnap = await getDoc(doc(db, 'empresa', firebaseUser.uid));
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        // Validar que empresa esté aprobada
         if (userData.estado === 'pendiente') {
           setErrores({ general: 'Tu solicitud aún está pendiente de aprobación' });
-          return false;
+          return null;
         } else if (userData.estado === 'rechazado') {
-          setErrores({ 
-            general: `Tu solicitud fue rechazada${userData.motivoRechazo ? ': ' + userData.motivoRechazo : ''}` 
+          setErrores({
+            general: `Tu solicitud fue rechazada${userData.motivoRechazo ? ': ' + userData.motivoRechazo : ''}`
           });
-          return false;
+          return null;
         }
+        return { type: 'empresa', data: userData };
       }
-      return true;
-    } catch {
-      setErrores({ general: 'Error al validar usuario' });
-      return false;
+
+      // Intentar buscar en admin
+      userDocSnap = await getDoc(doc(db, 'admin', firebaseUser.uid));
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        if (!userData.puedeAprobar) {
+          setErrores({ general: 'No tienes permisos de administrador' });
+          return null;
+        }
+        return { type: 'admin', data: userData };
+      }
+
+      // Usuario no existe en ninguna colección
+      setErrores({ general: 'Usuario no registrado en el sistema' });
+      return null;
+    } catch (error) {
+      setErrores({ general: 'Error al buscar usuario: ' + error.message });
+      return null;
+    }
+  };
+
+  const handleEmailLogin = async (e) => {
+    e.preventDefault();
+    setErrores({});
+    setLoading(true);
+
+    try {
+      // Sign in con email y contraseña
+      const cred = await signInWithEmailAndPassword(auth, form.email, form.password);
+      
+      // Detectar tipo de usuario
+      const result = await detectUserType(cred.user);
+      
+      if (result) {
+        setDetectedUserType(result.type);
+        redirectByUserType(result.type);
+      }
+    } catch (error) {
+      const errorMsg = error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password'
+        ? 'Correo o contraseña incorrectos'
+        : error.code === 'auth/too-many-requests'
+        ? 'Demasiados intentos fallidos. Intenta más tarde.'
+        : error.message;
+      setErrores({ general: errorMsg });
+    }
+    setLoading(false);
+  };
+
+  const handleGoogleLogin = async () => {
+    setErrores({});
+    setLoading(true);
+
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const fbUser = result.user;
+      
+      // Verificar si el usuario ya existe
+      let userDoc = await getDoc(doc(db, 'usuarios', fbUser.uid));
+      
+      if (!userDoc.exists()) {
+        // Crear nuevo cliente con Google
+        await setDoc(doc(db, 'usuarios', fbUser.uid), {
+          nombre: fbUser.displayName || 'Usuario Google',
+          email: fbUser.email,
+          tipo: 'cliente',
+          telefono: '',
+          estado: 'aprobado',
+          foto: fbUser.photoURL || null,
+          createdAt: new Date(),
+        });
+        setDetectedUserType('cliente');
+      } else {
+        const userData = userDoc.data();
+        if (userData.tipo !== 'cliente') {
+          setErrores({ general: 'Esta cuenta no es de cliente. Use el login tradicional.' });
+          setLoading(false);
+          return;
+        }
+        setDetectedUserType('cliente');
+      }
+      
+      redirectByUserType('cliente');
+    } catch (error) {
+      if (error.code === 'auth/popup-closed-by-user') {
+        setErrores({ general: 'Inicio de sesión cancelado' });
+      } else {
+        setErrores({ general: `Error: ${error.message}` });
+      }
+    }
+    setLoading(false);
+  };
+
+  if (user && authUserType) {
+    return <div className="auth-redirecting">Redirigiendo...</div>;
+  }
+
+  return (
+    <div className="auth-page" data-type={detectedUserType}>
+
+      {/* ── Panel izquierdo: Branding ── */}
+      <div className="auth-panel-brand">
+        <div className="brand-content">
+          <div className="brand-logo-wrap">
+            <span className="brand-logo-icon">📍</span>
+            <span className="brand-logo-text">Promo Cerca</span>
+          </div>
+          <p className="brand-tagline">{brand.title}</p>
+          <p className="brand-desc">{brand.subtitle}</p>
+          <div className="brand-features">
+            {brand.features.map((f, i) => (
+              <div className="brand-feature" key={i}>
+                <span className="brand-feature-icon">{f.icon}</span>
+                <span>{f.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Panel derecho: Formulario ── */}
+      <div className="auth-panel-form">
+        <div className="auth-form-container">
+          <div className="auth-card">
+
+            {/* Cabecera */}
+            <div className="auth-header">
+              <h2 className="auth-title">Iniciar sesión unificado</h2>
+              <p className="auth-subtitle">Ingresa con tu correo para acceder</p>
+            </div>
+
+            {/* Formulario email/contraseña */}
+            <form className="auth-form" onSubmit={handleEmailLogin}>
+              <div className="auth-field">
+                <label className="auth-label">Correo electrónico</label>
+                <input
+                  className={`auth-input${errores.email ? ' is-error' : ''}`}
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="correo@ejemplo.com"
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="auth-field">
+                <label className="auth-label">Contraseña</label>
+                <input
+                  className={`auth-input${errores.password ? ' is-error' : ''}`}
+                  name="password"
+                  type="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              {errores.general && (
+                <div className="auth-alert-error">{errores.general}</div>
+              )}
+
+              <button className="auth-btn-primary" type="submit" disabled={loading}>
+                {loading ? '⏳ Verificando...' : 'Iniciar sesión'}
+              </button>
+            </form>
+
+            {/* Google (solo para clientes) */}
+            <>
+              <div className="auth-divider-or">
+                <hr /><span>o continúa con</span><hr />
+              </div>
+              <button onClick={handleGoogleLogin} className="auth-btn-google" disabled={loading}>
     }
   };
 
