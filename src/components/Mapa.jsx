@@ -42,7 +42,7 @@ const Mapa = () => {
     const cargarLocales = async () => {
       try {
         setLoading(true);
-        const snapshot = await getDocs(collection(db, 'locales'));
+        const snapshot = await getDocs(collection(db, 'promociones'));
         setLocales(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       } catch (error) {
         console.error('Error cargando locales:', error);

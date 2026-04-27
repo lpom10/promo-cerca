@@ -139,9 +139,10 @@
 
 /* Caja del Mapa */
 .mapa-box {
-  position: relative;
+  position: left;
   border-radius: 20px;
   overflow: hidden;
+  width: 100%;
   box-shadow: 0 10px 40px rgba(6, 182, 212, 0.15);
   border: 1px solid #334155;
 }
@@ -265,7 +266,7 @@
   }
 
   .mapa-embedded {
-    height: 300px;
+    height: 100px;
   }
 
   .mapa-features li {

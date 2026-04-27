@@ -30,6 +30,9 @@ const TicketModal = ({ local, onClose }) => {
         <button className="ticket-copiar" onClick={() => navigator.clipboard?.writeText(codigo)}>
           📋 Copiar código
         </button>
+        <Link to={`/mapa?id=${local.id}`} className="perfil-empresa-btn">
+          Ver perfil de la empresa
+        </Link>
       </div>
     </div>
   );
@@ -81,7 +84,7 @@ const Locales = () => {
   const [locales, setLocales] = useState([]); 
 
   useEffect(() => { 
-    const unsub = onSnapshot(collection(db, 'locales'), (snapshot) => {
+    const unsub = onSnapshot(collection(db, 'promociones'), (snapshot) => {
       setLocales(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
     return () => unsub();

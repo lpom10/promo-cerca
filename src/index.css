@@ -366,7 +366,7 @@ a {
 }
 
 .locales-header {
-  background: #ffffff;
+  background: #334155;
   padding: 40px 5% 30px;
   color: #f1f5f9;
 }
@@ -414,6 +414,7 @@ a {
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
+  border-radius: 5px;
 }
 
 .cat-btn:hover {

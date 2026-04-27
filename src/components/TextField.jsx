@@ -91,7 +91,7 @@ const TextField = () => {
               </li>
             </ul>
 
-            <Link to="/locales" className="mapa-btn">
+            <Link to="./Mapa" className="mapa-btn">
               Ver mapa completo →
             </Link>
           </div>
