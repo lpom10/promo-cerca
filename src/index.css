@@ -366,9 +366,10 @@ a {
 }
 
 .locales-header {
-  background: #ffffff;
+  background: #1e293b;
   padding: 40px 5% 30px;
   color: #f1f5f9;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .locales-titulo {

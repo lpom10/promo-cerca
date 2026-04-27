@@ -205,7 +205,7 @@
   border-radius: var(--auth-radius);
   padding: 40px 36px;
   box-shadow: var(--auth-shadow-lg);
-  border: 1px solid rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
 /* Mobile: sin panel brand, la card lleva el color */
@@ -317,13 +317,10 @@
 .auth-input::placeholder {
   color: #64748b;
 }
-.auth-input:active{
-  color: black;
-}
 
 .auth-input:focus {
   border-color: var(--auth-orange);
-  background: #948f8f;
+  background: #1e293b;
   box-shadow: 0 0 0 3px var(--auth-orange-glow);
 }
 
@@ -450,7 +447,7 @@
   width: 100%;
   padding: 12px;
   background: white;
-  color: var(--auth-text);
+  color: #0f172a;
   font-family: var(--auth-font);
   font-size: 14px;
   font-weight: 600;
@@ -637,11 +634,11 @@
 
 .auth-success .info-box {
   background: var(--auth-orange-light);
-  border: 1px solid rgba(255,107,0,0.2);
+  border: 1px solid rgba(6, 182, 212, 0.2);
   border-radius: var(--auth-radius-sm);
   padding: 14px 18px;
   font-size: 13.5px;
-  color: #a04200;
+  color: #67e8f9;
   text-align: left;
   line-height: 1.5;
   width: 100%;
@@ -650,8 +647,8 @@
 
 .auth-page[data-type="empresa"] .auth-success .info-box {
   background: var(--auth-empresa-light);
-  border-color: rgba(30, 79, 194, 0.2);
-  color: #163aa0;
+  border-color: rgba(30, 58, 138, 0.2);
+  color: #93c5fd;
 }
 
 .auth-success-btn {
@@ -720,9 +717,10 @@
 }
 
 .lts-card {
-  background: white;
+  background: var(--auth-card);
   border-radius: var(--auth-radius);
   box-shadow: var(--auth-shadow-lg);
+  border: 1px solid rgba(255,255,255,0.1);
   padding: 48px 40px;
   max-width: 560px;
   width: 100%;
