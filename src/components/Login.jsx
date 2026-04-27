@@ -282,133 +282,8 @@ const Login = () => {
               </button>
             </form>
 
-            {/* Google (solo para clientes) */}
-            <>
-              <div className="auth-divider-or">
-                <hr /><span>o continúa con</span><hr />
-              </div>
-              <button onClick={handleGoogleLogin} className="auth-btn-google" disabled={loading}>
-    }
-  };
-
-  const handleEmailLogin = async (e) => {
-    e.preventDefault();
-    setErrores({});
-    setLoading(true);
-    try {
-      const cred = await signInWithEmailAndPassword(auth, form.email, form.password);
-      if (await validateLoginByType(cred.user, userType)) redirectByUserType(userType);
-    } catch (error) {
-      setErrores({ general: error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password'
-        ? 'Correo o contraseña incorrectos'
-        : error.message });
-    }
-    setLoading(false);
-  };
-
-  const handleGoogleLogin = async () => {
-    setErrores({});
-    setLoading(true);
-    try {
-      if (userType !== 'cliente') {
-        setErrores({ general: 'Google login solo disponible para clientes' });
-        setLoading(false);
-        return;
-      }
-      const result = await signInWithPopup(auth, googleProvider);
-      const fbUser = result.user;
-      const userDoc = await getDoc(doc(db, 'usuarios', fbUser.uid));
-      if (!userDoc.exists()) {
-        await fbUser.delete();
-        setErrores({ general: 'Esta cuenta de Google no está registrada. Por favor regístrate primero en la pestaña de registro.' });
-        setLoading(false);
-        return;
-      }
-      redirectByUserType('cliente');
-    } catch (error) {
-      setErrores({ general: `Error: ${error.message}` });
-    }
-    setLoading(false);
-  };
-
-  if (user && authUserType) {
-    return <div className="auth-redirecting">Redirigiendo...</div>;
-  }
-
-  return (
-    <div className="auth-page" data-type={userType}>
-
-      {/* ── Panel izquierdo: Branding ── */}
-      <div className="auth-panel-brand">
-        <div className="brand-content">
-          <div className="brand-logo-wrap">
-            <span className="brand-logo-icon">📍</span>
-            <span className="brand-logo-text">Promo Cerca</span>
-          </div>
-          <p className="brand-tagline">{brand.title}</p>
-          <p className="brand-desc">{brand.subtitle}</p>
-          <div className="brand-features">
-            {brand.features.map((f, i) => (
-              <div className="brand-feature" key={i}>
-                <span className="brand-feature-icon">{f.icon}</span>
-                <span>{f.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Panel derecho: Formulario ── */}
-      <div className="auth-panel-form">
-        <div className="auth-form-container">
-          <div className="auth-card">
-
-            {/* Cabecera */}
-            <div className="auth-header">
-              <div className="auth-type-badge">{brand.badge}</div>
-              <h2 className="auth-title">Iniciar sesión</h2>
-              <p className="auth-subtitle">{brand.subtitle}</p>
-            </div>
-
-            {/* Formulario email/contraseña */}
-            <form className="auth-form" onSubmit={handleEmailLogin}>
-              <div className="auth-field">
-                <label className="auth-label">Correo electrónico</label>
-                <input
-                  className={`auth-input${errores.email ? ' is-error' : ''}`}
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="correo@ejemplo.com"
-                  required
-                />
-              </div>
-
-              <div className="auth-field">
-                <label className="auth-label">Contraseña</label>
-                <input
-                  className={`auth-input${errores.password ? ' is-error' : ''}`}
-                  name="password"
-                  type="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-
-              {errores.general && (
-                <div className="auth-alert-error">{errores.general}</div>
-              )}
-
-              <button className="auth-btn-primary" type="submit" disabled={loading}>
-                {loading ? '⏳ Verificando...' : 'Iniciar sesión'}
-              </button>
-            </form>
-
             {/* Google (solo clientes) */}
-            {userType === 'cliente' && (
+            {detectedUserType === 'cliente' && (
               <>
                 <div className="auth-divider-or">
                   <hr /><span>o continúa con</span><hr />
@@ -424,7 +299,7 @@ const Login = () => {
             <div className="auth-footer">
               <p>
                 ¿No tienes cuenta?{' '}
-                <Link to={`/registro?tipo=${userType}`} className="auth-link">Regístrate gratis</Link>
+                <Link to={`/registro?tipo=${detectedUserType}`} className="auth-link">Regístrate gratis</Link>
               </p>
               <Link to="/login-tipo" className="auth-back-link">← Cambiar tipo de usuario</Link>
             </div>
