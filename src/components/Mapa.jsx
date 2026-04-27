@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import "leaflet/dist/leaflet.css";
+import '../styles/mapa.css';
 
 import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
@@ -33,14 +34,23 @@ const Mapa = () => {
   const targetId = searchParams.get('id');
   const [catActiva, setCatActiva] = useState('todos');
   const [search, setSearch] = useState('');
-  const [locales, setLocales] = useState([]);  // ← nuevo
+  const [locales, setLocales] = useState([]);
+  const [loading, setLoading] = useState(true);
   const markerRefs = useRef({});
 
-  useEffect(() => {  // ← nuevo
-    const unsub = onSnapshot(collection(db, 'locales'), (snapshot) => {
-      setLocales(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsub();
+  useEffect(() => {
+    const cargarLocales = async () => {
+      try {
+        setLoading(true);
+        const snapshot = await getDocs(collection(db, 'locales'));
+        setLocales(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error('Error cargando locales:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    cargarLocales();
   }, []);
 
   
