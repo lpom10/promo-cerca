@@ -7,15 +7,15 @@
 
 /* ---------- CSS Variables ---------- */
 :root {
-  --auth-orange: #06b6d4;
-  --auth-orange-deep: #0891b2;
-  --auth-orange-light: rgba(6, 182, 212, 0.1);
-  --auth-orange-glow: rgba(6, 182, 212, 0.25);
+  --auth-orange: #ffc22f;
+  --auth-orange-deep: #fb4c23;
+  --auth-orange-light: rgba(255, 194, 47, 0.1);
+  --auth-orange-glow: rgba(255, 194, 47, 0.25);
 
-  --auth-empresa: #1e3a8a;
-  --auth-empresa-deep: #1e40af;
-  --auth-empresa-light: rgba(30, 58, 138, 0.1);
-  --auth-empresa-glow: rgba(30, 58, 138, 0.22);
+  --auth-empresa: #fb4c23;
+  --auth-empresa-deep: #ffc22f;
+  --auth-empresa-light: rgba(251, 76, 35, 0.1);
+  --auth-empresa-glow: rgba(251, 76, 35, 0.22);
 
   --auth-bg: #0f172a;
   --auth-card: #1e293b;
@@ -69,13 +69,13 @@
   justify-content: center;
   padding: 48px 40px;
   overflow: hidden;
-  background: linear-gradient(150deg, #06b6d4 0%, #0891b2 60%, #0e7490 100%);
+  background: linear-gradient(150deg, #ffc22f 0%, #fb4c23 60%, #fb552f 100%);
   color: white;
 }
 
 /* Variante empresa: azul */
 .auth-page[data-type="empresa"] .auth-panel-brand {
-  background: linear-gradient(150deg, #1e3a8a 0%, #1e40af 55%, #1e3a8a 100%);
+  background: linear-gradient(150deg, #fb4c23 0%, #ffc22f 55%, #fb4c23 100%);
 }
 
 /* Decoración geométrica fondo */

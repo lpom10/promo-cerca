@@ -67,15 +67,15 @@
 }
 
 .type-option:hover {
-  border-color: #06b6d4;
-  background: rgba(6, 182, 212, 0.05);
+  border-color: #ffc22f;
+  background: rgba(255, 194, 47, 0.05);
   transform: translateY(-5px);
 }
 
 .type-option.active {
-  border-color: #06b6d4;
-  background: rgba(6, 182, 212, 0.1);
-  box-shadow: 0 5px 20px rgba(6, 182, 212, 0.2);
+  border-color: #ffc22f;
+  background: rgba(255, 194, 47, 0.1);
+  box-shadow: 0 5px 20px rgba(255, 194, 47, 0.2);
 }
 
 .type-option .icon {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import { categorias } from '../data/categorias';
 import '../styles/promociones.css';
 
 const ListarPromociones = () => {
@@ -56,13 +57,12 @@ const ListarPromociones = () => {
     setLoading(false);
   };
 
-  const categorias = [
-    { valor: '', etiqueta: 'Todas' },
-    { valor: 'restaurantes', etiqueta: '🍽️ Restaurantes' },
-    { valor: 'cafeterias', etiqueta: '☕ Cafeterías' },
-    { valor: 'tiendas', etiqueta: '🛍️ Tiendas' },
-    { valor: 'servicios', etiqueta: '🔧 Servicios' },
-    { valor: 'salud', etiqueta: '💊 Salud' },
+  const categoriasFormato = [
+    { valor: '', etiqueta: '🗂️ Todas' },
+    ...categorias.slice(1).map(cat => ({
+      valor: cat.id,
+      etiqueta: `${cat.emoji} ${cat.label}`
+    }))
   ];
 
   const isPromoVencida = (fechaFin) => {
@@ -83,7 +83,7 @@ const ListarPromociones = () => {
       <div className="filtro-container">
         <h2>Promociones Disponibles</h2>
         <div className="filtros">
-          {categorias.map(cat => (
+          {categoriasFormato.map(cat => (
             <button
               key={cat.valor}
               onClick={() => setFiltroCategoria(cat.valor)}
