@@ -12,6 +12,8 @@ import ClienteDashboard from "./components/ClienteDashboard.jsx";
 import EmpresaDashboard from "./components/EmpresaDashboard.jsx";
 import AdminDashboard from "./components/AdminDashboard.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import GestorPromociones from './components/GestorPromociones';
+
 
 function AppContent() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -91,7 +93,7 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         
-        {/* Rutas protegidas por tipo de usuario */}
+        {/* Rutas protegidas */}
         <Route 
           path="/cliente/dashboard" 
           element={
@@ -109,6 +111,15 @@ function AppContent() {
             </ProtectedRoute>
           } 
         />
+
+        <Route
+          path="/empresa/gestionar-promociones"
+          element={
+            <ProtectedRoute requiredUserType="empresa">
+              <GestorPromociones />
+            </ProtectedRoute>
+          }
+        />
         
         <Route 
           path="/admin/dashboard" 
@@ -119,9 +130,9 @@ function AppContent() {
           } 
         />
 
-        {/* Ruta por defecto */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      {/* AQUÍ YA NO DEBE HABER NADA MÁS */}
     </>
   );
 }
