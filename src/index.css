@@ -45,9 +45,7 @@ a {
   font-weight: 500;
 }
 
-/* ═══════════════════════════════════════════
-   NAVBAR - Diseño Profesional
-═══════════════════════════════════════════ */
+
 .navbar {
   display: flex;
   align-items: center;
@@ -793,6 +791,9 @@ a {
   padding: 20px;
   text-align: center;
   margin-bottom: 18px;
+  tword-break: break-all; 
+  overflow-wrap: break-word;
+
 }
 
 .ticket-codigo-label {
@@ -806,11 +807,14 @@ a {
 }
 
 .ticket-codigo-valor {
+  display: block;
+  
   font-size: 28px;
   font-weight: 900;
   color: var(--color-primary);
   letter-spacing: 4px;
   font-family: 'Courier New', monospace;
+  
 }
 
 .ticket-instruccion {
@@ -1109,4 +1113,29 @@ a {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.perfil-empresa-btn{
+    width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--color-highlight) 0%, var(--color-secondary) 100%);
+  color: var(--color-dark);
+  font-size: 16px;
+  font-weight: 800;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(255, 200, 77, 0.2);
+  letter-spacing: 0.5px;
+  padding: 14px 103px;
+  margin-top: 20px;
+  display: block;
+  text-align: center;
+}
+
+.perfil-empresa-btn:hover {
+  background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-primary) 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(251, 75, 35, 0.3);
 }
