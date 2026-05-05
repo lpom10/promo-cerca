@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import GestorPromociones from './GestorPromociones';
 import GestorSuscripcion from './GestorSuscripcion';
 import {
-  doc, updateDoc, collection, query, where, getDocs
+  doc, updateDoc, collection, query, where, getDocs, onSnapshot
 } from 'firebase/firestore';
+import CanjeTickets from './CanjeTickets';
 import { db } from '../firebase';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -99,22 +100,13 @@ const EmpresaDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('resumen');
 
-  // Dashboard data
+  // Dashboard data (raw from Firebase)
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    ticketsGenerados: 0,
-    ticketsCanjeados: 0,
-    clientesUnicos: 0,
-    tasaCanje: 0,
-    totalVisualizaciones: 0,
-    descuentoPromedio: 0,
-    ingresosEstimados: 0,
-    promocionesActivas: 0,
-  });
-  const [promociones, setPromociones] = useState([]);
+  const [rawPromos, setRawPromos] = useState([]);
   const [tickets, setTickets] = useState([]);
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [vistas, setVistas] = useState([]);
   const [suscripcion, setSuscripcion] = useState(null);
+
   const [ticketFilter, setTicketFilter] = useState('todos');
   const [ticketSearch, setTicketSearch] = useState('');
 
@@ -142,87 +134,103 @@ const EmpresaDashboard = () => {
     }
   }, [userDetails]);
 
-  // ── Data fetch ──────────────────────────────────────────
+  // ── Real-time listeners ──────────────────────────────────
   useEffect(() => {
-    if (user && userStatus === 'aprobado') fetchDashboardData();
+    if (!user || userStatus !== 'aprobado') return;
+
+    setLoading(true);
+
+    // 1. Listen to Promociones
+    const qPromos = query(collection(db, 'promociones'), where('empresaId', '==', user.uid));
+    const unsubPromos = onSnapshot(qPromos, (snapshot) => {
+      setRawPromos(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    });
+
+    // 2. Listen to Tickets
+    const qTickets = query(collection(db, 'tickets'), where('empresaId', '==', user.uid));
+    const unsubTickets = onSnapshot(qTickets, (snapshot) => {
+      setTickets(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    // 3. Listen to Vistas
+    const qVistas = query(collection(db, 'vistas'), where('empresaId', '==', user.uid));
+    const unsubVistas = onSnapshot(qVistas, (snapshot) => {
+      setVistas(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    // 4. Listen to Suscripción
+    const qSusc = query(collection(db, 'suscripciones'), 
+      where('empresaId', '==', user.uid), 
+      where('estado', '==', 'activa')
+    );
+    const unsubSusc = onSnapshot(qSusc, (snapshot) => {
+      setSuscripcion(snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
+    });
+
+    return () => {
+      unsubPromos();
+      unsubTickets();
+      unsubVistas();
+      unsubSusc();
+    };
   }, [user, userStatus]);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      // 1. Promociones de esta empresa
-      const promoSnap = await getDocs(
-        query(collection(db, 'promociones'), where('empresaId', '==', user.uid))
-      );
-      const promos = promoSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // ── Derived Data (Stats, Charts, Activity) ───────────────
+  const { stats, promociones, recentActivity } = useMemo(() => {
+    const promoById = Object.fromEntries(rawPromos.map(p => [p.id, p]));
 
-      // 2. Tickets (batched by promo IDs, Firestore supports up to 30 per 'in')
-      let allTickets = [];
-      if (promos.length > 0) {
-        const ids = promos.map(p => p.id);
-        for (let i = 0; i < ids.length; i += 30) {
-          const chunk = ids.slice(i, i + 30);
-          const snap = await getDocs(
-            query(collection(db, 'tickets'), where('promocionId', 'in', chunk))
-          );
-          allTickets = [...allTickets, ...snap.docs.map(d => ({ id: d.id, ...d.data() }))];
-        }
-      }
+    // 1. Métricas
+    const ticketsCanjeados  = tickets.filter(t => t.estado === 'canjeado').length;
+    const ticketsGenerados  = tickets.length;
+    const clientesUnicos    = new Set(tickets.map(t => t.usuarioId)).size;
+    const tasaCanje         = ticketsGenerados > 0
+      ? Math.round((ticketsCanjeados / ticketsGenerados) * 100) : 0;
+    const totalVistas       = rawPromos.reduce((s, p) => s + (p.visualizaciones || 0), 0);
+    const descProm          = rawPromos.length > 0
+      ? Math.round(rawPromos.reduce((s, p) => s + (Number(p.descuento) || 0), 0) / rawPromos.length)
+      : 0;
+    const valorVenta        = userDetails?.valorVentaPromedio || 25;
+    const ingresosEst       = ticketsCanjeados * (descProm / 100) * valorVenta;
+    const promosActivas     = rawPromos.filter(isPromoActive).length;
 
-      // 3. Suscripción activa
-      const suscSnap = await getDocs(
-        query(collection(db, 'suscripciones'),
-          where('empresaId', '==', user.uid),
-          where('estado', '==', 'activa'))
-      );
-      const susc = suscSnap.empty
-        ? null
-        : { id: suscSnap.docs[0].id, ...suscSnap.docs[0].data() };
+    const statsObj = { 
+      ticketsGenerados, ticketsCanjeados, clientesUnicos, tasaCanje,
+      totalVisualizaciones: totalVistas, descuentoPromedio: descProm,
+      ingresosEstimados: ingresosEst, promocionesActivas: promosActivas 
+    };
 
-      // 4. Cálculo de métricas
-      const ticketsCanjeados  = allTickets.filter(t => t.estado === 'canjeado').length;
-      const ticketsGenerados  = allTickets.length;
-      const clientesUnicos    = new Set(allTickets.map(t => t.usuarioId)).size;
-      const tasaCanje         = ticketsGenerados > 0
-        ? Math.round((ticketsCanjeados / ticketsGenerados) * 100) : 0;
-      const totalVistas       = promos.reduce((s, p) => s + (p.visualizaciones || 0), 0);
-      const descProm          = promos.length > 0
-        ? Math.round(promos.reduce((s, p) => s + (Number(p.descuento) || 0), 0) / promos.length)
-        : 0;
-      const valorVenta        = userDetails?.valorVentaPromedio || 25;
-      const ingresosEst       = ticketsCanjeados * (descProm / 100) * valorVenta;
-      const promosActivas     = promos.filter(isPromoActive).length;
+    // 2. Datos por promoción
+    const promoMap = rawPromos.map(p => ({
+      ...p,
+      totalTickets:     tickets.filter(t => t.promocionId === p.id).length,
+      ticketsCanjeados: tickets.filter(t => t.promocionId === p.id && t.estado === 'canjeado').length,
+    })).sort((a, b) => b.totalTickets - a.totalTickets);
 
-      // 5. Datos por promoción (para gráficos)
-      const promoMap = promos.map(p => ({
-        ...p,
-        totalTickets:     allTickets.filter(t => t.promocionId === p.id).length,
-        ticketsCanjeados: allTickets.filter(t => t.promocionId === p.id && t.estado === 'canjeado').length,
-      })).sort((a, b) => b.totalTickets - a.totalTickets);
+    // 3. Actividad reciente
+    const ticketEvents = tickets.map(t => ({
+      ...t,
+      _tipo: 'ticket',
+      _fecha: toDate(t.fechaGeneracion),
+      _promo: promoById[t.promocionId]
+    }));
 
-      // 6. Actividad reciente (ordenada por fecha)
-      const promoById = Object.fromEntries(promos.map(p => [p.id, p]));
-      const recent = [...allTickets]
-        .sort((a, b) => {
-          const da = toDate(a.fechaGeneracion)?.getTime() || 0;
-          const db_ = toDate(b.fechaGeneracion)?.getTime() || 0;
-          return db_ - da;
-        })
-        .slice(0, 12)
-        .map(t => ({ ...t, _promo: promoById[t.promocionId] }));
+    const vistaEvents = vistas.map(v => ({
+      ...v,
+      _tipo: 'vista',
+      _fecha: toDate(v.timestamp),
+      _promo: promoById[v.promocionId]
+    }));
 
-      setStats({ ticketsGenerados, ticketsCanjeados, clientesUnicos, tasaCanje,
-                 totalVisualizaciones: totalVistas, descuentoPromedio: descProm,
-                 ingresosEstimados: ingresosEst, promocionesActivas: promosActivas });
-      setPromociones(promoMap);
-      setTickets(allTickets.map(t => ({ ...t, _promo: promoById[t.promocionId] })));
-      setRecentActivity(recent);
-      setSuscripcion(susc);
-    } catch (err) {
-      console.error('Error cargando dashboard empresa:', err);
-    }
-    setLoading(false);
-  };
+    const activity = [...ticketEvents, ...vistaEvents]
+      .filter(e => e._fecha)
+      .sort((a, b) => b._fecha.getTime() - a._fecha.getTime())
+      .slice(0, 15);
+
+    return { stats: statsObj, promociones: promoMap, recentActivity: activity };
+  }, [rawPromos, tickets, vistas, userDetails?.valorVentaPromedio]);
+  // No incluimos 'promociones' en dependencias directas del setPromociones para evitar loops infinitos
+  // Pero necesitamos actualizar cuando cambian. Usaremos una técnica diferente si es necesario.
 
   const handleLogout = async () => { await logout(); navigate('/'); };
 
@@ -266,6 +274,7 @@ const EmpresaDashboard = () => {
   // ── Nav items ──────────────────────────────────────────
   const navItems = [
     { id: 'resumen',     icon: '📊', label: 'Resumen' },
+    { id: 'canjear',     icon: '✅', label: 'Canjear' },
     { id: 'tickets',     icon: '🎟️', label: 'Tickets' },
     { id: 'promociones', icon: '📢', label: 'Promociones' },
     { id: 'suscripcion', icon: '💳', label: 'Suscripción' },
@@ -435,15 +444,19 @@ const EmpresaDashboard = () => {
                           </div>
                         ) : (
                           <div className="dpro-feed">
-                            {recentActivity.map((t, i) => (
+                            {recentActivity.map((e, i) => (
                               <div key={i} className="dpro-feed-item">
-                                <div className={`dpro-feed-dot ${t.estado}`} />
+                                <div className={`dpro-feed-dot ${e._tipo === 'vista' ? 'vista' : e.estado}`} />
                                 <div className="dpro-feed-text">
-                                  {t.estado === 'canjeado'
-                                    ? <>Un cliente <strong>canjeó</strong> en <strong>{t._promo?.titulo || 'promo'}</strong></>
-                                    : <>Un cliente <strong>generó</strong> un ticket de <strong>{t._promo?.titulo || 'promo'}</strong></>}
+                                  {e._tipo === 'vista' ? (
+                                    <>Alguien <strong>vio</strong> tu promoción <strong>{e._promo?.titulo || 'promo'}</strong></>
+                                  ) : e.estado === 'canjeado' ? (
+                                    <><strong>{e.usuarioNombre || 'Un cliente'}</strong> <strong>canjeó</strong> en <strong>{e._promo?.titulo || 'promo'}</strong></>
+                                  ) : (
+                                    <><strong>{e.usuarioNombre || 'Un cliente'}</strong> <strong>generó</strong> un ticket de <strong>{e._promo?.titulo || 'promo'}</strong></>
+                                  )}
                                 </div>
-                                <span className="dpro-feed-time">{timeAgo(t.fechaGeneracion)}</span>
+                                <span className="dpro-feed-time">{timeAgo(e._fecha)}</span>
                               </div>
                             ))}
                           </div>
@@ -504,6 +517,13 @@ const EmpresaDashboard = () => {
               </>
             )}
 
+            {/* ── CANJEAR ── */}
+            {activeTab === 'canjear' && (
+              <div className="dpro-panel animate-fade-in">
+                <CanjeTickets empresaId={user.uid} />
+              </div>
+            )}
+
             {/* ── TICKETS ── */}
             {activeTab === 'tickets' && (
               <>
@@ -536,6 +556,7 @@ const EmpresaDashboard = () => {
                       <thead>
                         <tr>
                           <th>Código</th>
+                          <th>Cliente</th>
                           <th>Promoción</th>
                           <th>Estado</th>
                           <th>Descuento</th>
@@ -546,7 +567,7 @@ const EmpresaDashboard = () => {
                       <tbody>
                         {filteredTickets.length === 0 ? (
                           <tr>
-                            <td colSpan={6}>
+                            <td colSpan={8}>
                               <div className="dpro-empty">
                                 <div className="dpro-empty-icon">🎟️</div>
                                 <div className="dpro-empty-text">No hay tickets con ese filtro</div>
@@ -558,7 +579,11 @@ const EmpresaDashboard = () => {
                             <td style={{ fontFamily: 'monospace', color: '#06b6d4', fontSize: '.82rem' }}>
                               {t.codigo || '—'}
                             </td>
-                            <td style={{ color: '#e2e8f0' }}>{t._promo?.titulo || '—'}</td>
+                            <td>
+                              <div style={{ color: '#e2e8f0', fontWeight: 500 }}>{t.usuarioNombre || '—'}</div>
+                              <div style={{ color: '#64748b', fontSize: '0.75rem' }}>{t.usuarioTelefono || ''}</div>
+                            </td>
+                            <td style={{ color: '#94a3b8' }}>{t._promo?.titulo || '—'}</td>
                             <td><span className={`dpro-chip ${t.estado}`}>{t.estado}</span></td>
                             <td style={{ color: '#f59e0b', fontWeight: 600 }}>
                               {t._promo?.descuento ? `${t._promo.descuento}%` : '—'}

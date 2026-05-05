@@ -3,9 +3,11 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { categorias } from '../data/categorias';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { registrarVisualizacion, crearTicket } from '../services/ticketService';
+import { useAuth } from '../context/AuthContext';
 
-const TicketModal = ({ local, onClose }) => {
-  const codigo = `PROMO-${local.id}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+const TicketModal = ({ ticket, local, onClose }) => {
+  const codigo = ticket?.codigo || 'ERROR';
   const catEmoji = categorias.find(c => c.id === local.categoria)?.emoji || '🏷️';
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -17,18 +19,22 @@ const TicketModal = ({ local, onClose }) => {
         </div>
         <div className="ticket-promo">{local.titulo}</div>
         <div className="ticket-codigo">
-          <span className="ticket-codigo-label">Codigo de canje</span>
+          <span className="ticket-codigo-label">Código de canje</span>
           <span className="ticket-codigo-valor">{codigo}</span>
         </div>
         <p className="ticket-instruccion">
-          Muestra este código en el establecimiento para obtener tu descuento del {local.descuento}%.
+          {ticket 
+            ? `Muestra este código en el establecimiento para obtener tu descuento del ${local.descuento}%.`
+            : "Hubo un problema al generar tu ticket. Por favor, intenta de nuevo."}
         </p>
         <div className="ticket-meta">
           <span>🗓️ Válido hasta: {local.fechaFin?.toDate ? new Date(local.fechaFin.toDate()).toLocaleDateString() : ''}</span>
         </div>
-        <button className="ticket-copiar" onClick={() => navigator.clipboard?.writeText(codigo)}>
-          📋 Copiar código
-        </button>
+        {ticket && (
+          <button className="ticket-copiar" onClick={() => navigator.clipboard?.writeText(codigo)}>
+            📋 Copiar código
+          </button>
+        )}
         <Link to={`/PerfilEmpresas?id=${local.empresaId}`} className="perfil-empresa-btn">
           Ver perfil de la empresa
         </Link>
@@ -85,7 +91,39 @@ const Locales = () => {
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [catActiva, setCatActiva] = useState('todos');
   const [ticketLocal, setTicketLocal] = useState(null);
+  const [activeTicket, setActiveTicket] = useState(null);
   const [locales, setLocales] = useState([]); 
+  const { user, userType, userDetails } = useAuth();
+
+  const handleTicketClick = async (local) => {
+    // 1. Registrar visualización
+    try {
+      await registrarVisualizacion(local.id, local.empresaId, user?.uid || null);
+    } catch (error) {
+      console.error('Error al registrar visualización:', error);
+    }
+
+    // 2. Generar ticket real si está logueado como cliente
+    if (user && userType === 'cliente') {
+      try {
+        const newTicket = await crearTicket(user.uid, local.id, local.empresaId, local, userDetails);
+        setActiveTicket(newTicket);
+      } catch (error) {
+        console.error('Error al crear ticket:', error);
+        alert(error.message || 'No se pudo generar el ticket. Intenta de nuevo.');
+        return;
+      }
+    } else if (user) {
+      alert('Solo los clientes pueden generar tickets de descuento.');
+      return;
+    } else {
+      alert('Debes iniciar sesión para obtener un ticket.');
+      // Opcional: navigate('/login')
+      return;
+    }
+
+    setTicketLocal(local);
+  };
 
   useEffect(() => { 
     const unsub = onSnapshot(collection(db, 'promociones'), (snapshot) => {
@@ -149,13 +187,17 @@ const Locales = () => {
       ) : (
         <div className="locales-grid">
           {localesFiltrados.map((local) => (
-            <LocalCard key={local.id} local={local} onTicket={setTicketLocal} />
+            <LocalCard key={local.id} local={local} onTicket={handleTicketClick} />
           ))}
         </div>
       )}
 
       {ticketLocal && (
-        <TicketModal local={ticketLocal} onClose={() => setTicketLocal(null)} />
+        <TicketModal 
+          local={ticketLocal} 
+          ticket={activeTicket}
+          onClose={() => { setTicketLocal(null); setActiveTicket(null); }} 
+        />
       )}
     </div>
   );
