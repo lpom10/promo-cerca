@@ -13,6 +13,7 @@ import EmpresaDashboard from "./components/EmpresaDashboard.jsx";
 import AdminDashboard from "./components/AdminDashboard.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import GestorPromociones from './components/GestorPromociones';
+import NotificationBell from "./components/NotificationBell.jsx";
 
 
 function AppContent() {
@@ -36,6 +37,9 @@ function AppContent() {
           <span className={`bar ${menuOpen ? "open" : ""}`} />
           <span className={`bar ${menuOpen ? "open" : ""}`} />
         </button>
+
+        {/* Campana de notificaciones */}
+        {user && <NotificationBell />}
 
         <nav className={`barra ${menuOpen ? "active" : ""}`}>
           <ul>
