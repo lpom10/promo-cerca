@@ -105,26 +105,6 @@
   border: 1px solid #a855f7;
 }
 
-/* Sección QR */
-.qr-section {
-  margin: 2rem 0;
-  display: flex;
-  justify-content: center;
-  padding: 1.5rem;
-  background: #f1f5f9;
-  border-radius: 12px;
-}
-
-.qr-code {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.qr-code canvas {
-  padding: 0.5rem;
-}
-
 /* Sección de código manual */
 .codigo-section {
   margin: 1.5rem 0;
@@ -218,34 +198,6 @@
   color: #06b6d4;
 }
 
-/* Botones de acción */
-.acciones {
-  display: flex;
-  gap: 1rem;
-  margin: 1.5rem 0;
-  flex-wrap: wrap;
-}
-
-.btn-descargar,
-.btn-imprimir {
-  flex: 1;
-  min-width: 150px;
-  padding: 0.75rem 1rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s ease;
-  background: linear-gradient(135deg, #06b6d4, #0891b2);
-  color: #0f172a;
-}
-
-.btn-descargar:hover,
-.btn-imprimir:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(6, 182, 212, 0.3);
-}
-
 /* Fechas */
 .fechas {
   background: rgba(52, 73, 94, 0.3);
@@ -267,53 +219,11 @@
     width: 95%;
   }
 
-  .acciones {
-    flex-direction: column;
-  }
-
-  .btn-descargar,
-  .btn-imprimir {
-    min-width: auto;
-  }
-
   .codigo-container {
     flex-direction: column;
   }
 
   .btn-copiar {
     width: 100%;
-  }
-}
-
-/* Print styles */
-@media print {
-  .modal-backdrop {
-    background: white;
-  }
-
-  .ticket-modal {
-    box-shadow: none;
-    border: none;
-    max-width: 100%;
-    padding: 0;
-    background: white;
-    color: black;
-  }
-
-  .close-btn,
-  .acciones,
-  .instrucciones {
-    display: none;
-  }
-
-  .qr-section {
-    background: white;
-    margin: 2rem 0;
-    page-break-inside: avoid;
-  }
-
-  .ticket-info {
-    background: white;
-    border: 1px solid #ddd;
   }
 }

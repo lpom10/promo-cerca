@@ -1,27 +1,13 @@
-import { useState, useRef } from 'react';
-import QRCode from 'qrcode.react';
+import { useState } from 'react';
 import '../styles/tickets.css';
 
 const VisualizarTicket = ({ ticket, onClose }) => {
-  const qrRef = useRef();
   const [copied, setCopied] = useState(false);
-
-  const descargarQR = () => {
-    const canvas = qrRef.current.querySelector('canvas');
-    const link = document.createElement('a');
-    link.href = canvas.toDataURL('image/png');
-    link.download = `ticket-${ticket.codigo}.png`;
-    link.click();
-  };
 
   const copiarCodigo = () => {
     navigator.clipboard.writeText(ticket.codigo);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const imprimirTicket = () => {
-    window.print();
   };
 
   return (
@@ -43,19 +29,6 @@ const VisualizarTicket = ({ ticket, onClose }) => {
             {/* Estado del ticket */}
             <div className={`ticket-status ${ticket.estado}`}>
               {ticket.estado === 'generado' ? '✓ Activo' : '✓ Canjeado'}
-            </div>
-          </div>
-
-          {/* Código QR */}
-          <div className="qr-section" ref={qrRef}>
-            <div className="qr-code">
-              <QRCode
-                value={ticket.codigo}
-                size={200}
-                level="H"
-                includeMargin={true}
-                renderAs="canvas"
-              />
             </div>
           </div>
 
@@ -84,19 +57,8 @@ const VisualizarTicket = ({ ticket, onClose }) => {
             <p><strong>Cómo usar:</strong></p>
             <ul>
               <li>Presenta este código en el local</li>
-              <li>Puedes mostrar el QR o el código manual</li>
               <li>Solo puedes canjear una vez por promoción</li>
             </ul>
-          </div>
-
-          {/* Botones de acción */}
-          <div className="acciones">
-            <button className="btn-descargar" onClick={descargarQR}>
-              ⬇️ Descargar QR
-            </button>
-            <button className="btn-imprimir" onClick={imprimirTicket}>
-              🖨️ Imprimir
-            </button>
           </div>
 
           {/* Fechas */}
