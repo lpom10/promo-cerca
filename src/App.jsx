@@ -57,13 +57,13 @@ function AppContent() {
                     } 
                     onClick={close}
                   >
-                    {userType === 'admin' ? '⚙️' : userType === 'empresa' ? '🏢' : '👤'} Dashboard
+                    {userType === 'admin' ? '' : userType === 'empresa' ? '' : ''} Estadisticas
                   </NavLink>
                 </li>
                 {userType === 'empresa' && (
                   <li>
                     <NavLink to="/empresa/gestionar-promociones" onClick={close}>
-                      📢 Gestionar Promociones
+                      Gestionar Promociones
                     </NavLink>
                   </li>
                 )}

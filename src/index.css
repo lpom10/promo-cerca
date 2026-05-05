@@ -19,7 +19,7 @@
   --color-gray-light: #e0e0e0;      /* Gris claro */
   
   /* Fondos */
-  --bg-primary: #0f172a;            /* Fondo oscuro principal */
+  --bg-primary: #ffffff;            /* Fondo oscuro principal */
   --bg-card: #1e293b;               /* Fondo de tarjetas */
   --bg-hover: #2a3a52;              /* Fondo hover */
 }
@@ -127,6 +127,7 @@ a {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: rgba(255, 255, 255, 0.08);
   font-weight: 600;
+  
 }
 
 .barra li:hover {
@@ -137,7 +138,7 @@ a {
 
 .barra li a.active {
   font-weight: bold;
-  text-decoration: underline;
+  
 }
 
 @media (max-width: 768px) {

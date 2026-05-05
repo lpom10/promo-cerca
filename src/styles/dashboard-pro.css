@@ -17,7 +17,7 @@
   justify-content: space-between;
   padding: 0 32px;
   height: 64px;
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(255, 255, 255, 0.95);
   border-bottom: 1px solid #1e293b;
   position: sticky;
   top: 0;
@@ -46,7 +46,7 @@
 .dpro-topbar-name {
   font-weight: 600;
   font-size: 1rem;
-  color: #f1f5f9;
+  color: #000000;
   line-height: 1.2;
 }
 
@@ -96,7 +96,7 @@
 
 .dpro-sidebar {
   width: 220px;
-  background: #0d1629;
+  background: #ffffff;
   border-right: 1px solid #1e293b;
   padding: 24px 0;
   flex-shrink: 0;
@@ -141,6 +141,7 @@
   padding: 32px;
   overflow-y: auto;
   max-width: 1200px;
+  background-color: white;
 }
 
 /* ── Status banners ──────────────────────────────────────── */
@@ -529,7 +530,7 @@
 
 /* ── Profile form ────────────────────────────────────────── */
 .dpro-profile-card {
-  background: #0d1629;
+  background: #ffffff;
   border: 1px solid #1e293b;
   border-radius: 16px;
   overflow: hidden;

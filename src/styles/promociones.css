@@ -8,14 +8,14 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    background: white;
+    background: #fb4b23;
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   }
 
   .gestor-header h2 {
-    color: #333;
+    color: #ffffff;
   }
 
   .suscripcion-info {
@@ -215,11 +215,14 @@
     overflow: hidden;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
+    border: 1px solid rgb(104, 102, 102);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); 
   }
 
   .promo-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+    
   }
 
   .promo-card img {
