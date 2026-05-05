@@ -8,7 +8,7 @@ import VisualizarTicket from './VisualizarTicket';
 import '../styles/promociones.css';
 
 const ListarPromociones = () => {
-  const { user, userType } = useAuth();
+  const { user, userType, userDetails } = useAuth();
   const [promociones, setPromociones] = useState([]);
   const [trending, setTrending] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +100,7 @@ const ListarPromociones = () => {
   const handleClickTicket = async (promo) => {
     // Registrar visualización
     try {
-      await registrarVisualizacion(promo.id, user?.uid || null);
+      await registrarVisualizacion(promo.id, promo.empresaId, user?.uid || null);
     } catch (error) {
       console.error('Error registrando visualización:', error);
     }
@@ -114,7 +114,7 @@ const ListarPromociones = () => {
     // Generar ticket
     try {
       setError('');
-      const ticket = await crearTicket(user.uid, promo.id, promo.empresaId, promo);
+      const ticket = await crearTicket(user.uid, promo.id, promo.empresaId, promo, userDetails);
       setTicketSeleccionado(ticket);
     } catch (error) {
       setError(error.message);

@@ -9,6 +9,7 @@ import {
   where,
   getDocs,
   Timestamp,
+  increment,
 } from 'firebase/firestore';
 
 // Generar código único para ticket
@@ -22,7 +23,7 @@ export const generarCodigoTicket = () => {
 };
 
 // Crear ticket para cliente
-export const crearTicket = async (usuarioId, promocionId, empresaId, promocionData) => {
+export const crearTicket = async (usuarioId, promocionId, empresaId, promocionData, usuarioData) => {
   try {
     // Verificar que no exista un ticket activo para esta promoción
     const q = query(
@@ -41,6 +42,8 @@ export const crearTicket = async (usuarioId, promocionId, empresaId, promocionDa
     
     const ticket = {
       usuarioId,
+      usuarioNombre: usuarioData?.nombre || 'Cliente',
+      usuarioTelefono: usuarioData?.telefono || 'N/A',
       promocionId,
       empresaId,
       codigo,
@@ -150,23 +153,21 @@ export const obtenerTicketsEmpresa = async (empresaId) => {
 };
 
 // Registrar visualización de promoción
-export const registrarVisualizacion = async (promocionId, usuarioId = null) => {
+export const registrarVisualizacion = async (promocionId, empresaId, usuarioId = null) => {
   try {
-    const viewRef = await addDoc(collection(db, 'vistas'), {
+    await addDoc(collection(db, 'vistas'), {
       promocionId,
+      empresaId,
       usuarioId,
       timestamp: Timestamp.now(),
     });
 
-    // Incrementar contador en promoción
+    // Incrementar contador en promoción de forma atómica
     const promoRef = doc(db, 'promociones', promocionId);
-    const promoSnap = await getDoc(promoRef);
-    if (promoSnap.exists()) {
-      const visualizaciones = (promoSnap.data().visualizaciones || 0) + 1;
-      await updateDoc(promoRef, { visualizaciones });
-    }
+    await updateDoc(promoRef, {
+      visualizaciones: increment(1)
+    });
 
-    return viewRef.id;
   } catch (error) {
     console.error('Error registrando visualización:', error);
     // No lanzar error, es secundario

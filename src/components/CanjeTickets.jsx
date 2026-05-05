@@ -105,6 +105,14 @@ const CanjeTickets = ({ empresaId }) => {
 
           <div className="info-grid">
             <div className="info-item">
+              <label>Cliente:</label>
+              <p>{ticket.usuarioNombre || 'No especificado'}</p>
+            </div>
+            <div className="info-item">
+              <label>Teléfono:</label>
+              <p>{ticket.usuarioTelefono || 'N/A'}</p>
+            </div>
+            <div className="info-item">
               <label>Promoción:</label>
               <p>{ticket.promocionTitulo}</p>
             </div>
