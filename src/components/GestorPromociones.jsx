@@ -19,6 +19,8 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
     fechaFin: '',
     categoria: '',
     imagen: '',
+    ticketsMaximos: '',
+    fechaHoraExpiracion: '',
   });
   const [errores, setErrores] = useState({});
 
@@ -78,6 +80,21 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
       e.fechaFin = 'La fecha de fin debe ser posterior a la de inicio';
     }
     if (!form.categoria) e.categoria = 'Selecciona una categoría';
+    
+    // Validar ticketsMaximos si está proporcionado
+    if (form.ticketsMaximos && (isNaN(form.ticketsMaximos) || parseInt(form.ticketsMaximos) <= 0)) {
+      e.ticketsMaximos = 'Ingresa un número válido de tickets (mayor a 0)';
+    }
+    
+    // Validar fechaHoraExpiracion si está proporcionada
+    if (form.fechaHoraExpiracion) {
+      const fechaExpiracion = new Date(form.fechaHoraExpiracion);
+      const fechaFin = new Date(form.fechaFin);
+      if (fechaExpiracion > fechaFin) {
+        e.fechaHoraExpiracion = 'La hora de expiración no puede ser después de la fecha de fin de la promoción';
+      }
+    }
+    
     return e;
   };
 
@@ -111,6 +128,9 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
         lat: userDetails?.lat || 0,
         lng: userDetails?.lng || 0,
         updatedAt: new Date(),
+        // Nuevos campos para límites de tickets
+        ticketsMaximos: form.ticketsMaximos ? parseInt(form.ticketsMaximos) : null,
+        fechaHoraExpiracion: form.fechaHoraExpiracion ? new Date(form.fechaHoraExpiracion) : null,
       };
 
       if (editingId) {
@@ -121,6 +141,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
           createdAt: new Date(),
           activa: true,
           visualizaciones: 0,
+          ticketsGenerados: 0, // Contador inicial
         });
       }
 
@@ -132,6 +153,8 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
         fechaFin: '',
         categoria: '',
         imagen: '',
+        ticketsMaximos: '',
+        fechaHoraExpiracion: '',
       });
       setEditingId(null);
       setShowForm(false);
@@ -152,6 +175,10 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
       fechaFin: promo.fechaFin.toDate?.().toISOString().split('T')[0] || promo.fechaFin,
       categoria: promo.categoria,
       imagen: promo.imagen,
+      ticketsMaximos: promo.ticketsMaximos ? promo.ticketsMaximos.toString() : '',
+      fechaHoraExpiracion: promo.fechaHoraExpiracion 
+        ? promo.fechaHoraExpiracion.toDate?.().toISOString().slice(0, 16) || promo.fechaHoraExpiracion
+        : '',
     });
     setEditingId(promo.id);
     setShowForm(true);
@@ -294,6 +321,44 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
                   />
                 </div>
 
+                <div className="form-separator" style={{ marginTop: '30px', marginBottom: '20px', borderTop: '2px solid #ddd', paddingTop: '20px' }}>
+                  <h4 style={{ margin: '0 0 20px 0', color: '#333' }}>⚙️ Límites de Tickets (Opcional)</h4>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Máximo de Tickets (opcional)</label>
+                    <input
+                      type="number"
+                      name="ticketsMaximos"
+                      value={form.ticketsMaximos}
+                      onChange={handleChange}
+                      placeholder="Ej: 50"
+                      min="1"
+                      className={errores.ticketsMaximos ? 'input-error' : ''}
+                    />
+                    <small style={{ color: '#666', marginTop: '5px', display: 'block' }}>
+                      Deja vacío si no hay límite de cantidad
+                    </small>
+                    {errores.ticketsMaximos && <span className="error">{errores.ticketsMaximos}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label>Fecha y Hora de Expiración (opcional)</label>
+                    <input
+                      type="datetime-local"
+                      name="fechaHoraExpiracion"
+                      value={form.fechaHoraExpiracion}
+                      onChange={handleChange}
+                      className={errores.fechaHoraExpiracion ? 'input-error' : ''}
+                    />
+                    <small style={{ color: '#666', marginTop: '5px', display: 'block' }}>
+                      Hora exacta hasta la cual se pueden generar tickets
+                    </small>
+                    {errores.fechaHoraExpiracion && <span className="error">{errores.fechaHoraExpiracion}</span>}
+                  </div>
+                </div>
+
                 {errores.general && <div className="error-general">{errores.general}</div>}
 
                 <div className="form-buttons">
@@ -313,6 +378,8 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
                         fechaFin: '',
                         categoria: '',
                         imagen: '',
+                        ticketsMaximos: '',
+                        fechaHoraExpiracion: '',
                       });
                     }}
                     className="btn-cancelar"
@@ -347,7 +414,20 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
                       </div>
                       <div className="promo-stats">
                         <span>👁️ {promo.visualizaciones || 0} visualizaciones</span>
+                        {promo.ticketsMaximos && (
+                          <span>🎟️ {promo.ticketsGenerados || 0}/{promo.ticketsMaximos} tickets</span>
+                        )}
                       </div>
+                      {(promo.ticketsMaximos || promo.fechaHoraExpiracion) && (
+                        <div className="promo-limites" style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px', fontSize: '12px' }}>
+                          {promo.ticketsMaximos && (
+                            <p style={{ margin: '5px 0' }}>📊 Límite: {promo.ticketsMaximos} tickets</p>
+                          )}
+                          {promo.fechaHoraExpiracion && (
+                            <p style={{ margin: '5px 0' }}>⏰ Expira: {new Date(promo.fechaHoraExpiracion.toDate?.()).toLocaleString()}</p>
+                          )}
+                        </div>
+                      )}
                       <div className="promo-actions">
                         <button onClick={() => handleEdit(promo)} className="btn-edit">✏️ Editar</button>
                         <button onClick={() => handleDelete(promo.id)} className="btn-delete">🗑️ Eliminar</button>

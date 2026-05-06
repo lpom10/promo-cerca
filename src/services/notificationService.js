@@ -23,6 +23,7 @@ export const NOTIFICATION_TYPES = {
   EMPRESA_REJECTED: 'empresa_rechazada',
   NEW_REVIEW: 'nueva_resena',
   REFERRAL_BONUS: 'bonus_referido',
+  TICKETS_EXHAUSTED: 'tickets_agotados',
 };
 
 // Crear notificación
@@ -193,6 +194,24 @@ export const crearNotificacionTicketCanjeado = async (empresaId, clienteNombre, 
   );
 };
 
+// Crear notificación de tickets agotados
+export const crearNotificacionTicketsAgotados = async (empresaId, promocion) => {
+  const titulo = '🎟️ Tickets Agotados';
+  const mensaje = `Los tickets para "${promocion.titulo}" se han agotado.`;
+
+  return crearNotificacion(
+    empresaId,
+    NOTIFICATION_TYPES.TICKETS_EXHAUSTED,
+    titulo,
+    mensaje,
+    { 
+      promocionId: promocion.id,
+      promocionTitulo: promocion.titulo,
+      ticketsMaximos: promocion.ticketsMaximos 
+    }
+  );
+};
+
 // Obtener mensajes por tipo
 export const obtenerMensajePorTipo = (tipo) => {
   const mensajes = {
@@ -204,6 +223,7 @@ export const obtenerMensajePorTipo = (tipo) => {
     [NOTIFICATION_TYPES.EMPRESA_REJECTED]: { icon: '❌', color: '#dc3545' },
     [NOTIFICATION_TYPES.NEW_REVIEW]: { icon: '⭐', color: '#ffc107' },
     [NOTIFICATION_TYPES.REFERRAL_BONUS]: { icon: '💰', color: '#ffc107' },
+    [NOTIFICATION_TYPES.TICKETS_EXHAUSTED]: { icon: '🎟️', color: '#dc3545' },
   };
 
   return mensajes[tipo] || { icon: '📢', color: '#06b6d4' };

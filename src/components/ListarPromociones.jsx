@@ -3,7 +3,7 @@ import { db } from '../firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { categorias } from '../data/categorias';
-import { crearTicket, registrarVisualizacion, obtenerPromocionesTrending } from '../services/ticketService';
+import { crearTicket, registrarVisualizacion, obtenerPromocionesTrending, verificarDisponibilidadTickets, obtenerMensajeDisponibilidad, calcularTiempoRestante, formatearTiempoRestante } from '../services/ticketService';
 import VisualizarTicket from './VisualizarTicket';
 import '../styles/promociones.css';
 
@@ -16,6 +16,7 @@ const ListarPromociones = () => {
   const [busqueda, setBusqueda] = useState('');
   const [ordenamiento, setOrdenamiento] = useState('vencimiento'); // vencimiento | trending | descuento
   const [ticketSeleccionado, setTicketSeleccionado] = useState(null);
+  const [promocionActual, setPromocionActual] = useState(null);
   const [mostrarTrending, setMostrarTrending] = useState(false);
   const [error, setError] = useState('');
 
@@ -116,6 +117,7 @@ const ListarPromociones = () => {
       setError('');
       const ticket = await crearTicket(user.uid, promo.id, promo.empresaId, promo, userDetails);
       setTicketSeleccionado(ticket);
+      setPromocionActual(promo);
     } catch (error) {
       setError(error.message);
     }
@@ -148,7 +150,11 @@ const ListarPromociones = () => {
       {ticketSeleccionado && (
         <VisualizarTicket
           ticket={ticketSeleccionado}
-          onClose={() => setTicketSeleccionado(null)}
+          promocion={promocionActual}
+          onClose={() => {
+            setTicketSeleccionado(null);
+            setPromocionActual(null);
+          }}
         />
       )}
 
@@ -246,11 +252,17 @@ const ListarPromociones = () => {
           {promociones.map(promo => {
             const dias = diasFaltantes(promo.fechaFin);
             const vencida = dias < 0;
+            const disponibilidad = verificarDisponibilidadTickets(promo);
+            const mensajeDisponibilidad = obtenerMensajeDisponibilidad(disponibilidad);
+            const fechaExpCampo = promo.fechaHoraExpiracion || promo.fechaFin;
+            const tiempoRestante = calcularTiempoRestante(fechaExpCampo);
+            const textoTiempoRestante = tiempoRestante ? formatearTiempoRestante(tiempoRestante) : null;
+            const puedeGenerarTicket = !vencida && disponibilidad.disponible;
 
             return (
               <div
                 key={promo.id}
-                className={`promo-card-cliente ${vencida ? 'vencida' : ''}`}
+                className={`promo-card-cliente ${vencida ? 'vencida' : ''} ${!disponibilidad.disponible ? 'sin-tickets' : ''}`}
               >
                 {promo.imagen && (
                   <div className="promo-imagen">
@@ -273,6 +285,28 @@ const ListarPromociones = () => {
                   {/* Estadísticas */}
                   <div className="promo-stats">
                     <span className="visualizaciones">👁️ {promo.visualizaciones || 0}</span>
+                    {promo.ticketsMaximos && (
+                      <span className="tickets-info">🎟️ {promo.ticketsGenerados || 0}/{promo.ticketsMaximos}</span>
+                    )}
+                  </div>
+
+                  {/* Información de disponibilidad de tickets */}
+                  <div className="disponibilidad-tickets">
+                    <p className={`mensaje-disponibilidad ${disponibilidad.disponible ? 'disponible' : 'no-disponible'}`}>
+                      {disponibilidad.disponible ? '✅' : '⛔'} {mensajeDisponibilidad}
+                    </p>
+
+                    {promo.ticketsMaximos && disponibilidad.ticketsRestantes !== null && (
+                      <p className="tickets-restantes">
+                        🎟️ Quedan: <strong>{disponibilidad.ticketsRestantes}</strong> de {promo.ticketsMaximos}
+                      </p>
+                    )}
+
+                    {fechaExpCampo && (
+                      <p className="fecha-expiracion">
+                        ⏰ Vence: {textoTiempoRestante ? `${textoTiempoRestante} (${new Date(fechaExpCampo.toDate?.() || fechaExpCampo).toLocaleString()})` : new Date(fechaExpCampo.toDate?.() || fechaExpCampo).toLocaleString()}
+                      </p>
+                    )}
                   </div>
 
                   <div className="promo-footer">
@@ -290,8 +324,16 @@ const ListarPromociones = () => {
                     <button
                       className="btn-ticket"
                       onClick={() => handleClickTicket(promo)}
-                      disabled={vencida}
-                      title={userType !== 'cliente' ? 'Solo clientes pueden generar tickets' : vencida ? 'Promoción vencida' : 'Generar ticket'}
+                      disabled={!puedeGenerarTicket}
+                      title={
+                        userType !== 'cliente' 
+                          ? 'Solo clientes pueden generar tickets' 
+                          : !disponibilidad.disponible
+                          ? disponibilidad.razon
+                          : vencida 
+                          ? 'Promoción vencida' 
+                          : 'Generar ticket'
+                      }
                     >
                       🎟️ Ticket
                     </button>
