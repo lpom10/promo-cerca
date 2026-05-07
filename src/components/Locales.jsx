@@ -3,12 +3,24 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { categorias } from '../data/categorias';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { registrarVisualizacion, crearTicket } from '../services/ticketService';
+import {
+  registrarVisualizacion,
+  crearTicket,
+  verificarDisponibilidadTickets,
+  obtenerMensajeDisponibilidad,
+  calcularTiempoRestante,
+  formatearTiempoRestante,
+} from '../services/ticketService';
 import { useAuth } from '../context/AuthContext';
 
 const TicketModal = ({ ticket, local, onClose }) => {
   const codigo = ticket?.codigo || 'ERROR';
   const catEmoji = categorias.find(c => c.id === local.categoria)?.emoji || '🏷️';
+  const fechaExpiracion = local.fechaHoraExpiracion || local.fechaFin;
+  const fechaFinStr = fechaExpiracion
+    ? (fechaExpiracion.toDate ? new Date(fechaExpiracion.toDate()).toLocaleString() : new Date(fechaExpiracion).toLocaleString())
+    : '';
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -28,7 +40,7 @@ const TicketModal = ({ ticket, local, onClose }) => {
             : "Hubo un problema al generar tu ticket. Por favor, intenta de nuevo."}
         </p>
         <div className="ticket-meta">
-          <span>🗓️ Válido hasta: {local.fechaFin?.toDate ? new Date(local.fechaFin.toDate()).toLocaleDateString() : ''}</span>
+          <span>🗓️ Válido hasta: {fechaFinStr}</span>
         </div>
         {ticket && (
           <button className="ticket-copiar" onClick={() => navigator.clipboard?.writeText(codigo)}>
@@ -47,7 +59,12 @@ const LocalCard = ({ local, onTicket }) => {
   const catEmoji = categorias.find(c => c.id === local.categoria)?.emoji || '🏷️';
   const catLabel = categorias.find(c => c.id === local.categoria)?.label || 'Promoción';
   const color = '#06b6d4';
-  const fechaFinStr = local.fechaFin?.toDate ? new Date(local.fechaFin.toDate()).toLocaleDateString() : '';
+  const fechaExpiracion = local.fechaHoraExpiracion || local.fechaFin;
+  const fechaExpiracionStr = formatFechaHora(fechaExpiracion);
+  const disponibilidad = verificarDisponibilidadTickets(local);
+  const mensajeDisponibilidad = obtenerMensajeDisponibilidad(disponibilidad);
+  const tiempoRestante = fechaExpiracion ? calcularTiempoRestante(fechaExpiracion) : null;
+  const textoTiempoRestante = tiempoRestante ? formatearTiempoRestante(tiempoRestante) : null;
 
   return (
     <div className="local-card">
@@ -62,8 +79,32 @@ const LocalCard = ({ local, onTicket }) => {
         <div className="local-promo-box">
           🏷️ {local.titulo}
         </div>
-        <div className="local-meta">
-          <span>🗓️ Válido hasta: {fechaFinStr}</span>
+        <div className="local-meta" style={{ marginTop: '14px', padding: '14px 16px', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#334155', fontSize: '0.92rem', display: 'grid', gap: '8px' }}>
+          {fechaExpiracionStr && (
+            <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
+              🗓️ {local.fechaHoraExpiracion ? 'Vence:' : 'Válido hasta:'} {fechaExpiracionStr}
+            </span>
+          )}
+          <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
+            👁️ {local.visualizaciones || 0} vistas
+          </span>
+          {local.ticketsMaximos ? (
+            <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
+              🎟️ {Math.max(0, local.ticketsMaximos - (local.ticketsGenerados || 0))}/{local.ticketsMaximos} tickets disponibles
+            </span>
+          ) : (
+            <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
+              🎟️ {local.ticketsGenerados || 0} tickets generados
+            </span>
+          )}
+          {textoTiempoRestante && (
+            <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
+              ⏱️ {textoTiempoRestante}
+            </span>
+          )}
+          <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center', fontWeight: 600, color: disponibilidad.disponible ? '#166534' : '#991b1b' }}>
+            {mensajeDisponibilidad}
+          </span>
         </div>
       </div>
       <div className="local-card-footer">
@@ -84,6 +125,12 @@ const normalizarTexto = (texto) => {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+};
+
+const formatFechaHora = (fecha) => {
+  if (!fecha) return '';
+  const value = fecha.toDate ? fecha.toDate() : new Date(fecha);
+  return value.toLocaleString();
 };
 
 const Locales = () => {
