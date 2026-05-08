@@ -56,64 +56,63 @@ const TicketModal = ({ ticket, local, onClose }) => {
 };
 
 const LocalCard = ({ local, onTicket }) => {
-  const catEmoji = categorias.find(c => c.id === local.categoria)?.emoji || '🏷️';
-  const catLabel = categorias.find(c => c.id === local.categoria)?.label || 'Promoción';
-  const color = '#06b6d4';
+  const { user, userType, userDetails } = useAuth();
   const fechaExpiracion = local.fechaHoraExpiracion || local.fechaFin;
   const fechaExpiracionStr = formatFechaHora(fechaExpiracion);
   const disponibilidad = verificarDisponibilidadTickets(local);
-  const mensajeDisponibilidad = obtenerMensajeDisponibilidad(disponibilidad);
-  const tiempoRestante = fechaExpiracion ? calcularTiempoRestante(fechaExpiracion) : null;
-  const textoTiempoRestante = tiempoRestante ? formatearTiempoRestante(tiempoRestante) : null;
+  const imagen = local.imagen || local.image || '/placeholder.png';
+
+  const isOwner = userType === 'empresa' && userDetails?.empresaId === local.empresaId;
+
+  const handleEdit = () => {
+    window.location.href = `/GestorPromociones?id=${local.id}`;
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('¿Eliminar promoción? Esta acción no se puede deshacer.')) return;
+    try {
+      alert('Eliminar: acción pendiente de implementar.');
+    } catch (err) {
+      console.error(err);
+      alert('Error al eliminar.');
+    }
+  };
 
   return (
-    <div className="local-card">
-      <div className="local-card-top" style={{ background: color + '22', borderBottom: `3px solid ${color}` }}>
-        <span className="local-emoji-big">{catEmoji}</span>
-        {local.descuento && <span className="descuento-badge">-{local.descuento}%</span>}
+    <div className="promo-card">
+      <div className="promo-imagen">
+        <img src={imagen} alt={local.titulo || local.empresaNombre} />
       </div>
-      <div className="local-card-body">
-        <h3 className="local-nombre">{local.empresaNombre || 'Negocio'}</h3>
-        <span className="local-cat-tag">{catEmoji} {catLabel}</span>
-        <p className="local-desc">{local.descripcion}</p>
-        <div className="local-promo-box">
-          🏷️ {local.titulo}
+      <div className="promo-content">
+        <div className="promo-header">
+          <h3>{local.titulo || local.empresaNombre}</h3>
+          {local.descuento && <div className="descuento-grande">-{local.descuento}%</div>}
         </div>
-        <div className="local-meta" style={{ marginTop: '14px', padding: '14px 16px', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#334155', fontSize: '0.92rem', display: 'grid', gap: '8px' }}>
-          {fechaExpiracionStr && (
-            <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
-              🗓️ {local.fechaHoraExpiracion ? 'Vence:' : 'Válido hasta:'} {fechaExpiracionStr}
-            </span>
-          )}
-          <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
-            👁️ {local.visualizaciones || 0} vistas
-          </span>
-          {local.ticketsMaximos ? (
-            <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
-              🎟️ {Math.max(0, local.ticketsMaximos - (local.ticketsGenerados || 0))}/{local.ticketsMaximos} tickets disponibles
-            </span>
+
+        <div className="negocio-nombre">{local.empresaNombre}</div>
+
+        <p className="promo-descripcion">{local.descripcion}</p>
+
+        <div className="promo-info">
+          <div className="categoria">{categorias.find(c => c.id === local.categoria)?.label || 'Promoción'}</div>
+        </div>
+
+        <div className="promo-fechas">{fechaExpiracionStr}</div>
+
+        <div className="promo-stats">
+          👁️ {local.visualizaciones || 0} visualizaciones · 🎟️ {local.ticketsGenerados || 0}{local.ticketsMaximos ? ` / ${local.ticketsMaximos}` : ''} tickets
+        </div>
+
+        <div style={{ marginTop: 12 }} className="promo-actions">
+          {isOwner ? (
+            <>
+              <button className="btn-edit" onClick={handleEdit}>✏️ Editar</button>
+              <button className="btn-delete" onClick={handleDelete}>🗑️ Eliminar</button>
+            </>
           ) : (
-            <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
-              🎟️ {local.ticketsGenerados || 0} tickets generados
-            </span>
+            <button className="btn-ticket" onClick={() => onTicket(local)}>🎫 Obtener ticket</button>
           )}
-          {textoTiempoRestante && (
-            <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
-              ⏱️ {textoTiempoRestante}
-            </span>
-          )}
-          <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center', fontWeight: 600, color: disponibilidad.disponible ? '#166534' : '#991b1b' }}>
-            {mensajeDisponibilidad}
-          </span>
         </div>
-      </div>
-      <div className="local-card-footer">
-        <Link to={`/mapa?id=${local.id}`} className="btn-mapa">
-          🗺️ Ver en mapa
-        </Link>
-        <button className="btn-ticket" onClick={() => onTicket(local)}>
-          🎫 Obtener ticket
-        </button>
       </div>
     </div>
   );
