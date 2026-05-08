@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import '../styles/tickets.css';
 
 const VisualizarTicket = ({ ticket, onClose, promocion }) => {
@@ -71,19 +72,30 @@ const VisualizarTicket = ({ ticket, onClose, promocion }) => {
 
           {/* Información adicional sobre disponibilidad (si se proporciona promoción) */}
           {promocion && (promocion.ticketsMaximos || promocion.fechaHoraExpiracion) && (
-            <div className="info-limites" style={{ marginTop: '15px', padding: '12px', backgroundColor: '#f0f8ff', borderRadius: '6px', borderLeft: '3px solid #2196F3' }}>
-              <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#1976D2' }}>ℹ️ Información de disponibilidad:</p>
+            <div className="info-limites" style={{ marginTop: '15px', padding: '12px', backgroundColor: '#fff9f0', borderRadius: '6px', borderLeft: '3px solid #ffc22f' }}>
+              <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#d97706' }}>ℹ️ Información de disponibilidad:</p>
               {promocion.ticketsMaximos && (
-                <p style={{ margin: '5px 0', fontSize: '13px', color: '#333' }}>
+                <p style={{ margin: '5px 0', fontSize: '13px', color: '#475569' }}>
                   Tickets disponibles: {Math.max(0, promocion.ticketsMaximos - (promocion.ticketsGenerados || 0))} de {promocion.ticketsMaximos}
                 </p>
               )}
               {promocion.fechaHoraExpiracion && (
-                <p style={{ margin: '5px 0', fontSize: '13px', color: '#333' }}>
+                <p style={{ margin: '5px 0', fontSize: '13px', color: '#475569' }}>
                   Generación de tickets hasta: {new Date(promocion.fechaHoraExpiracion.toDate?.() || promocion.fechaHoraExpiracion).toLocaleString()}
                 </p>
               )}
             </div>
+          )}
+
+          {/* Ver perfil de la empresa */}
+          {ticket.empresaId && (
+            <Link
+              to={`/empresa/perfil/${ticket.empresaId}`}
+              className="btn-ver-empresa"
+              onClick={onClose}
+            >
+              🏢 Ver perfil de la empresa
+            </Link>
           )}
         </div>
       </div>

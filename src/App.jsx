@@ -14,6 +14,7 @@ import AdminDashboard from "./components/AdminDashboard.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import GestorPromociones from './components/GestorPromociones';
 import NotificationBell from "./components/NotificationBell.jsx";
+import PerfilPublicoEmpresa from "./components/PerfilPublicoEmpresa.jsx";
 
 
 function AppContent() {
@@ -96,6 +97,9 @@ function AppContent() {
         <Route path="/mapa" element={<Mapa />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
+
+        {/* Perfil público de empresa (accesible sin login) */}
+        <Route path="/empresa/perfil/:empresaId" element={<PerfilPublicoEmpresa />} />
         
         {/* Rutas protegidas */}
         <Route 
@@ -136,7 +140,6 @@ function AppContent() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      {/* AQUÍ YA NO DEBE HABER NADA MÁS */}
     </>
   );
 }

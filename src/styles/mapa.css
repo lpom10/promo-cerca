@@ -351,7 +351,7 @@
   min-height: 720px;
   border-radius: 28px;
   overflow: hidden;
-  background: white;
+  background: rgb(255, 255, 255);
   border: 1px solid rgba(226,232,240,0.8);
   box-shadow:
     0 12px 40px rgba(15,23,42,0.08);
