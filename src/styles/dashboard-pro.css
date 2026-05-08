@@ -693,3 +693,65 @@
   .dpro-kpi-value { font-size: 1.5rem; }
   .dpro-bar-row { grid-template-columns: 80px 1fr 30px; }
 }
+/* -- Ticket Usage Section ---------------------------------- */
+dpro-usage-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 1024px) {
+  .dpro-usage-grid { grid-template-columns: 1fr 1fr; }
+}
+.dpro-usage-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 16px;
+  border-radius: 12px;
+}
+.dpro-usage-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.dpro-usage-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+.dpro-usage-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.dpro-usage-badge.green { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.dpro-usage-badge.orange { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.dpro-usage-badge.red { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.dpro-usage-track {
+  height: 10px;
+  background: #1e293b;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.dpro-usage-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dpro-usage-fill.green { background: linear-gradient(90deg, #10b981, #34d399); }
+.dpro-usage-fill.orange { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.dpro-usage-fill.red { background: linear-gradient(90deg, #ef4444, #f87171); }
+.dpro-usage-warning {
+  font-size: 0.72rem;
+  color: #ef4444;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
