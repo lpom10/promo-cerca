@@ -27,7 +27,15 @@ const isPromoVencida = (fechaFin) => {
 const createEmpresaIcon = (count) => {
   const html = `
     <div class="empresa-marker">
-      <div class="empresa-marker-pin">📍</div>
+      <svg class="empresa-pin-svg" width="48" height="60" viewBox="0 0 48 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <filter id="pinShadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity="0.18"/>
+          </filter>
+        </defs>
+        <path d="M24 0C14 0 6 8 6 18c0 12 18 36 18 36s18-24 18-36C42 8 34 0 24 0z" fill="#2B87FF" filter="url(#pinShadow)"/>
+        <circle cx="24" cy="18" r="8" fill="#FFFFFF" opacity="0.98"/>
+      </svg>
       <div class="empresa-marker-badge">${count}</div>
     </div>
   `;
@@ -35,9 +43,9 @@ const createEmpresaIcon = (count) => {
   return L.divIcon({
     html,
     className: 'empresa-marker-div-icon',
-    iconSize: [40, 44],
-    iconAnchor: [20, 44],
-    popupAnchor: [0, -44],
+    iconSize: [48, 60],
+    iconAnchor: [24, 60],
+    popupAnchor: [0, -60],
   });
 };
 
@@ -256,7 +264,7 @@ const Mapa = () => {
             <input
               type="text"
               className="mapa-search"
-              placeholder="Buscar calle, provincia o ciudad..."
+              placeholder="Buscar promocion"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -352,11 +360,11 @@ const Mapa = () => {
           <input
             type="text"
             className="mapa-search"
-            placeholder="Buscar calle, provincia o ciudad..."
+            placeholder="Busca promociones o negocios"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button className="mapa-change-btn">Cambiar ubicación</button>
+          
         </div>
         <MapContainer
           center={[-4.007, -79.211]}

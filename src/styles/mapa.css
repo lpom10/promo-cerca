@@ -364,6 +364,13 @@
   z-index: 1;
 }
 
+/* Empresa marker (custom SVG pin + badge) */
+.empresa-marker-div-icon{background:transparent;border:none;cursor:pointer}
+.empresa-marker{position:relative;display:flex;align-items:flex-end;justify-content:center;width:48px;height:60px}
+.empresa-pin-svg{display:block}
+.empresa-marker-badge{position:absolute;top:-8px;right:-8px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800;box-shadow:0 8px 20px rgba(37,99,235,0.22);display:flex;align-items:center;justify-content:center}
+.empresa-marker-div-icon:hover .empresa-marker-badge{transform:translateY(-2px)}
+
 /* Search flotante */
 .mapa-search-overlay {
   position: absolute;
