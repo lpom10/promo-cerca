@@ -62,9 +62,7 @@ const TextField = () => {
           </form>
         </div>
 
-        <div className="hero-img-wrap">
-          <img src={empresaImg} alt="Negocios locales" className="hero-img" />
-        </div>
+        
       </div>
 
       {/* ──── Sección Mapa ──── */}

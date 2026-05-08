@@ -220,6 +220,7 @@ a {
   position: relative;
   z-index: 2;
   max-width: 620px;
+  text-align: center;
 }
 
 .hero-title {
@@ -230,6 +231,7 @@ a {
   line-height: 1.15;
   text-align: left;
   letter-spacing: -1px;
+  text-align: center;
 }
 
 .hero-title-accent {
