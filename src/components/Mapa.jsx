@@ -80,6 +80,7 @@ const Mapa = () => {
   const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(6);
   const markerRefs = useRef({});
+  const [selected, setSelected] = useState(null); // { empresa, promo }
 
   const empresas = useMemo(() => {
     const empresasMap = {};
@@ -235,6 +236,7 @@ const Mapa = () => {
         position={[cluster.lat, cluster.lng]}
         icon={createEmpresaIcon({ count: cluster.count, isCluster })}
         ref={(ref) => { if (ref && firstEmpresa) markerRefs.current[firstEmpresa.empresaId] = ref; }}
+        eventHandlers={{ click: () => setSelected({ empresa: firstEmpresa, promo: primaryPromo }) }}
       >
         <Tooltip direction="top" offset={[0, -50]} opacity={1}>
           <div style={{ width: isCluster ? 300 : 220 }}>
@@ -267,6 +269,8 @@ const Mapa = () => {
       </Marker>
     )});
   };
+
+  const closeOverlay = () => setSelected(null);
   return (
     <div className="mapa-page">
       <div className="mapa-wrapper">
@@ -396,6 +400,50 @@ const Mapa = () => {
 
           <VisibleMarkers items={empresasFiltradas} />
         </MapContainer>
+        {selected && (
+          <div className="promo-overlay" onClick={closeOverlay}>
+            <div className="promo-overlay-card" onClick={(e) => e.stopPropagation()}>
+              <button className="promo-overlay-close" onClick={closeOverlay}>✕</button>
+              <div className="promo-overlay-hero">
+                {selected.promo?.imagen ? (
+                  <img src={selected.promo.imagen} alt="" />
+                ) : (
+                  <div className="promo-overlay-placeholder">{getEmoji(selected.empresa.categoria)}</div>
+                )}
+              </div>
+              <div className="promo-overlay-body">
+                <h2 className="promo-overlay-title">{selected.promo?.titulo || selected.empresa.empresaNombre}</h2>
+                <div className="promo-overlay-sub">{selected.empresa.empresaNombre} • {selected.empresa.direccion || ''}</div>
+                <div className="promo-overlay-badges">
+                  <span className="badge categoria">{categorias.find(c => c.id === selected.empresa.categoria)?.label || 'Comercio'}</span>
+                  <span className="badge promos-count">{selected.empresa.promociones?.length || 0} promociones</span>
+                </div>
+                <p className="promo-overlay-desc">{selected.promo?.descripcion || selected.promo?.titulo}</p>
+
+                <div className="promo-overlay-others">
+                  <h4>Otras promociones</h4>
+                  <div className="promo-overlay-others-list">
+                    {selected.empresa.promociones?.filter(p => p.id !== (selected.promo && selected.promo.id)).map(p => (
+                      <div key={p.id} className="promo-mini">
+                        {p.imagen ? <img src={p.imagen} alt=""/> : <div className="mini-emoji">{getEmoji(p.categoria)}</div>}
+                        <div className="mini-info">
+                          <div className="mini-title">{p.titulo}</div>
+                          <div className="mini-meta">-{p.descuento ?? 0}%</div>
+                        </div>
+                      </div>
+                    ))}
+                    {!selected.empresa.promociones?.length && <div className="empty">No hay otras promociones</div>}
+                  </div>
+                </div>
+
+                <div className="promo-overlay-actions">
+                  <button className="btn-secondary" onClick={() => { navigate(`/locales?search=${encodeURIComponent(selected.empresa.empresaNombre)}`); }}>Ver en la lista</button>
+                  <button className="btn-primary" onClick={() => { navigate(`/PerfilEmpresas?id=${selected.empresa.empresaId}`); }}>Ver perfil</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       </div>
     </div>

@@ -589,3 +589,67 @@
   }
 }
 
+/* Promo overlay modal (map click) */
+.promo-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  background: rgba(2,6,23,0.45);
+  padding: 24px;
+}
+
+.promo-overlay-card {
+  width: 920px;
+  max-width: calc(100% - 48px);
+  background: linear-gradient(180deg, var(--bg-primary) 0%, #fff 100%);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(2,6,23,0.45);
+  border: 1px solid rgba(15,23,42,0.08);
+  display: grid;
+  grid-template-columns: 1fr 420px;
+}
+
+.promo-overlay-close {
+  position: absolute;
+  right: 28px;
+  top: 22px;
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  color: var(--color-dark);
+  cursor: pointer;
+}
+
+.promo-overlay-hero img { width: 100%; height: 260px; object-fit: cover; }
+.promo-overlay-placeholder { width:100%; height:260px; display:flex; align-items:center; justify-content:center; font-size:48px; background:linear-gradient(135deg,#eef2ff,#e0e7ff); }
+
+.promo-overlay-body { padding: 22px; display:flex; flex-direction:column; gap:12px; }
+.promo-overlay-title { margin:0; font-size:20px; color:var(--color-dark); font-weight:800; }
+.promo-overlay-sub { color:#64748b; font-size:13px; }
+.promo-overlay-badges { display:flex; gap:8px; }
+.badge { padding:6px 10px; border-radius:999px; font-weight:700; font-size:12px; }
+.badge.categoria { background: linear-gradient(135deg,var(--color-primary),var(--color-primary-light)); color:white }
+.badge.promos-count { background:#eef2ff; color:#3b82f6 }
+
+.promo-overlay-desc { color:#334155; font-size:14px; margin-top:8px }
+
+.promo-overlay-others { margin-top:8px }
+.promo-overlay-others-list { display:flex; gap:12px; overflow:auto; padding:6px 0 }
+.promo-mini { display:flex; gap:8px; align-items:center; background:#fff; border-radius:10px; padding:8px; min-width:220px; box-shadow:0 6px 18px rgba(2,6,23,0.06) }
+.promo-mini img { width:84px; height:64px; object-fit:cover; border-radius:8px }
+.mini-info .mini-title{ font-weight:700 }
+.mini-meta { color:#64748b; font-size:12px }
+
+.promo-overlay-actions { display:flex; gap:10px; margin-top:12px }
+.btn-primary { background: linear-gradient(135deg, var(--color-highlight) 0%, var(--color-secondary) 100%); color:var(--color-dark); padding:12px 18px; border-radius:12px; border:none; font-weight:800; cursor:pointer }
+.btn-secondary { background:transparent; border:1px solid rgba(15,23,42,0.06); padding:12px 18px; border-radius:12px; cursor:pointer }
+
+@media (max-width: 900px) {
+  .promo-overlay-card { grid-template-columns: 1fr; }
+  .promo-overlay-hero img, .promo-overlay-placeholder { height:180px }
+}
+
