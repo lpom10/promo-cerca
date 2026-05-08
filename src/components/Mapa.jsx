@@ -24,7 +24,7 @@ const isPromoVencida = (fechaFin) => {
   return fecha < new Date();
 };
 
-const createEmpresaIcon = (count) => {
+const createEmpresaIcon = ({ count = 1, isCluster = false } = {}) => {
   const html = `
     <div class="empresa-marker">
       <svg class="empresa-pin-svg" width="48" height="60" viewBox="0 0 48 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -225,31 +225,47 @@ const Mapa = () => {
       }
     });
 
-    return clusters.map((cluster, i) => (
+    return clusters.map((cluster, i) => {
+      const isCluster = cluster.empresas.length > 1 || cluster.count > 1;
+      const firstEmpresa = cluster.empresas[0];
+      const primaryPromo = firstEmpresa && firstEmpresa.promociones && firstEmpresa.promociones[0];
+      return (
       <Marker
         key={`cluster-${i}-${cluster.lat}-${cluster.lng}`}
         position={[cluster.lat, cluster.lng]}
-        icon={createEmpresaIcon(cluster.count)}
-        ref={(ref) => { if (ref && cluster.empresas[0]) markerRefs.current[cluster.empresas[0].empresaId] = ref; }}
+        icon={createEmpresaIcon({ count: cluster.count, isCluster })}
+        ref={(ref) => { if (ref && firstEmpresa) markerRefs.current[firstEmpresa.empresaId] = ref; }}
       >
-        <Tooltip direction="top" offset={[0, -40]} opacity={1}>
-          <div style={{ width: 260 }}>
-            <div style={{ fontWeight: 800, marginBottom: 6 }}>{cluster.count} promociones cerca</div>
-            <div style={{ display: 'grid', gap: 6 }}>
-              {cluster.empresas.slice(0, 4).flatMap(e => e.promociones.slice(0, 2)).slice(0, 6).map((promo) => (
-                <div key={promo.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  {promo.imagen ? <img src={promo.imagen} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6 }} loading="lazy"/> : <div style={{ width: 40, height: 40, background: '#e2e8f0', borderRadius: 6 }} />}
-                  <div style={{ overflow: 'hidden' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{promo.titulo}</div>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>-{promo.descuento}%</div>
-                  </div>
+        <Tooltip direction="top" offset={[0, -50]} opacity={1}>
+          <div style={{ width: isCluster ? 300 : 220 }}>
+            {isCluster ? (
+              <div>
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>{cluster.count} promociones en este punto</div>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  {cluster.empresas.slice(0, 4).flatMap(e => e.promociones.slice(0, 2)).slice(0, 6).map((promo) => (
+                    <div key={promo.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {promo.imagen ? <img src={promo.imagen} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6 }} loading="lazy"/> : <div style={{ width: 40, height: 40, background: '#e2e8f0', borderRadius: 6 }} />}
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{promo.titulo}</div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>-{promo.descuento}%</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                {primaryPromo?.imagen ? <img src={primaryPromo.imagen} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8 }} loading="lazy"/> : <div style={{ width: 56, height: 56, background: '#eef2ff', borderRadius: 8, display:'flex', alignItems:'center', justifyContent:'center' }}>{getEmoji(firstEmpresa?.categoria)}</div>}
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{firstEmpresa.empresaNombre}</div>
+                  <div style={{ fontSize: 13, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{primaryPromo?.titulo || 'Promoción'}</div>
+                </div>
+              </div>
+            )}
           </div>
         </Tooltip>
       </Marker>
-    ));
+    )});
   };
   return (
     <div className="mapa-page">
