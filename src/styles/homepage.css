@@ -128,7 +128,7 @@
 ═══════════════════════════════════════════ */
 
 .mapa-section {
-  background: #0f172a;
+  background: #ffffff;
   padding: 60px 5%;
   max-width: 1400px;
   margin: 0 auto;
@@ -177,7 +177,7 @@
 .mapa-title {
   font-size: 32px;
   font-weight: 800;
-  color: #f1f5f9;
+  color: #fb4c23;
   margin: 0;
   line-height: 1.2;
 }
@@ -214,7 +214,7 @@
 }
 
 .mapa-features strong {
-  color: #f1f5f9;
+  color: #fb4c23;
   display: block;
   margin-bottom: 4px;
 }

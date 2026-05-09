@@ -371,6 +371,18 @@
 .empresa-marker-badge{position:absolute;top:-8px;right:-8px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800;box-shadow:0 8px 20px rgba(37,99,235,0.22);display:flex;align-items:center;justify-content:center}
 .empresa-marker-div-icon:hover .empresa-marker-badge{transform:translateY(-2px)}
 
+/* Pulse animation for busy clusters */
+.empresa-marker-badge.pulse{animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{
+  0%{transform:scale(1);box-shadow:0 8px 20px rgba(37,99,235,0.22)}
+  50%{transform:scale(1.06);box-shadow:0 14px 30px rgba(37,99,235,0.28)}
+  100%{transform:scale(1);box-shadow:0 8px 20px rgba(37,99,235,0.22)}
+}
+
+/* Generated ticket display */
+.generated-ticket{display:flex;align-items:center;gap:12px;margin-top:8px}
+.generated-ticket .ticket-code{background:#f8fafc;padding:10px 12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);font-weight:800}
+
 /* Search flotante */
 .mapa-search-overlay {
   position: absolute;
@@ -596,7 +608,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 3000;
+  /* must be below the main header (.navbar z-index:1000) */
+  z-index: 900;
   background: rgba(2,6,23,0.45);
   padding: 24px;
 }

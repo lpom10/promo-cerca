@@ -10,8 +10,9 @@ import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 import { categorias } from '../data/categorias';
 import { collection, onSnapshot, getDocs } from 'firebase/firestore';
-import { verificarDisponibilidadTickets, obtenerMensajeDisponibilidad, calcularTiempoRestante, formatearTiempoRestante } from '../services/ticketService';
+import { verificarDisponibilidadTickets, obtenerMensajeDisponibilidad, calcularTiempoRestante, formatearTiempoRestante, crearTicket, registrarVisualizacion } from '../services/ticketService';
 import { db } from '../firebase';
+import { useAuth } from '../context/AuthContext';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
@@ -25,6 +26,8 @@ const isPromoVencida = (fechaFin) => {
 };
 
 const createEmpresaIcon = ({ count = 1, isCluster = false } = {}) => {
+  const badgeClass = isCluster && count > 5 ? 'empresa-marker-badge pulse' : 'empresa-marker-badge';
+  const badgeHtml = isCluster ? `<div class="${badgeClass}">${count}</div>` : '';
   const html = `
     <div class="empresa-marker">
       <svg class="empresa-pin-svg" width="48" height="60" viewBox="0 0 48 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -36,7 +39,7 @@ const createEmpresaIcon = ({ count = 1, isCluster = false } = {}) => {
         <path d="M24 0C14 0 6 8 6 18c0 12 18 36 18 36s18-24 18-36C42 8 34 0 24 0z" fill="#2B87FF" filter="url(#pinShadow)"/>
         <circle cx="24" cy="18" r="8" fill="#FFFFFF" opacity="0.98"/>
       </svg>
-      <div class="empresa-marker-badge">${count}</div>
+      ${badgeHtml}
     </div>
   `;
 
@@ -81,6 +84,11 @@ const Mapa = () => {
   const [visibleCount, setVisibleCount] = useState(6);
   const markerRefs = useRef({});
   const [selected, setSelected] = useState(null); // { empresa, promo }
+  const [expandedPromo, setExpandedPromo] = useState(null);
+  const [generatedTicket, setGeneratedTicket] = useState(null);
+  const [ticketLoading, setTicketLoading] = useState(false);
+  const [ticketError, setTicketError] = useState(null);
+  const { user, userType, userDetails } = useAuth();
 
   const empresas = useMemo(() => {
     const empresasMap = {};
@@ -271,6 +279,37 @@ const Mapa = () => {
   };
 
   const closeOverlay = () => setSelected(null);
+
+  const handleGenerateTicket = async (promo) => {
+    setTicketError(null);
+    if (!user) {
+      setTicketError('Debes iniciar sesión para obtener un ticket.');
+      return;
+    }
+    if (userType !== 'cliente') {
+      setTicketError('Solo usuarios clientes pueden obtener tickets.');
+      return;
+    }
+    try {
+      setTicketLoading(true);
+      try { await registrarVisualizacion(promo.id, selected.empresa.empresaId, user.uid); } catch (e) { /* ignore */ }
+      const ticket = await crearTicket(user.uid, promo.id, selected.empresa.empresaId, promo, userDetails);
+      setGeneratedTicket(ticket);
+    } catch (err) {
+      console.error('Error creando ticket:', err);
+      setTicketError(err?.message || 'Error al generar ticket');
+    } finally {
+      setTicketLoading(false);
+    }
+  };
+
+  // reset ephemeral overlay state when selection changes
+  useEffect(() => {
+    setExpandedPromo(null);
+    setGeneratedTicket(null);
+    setTicketError(null);
+    setTicketLoading(false);
+  }, [selected]);
   return (
     <div className="mapa-page">
       <div className="mapa-wrapper">
@@ -420,6 +459,28 @@ const Mapa = () => {
                 </div>
                 <p className="promo-overlay-desc">{selected.promo?.descripcion || selected.promo?.titulo}</p>
 
+                {/* Expanded promo detail (shows when user clicks Ver perfil) */}
+                {expandedPromo && expandedPromo.id === selected.promo?.id && (
+                  <div className="promo-overlay-detailed">
+                    <h3>Detalle de la promoción</h3>
+                    <div style={{ color:'#475569', fontSize:14, marginBottom:8 }}>{expandedPromo.descripcion || expandedPromo.titulo}</div>
+                    {expandedPromo.fechaFin && <div style={{ fontSize:13, color:'#64748b' }}>Válido hasta: {expandedPromo.fechaFin.toDate ? expandedPromo.fechaFin.toDate().toLocaleString() : String(expandedPromo.fechaFin)}</div>}
+                    <div style={{ marginTop:12 }}>
+                      {generatedTicket ? (
+                        <div className="generated-ticket">
+                          <div className="ticket-code">Código: <strong>{generatedTicket.codigo || generatedTicket.code || generatedTicket.id}</strong></div>
+                          <button className="btn-secondary" onClick={() => { navigator.clipboard?.writeText(generatedTicket.codigo || generatedTicket.code || generatedTicket.id); }}>Copiar código</button>
+                        </div>
+                      ) : (
+                        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                          <button className="btn-primary" onClick={() => handleGenerateTicket(expandedPromo)} disabled={ticketLoading}>{ticketLoading ? 'Generando...' : 'Obtener ticket'}</button>
+                          {ticketError && <div style={{ color:'#dc2626', fontSize:13 }}>{ticketError}</div>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="promo-overlay-others">
                   <h4>Otras promociones</h4>
                   <div className="promo-overlay-others-list">
@@ -438,7 +499,11 @@ const Mapa = () => {
 
                 <div className="promo-overlay-actions">
                   <button className="btn-secondary" onClick={() => { navigate(`/locales?search=${encodeURIComponent(selected.empresa.empresaNombre)}`); }}>Ver en la lista</button>
-                  <button className="btn-primary" onClick={() => { navigate(`/PerfilEmpresas?id=${selected.empresa.empresaId}`); }}>Ver perfil</button>
+                  {!expandedPromo || expandedPromo.id !== selected.promo?.id ? (
+                    <button className="btn-primary" onClick={() => { setExpandedPromo(selected.promo); }}>Ver perfil</button>
+                  ) : (
+                    <button className="btn-primary" onClick={() => { setExpandedPromo(null); }}>Cerrar detalle</button>
+                  )}
                 </div>
               </div>
             </div>
