@@ -26,17 +26,16 @@ export const generarCodigoTicket = () => {
 // Crear ticket para cliente
 export const crearTicket = async (usuarioId, promocionId, empresaId, promocionData, usuarioData) => {
   try {
-    // Verificar que no exista un ticket activo para esta promoción
+    // Verificar que no exista ya un ticket para esta promoción
     const q = query(
       collection(db, 'tickets'),
       where('usuarioId', '==', usuarioId),
-      where('promocionId', '==', promocionId),
-      where('estado', '==', 'generado')
+      where('promocionId', '==', promocionId)
     );
     
     const snapshot = await getDocs(q);
     if (!snapshot.empty) {
-      throw new Error('Ya tienes un ticket activo para esta promoción');
+      throw new Error('Ya has obtenido un ticket para esta promoción');
     }
 
     // Verificar límites de tickets
@@ -280,8 +279,9 @@ export const obtenerPromocionesTrending = async (limite = 5) => {
     const snapshot = await getDocs(q);
     const promos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
-    // Ordenar por visualizaciones
+    // Ordenar por visualizaciones y filtrar solo disponibles
     return promos
+      .filter(p => verificarDisponibilidadTickets(p).disponible)
       .sort((a, b) => (b.visualizaciones || 0) - (a.visualizaciones || 0))
       .slice(0, limite);
   } catch (error) {

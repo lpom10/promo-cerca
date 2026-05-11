@@ -187,7 +187,8 @@ const Locales = () => {
         normalizarTexto(l.descripcion).includes(q) ||
         normalizarTexto(l.titulo).includes(q);
       const matchCat = catActiva === 'todos' || l.categoria === catActiva;
-      return matchSearch && matchCat;
+      const disponible = verificarDisponibilidadTickets(l).disponible;
+      return matchSearch && matchCat && disponible;
     });
   }, [search, catActiva, locales]); 
 

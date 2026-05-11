@@ -95,8 +95,8 @@ const Mapa = () => {
 
     locales.forEach((promo) => {
       if (promo.activa === false) return;
-      if (isPromoVencida(promo.fechaFin)) return;
-      // Do not exclude promos without coords here; list should show empresas even without marker coords
+      if (!verificarDisponibilidadTickets(promo).disponible) return;
+      
       const key = promo.empresaId || promo.id;
       if (!empresasMap[key]) {
         empresasMap[key] = {
@@ -168,17 +168,31 @@ const Mapa = () => {
   }, []);
 
   
+  const promocionesFiltradas = locales.filter((promo) => {
+    if (promo.activa === false) return false;
+    if (!verificarDisponibilidadTickets(promo).disponible) return false;
+
+    const matchCat = catActiva === 'todos' || promo.categoria === catActiva;
+    const searchLower = search.toLowerCase();
+    const matchSearch = !searchLower || 
+      promo.empresaNombre?.toLowerCase().includes(searchLower) || 
+      promo.titulo?.toLowerCase().includes(searchLower);
+    
+    return matchCat && matchSearch;
+  });
+
   const empresasFiltradas = empresas.filter((empresa) => {
     const matchCat = catActiva === 'todos' || empresa.promociones.some((promo) => promo.categoria === catActiva);
     const searchLower = search.toLowerCase();
     const matchSearch = !searchLower || empresa.empresaNombre?.toLowerCase().includes(searchLower) || empresa.promociones.some((promo) => promo.titulo?.toLowerCase().includes(searchLower));
-    // Mostrar en la lista aunque no tengan coordenadas; marcadores se renderizan condicionalmente
     return matchCat && matchSearch;
   });
-  const totalPromos = empresas.reduce((s, e) => s + (e.promoCount || 0), 0);
+
+  const totalPromos = promocionesFiltradas.length;
+
   useEffect(() => {
-    console.log('Mapa: empresasFiltradas=', empresasFiltradas.length, empresasFiltradas.map(e => e.empresaNombre));
-  }, [empresasFiltradas]);
+    console.log('Mapa: promocionesFiltradas=', promocionesFiltradas.length);
+  }, [promocionesFiltradas]);
 
   useEffect(() => {
     console.log('Mapa: empresas coords=', empresas.map(e => ({ id: e.empresaId, lat: e.lat, lng: e.lng })));
@@ -354,58 +368,50 @@ const Mapa = () => {
             ))}
           </div>
           <div className="mapa-lista">
-          {empresasFiltradas.length === 0 && (
+          {promocionesFiltradas.length === 0 && (
             <p className="mapa-sin-resultados">Sin resultados</p>
           )}
-          {empresasFiltradas.slice(0, visibleCount).map((empresa) => {
-            const empresaActiva = targetId === empresa.empresaId || empresa.promociones.some((promo) => promo.id === targetId);
-            // pick primary promo (prefer one with image), and nearest expiration
-            const primaryPromo = empresa.promociones.find(p => p.imagen) || empresa.promociones[0];
-            // find earliest expiration date among promos
-            const fechas = empresa.promociones.map(p => p.fechaHoraExpiracion || p.fechaFin).filter(Boolean).map(f => f.toDate ? f.toDate() : new Date(f));
-            const fechaMasCercana = fechas.length ? new Date(Math.min(...fechas.map(d => d.getTime()))) : null;
-            const tiempoRest = fechaMasCercana ? calcularTiempoRestante(fechaMasCercana) : null;
+          {promocionesFiltradas.slice(0, visibleCount).map((promo) => {
+            const fechaExp = promo.fechaHoraExpiracion || promo.fechaFin;
+            const tiempoRest = fechaExp ? calcularTiempoRestante(fechaExp) : null;
             const textoTiempo = tiempoRest ? formatearTiempoRestante(tiempoRest) : null;
-            const anyDisponible = empresa.promociones.some(p => verificarDisponibilidadTickets(p).disponible);
-            const disponibilidadMensaje = primaryPromo ? obtenerMensajeDisponibilidad(verificarDisponibilidadTickets(primaryPromo)) : '';
+            const disp = verificarDisponibilidadTickets(promo);
+            const disponibilidadMensaje = obtenerMensajeDisponibilidad(disp);
+            
+            // Buscar la empresa correspondiente para las coordenadas
+            const empresa = empresas.find(e => e.empresaId === promo.empresaId);
 
             return (
               <div
-                key={empresa.empresaId}
-                className={`mapa-item ${empresaActiva ? 'active' : ''}`}
+                key={promo.id}
+                className={`mapa-item ${targetId === promo.id ? 'active' : ''}`}
                 onClick={() => {
-                  if (markerRefs.current[empresa.empresaId]) {
+                  if (empresa && markerRefs.current[empresa.empresaId]) {
                     const map = markerRefs.current[empresa.empresaId]._map;
                     if (map) map.setView([Number(empresa.lat), Number(empresa.lng)], 17, { animate: true });
                     markerRefs.current[empresa.empresaId].openPopup();
+                    setSelected({ empresa, promo });
                   } else {
-                    // No marker (no coords) -> navigate to the list/detail page
-                    navigate(`/locales?search=${encodeURIComponent(empresa.empresaNombre)}`);
+                    navigate(`/locales?search=${encodeURIComponent(promo.empresaNombre)}`);
                   }
                 }}
               >
-              <div className="mapa-item-img">
-                {primaryPromo?.imagen ? <img src={primaryPromo.imagen} alt="" loading="lazy" /> : <span className="mapa-item-emoji">{getEmoji(empresa.categoria)}</span>}
-              </div>
+                <div className="mapa-item-img">
+                  {promo.imagen ? <img src={promo.imagen} alt="" loading="lazy" /> : <span className="mapa-item-emoji">{getEmoji(promo.categoria)}</span>}
+                </div>
                 <div className="mapa-item-info">
-                <strong>{empresa.empresaNombre}</strong>
-                <div className="mapa-item-title" style={{fontSize:13,color:'#64748b',marginTop:4}}>{primaryPromo?.titulo || 'Promoción'}</div>
-                <div className="mapa-item-promos">
-                  {empresa.promociones.slice(0,3).map(p => (
-                    <small key={p.id} className="mapa-item-promo">{p.titulo || 'Sin título'} • -{(p.descuento ?? 0)}%</small>
-                  ))}
-                  {empresa.promoCount > 3 && <small className="mapa-item-promo">+{empresa.promoCount - 3} más</small>}
+                  <strong>{promo.empresaNombre}</strong>
+                  <div className="mapa-item-title" style={{fontSize:13,color:'#06b6d4',fontWeight:600,marginTop:4}}>{promo.titulo}</div>
+                  <div className="mapa-item-meta">
+                    {fechaExp && <span className="mapa-item-exp">Vence en: {textoTiempo}</span>}
+                    <span className={`mapa-item-availability ${disp.disponible ? 'available' : 'unavailable'}`}>{disponibilidadMensaje}</span>
+                  </div>
                 </div>
-                <div className="mapa-item-meta">
-                  {fechaMasCercana && <span className="mapa-item-exp">Vence en: {textoTiempo}</span>}
-                  <span className={`mapa-item-availability ${anyDisponible ? 'available' : 'unavailable'}`}>{anyDisponible ? disponibilidadMensaje : 'No disponible'}</span>
-                </div>
+                <span className="mapa-item-badge">-{promo.descuento}%</span>
               </div>
-              <span className="mapa-item-badge">{empresa.promoCount}</span>
-            </div>
             );
           })}
-          {empresasFiltradas.length > visibleCount && (
+          {promocionesFiltradas.length > visibleCount && (
             <div style={{ padding: 12, display: 'flex', justifyContent: 'center' }}>
               <button className="mapa-more-btn" onClick={() => setVisibleCount((v) => v + 6)}>Mostrar más</button>
             </div>

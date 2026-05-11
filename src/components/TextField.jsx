@@ -5,6 +5,7 @@ import L from 'leaflet';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { categorias } from '../data/categorias';
+import { verificarDisponibilidadTickets } from '../services/ticketService';
 import fondo from '../assets/fondo.png';
 import empresaImg from '../assets/empresa.png';
 import '../styles/homepage.css';
@@ -27,7 +28,12 @@ const TextField = () => {
     navigate(q ? `/locales?search=${encodeURIComponent(q)}` : '/locales');
   };
 
-  const promoMap = promociones.filter(p => p.lat !== undefined && p.lng !== undefined && p.activa !== false);
+  const promoMap = promociones.filter(p => 
+    p.lat !== undefined && 
+    p.lng !== undefined && 
+    p.activa !== false &&
+    verificarDisponibilidadTickets(p).disponible
+  );
 
   const getEmoji = (categoriaId) => categorias.find(c => c.id === categoriaId)?.emoji || '🏷️';
 

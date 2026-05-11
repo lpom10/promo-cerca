@@ -54,8 +54,8 @@ const ListarPromociones = () => {
           ...doc.data()
         }))
         .filter(promo => {
-          const fechaFin = promo.fechaFin.toDate?.() || new Date(promo.fechaFin);
-          return fechaFin >= hoy;
+          const disponibilidad = verificarDisponibilidadTickets(promo);
+          return disponibilidad.disponible;
         });
 
       // Aplicar búsqueda

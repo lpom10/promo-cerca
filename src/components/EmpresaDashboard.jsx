@@ -261,7 +261,8 @@ const EmpresaDashboard = () => {
     const matchEstado  = ticketFilter === 'todos' || t.estado === ticketFilter;
     const matchSearch  = !ticketSearch
       || (t.codigo || '').toLowerCase().includes(ticketSearch.toLowerCase())
-      || (t._promo?.titulo || '').toLowerCase().includes(ticketSearch.toLowerCase());
+      || (t._promo?.titulo || '').toLowerCase().includes(ticketSearch.toLowerCase())
+      || (t.usuarioNombre || '').toLowerCase().includes(ticketSearch.toLowerCase());
     return matchEstado && matchSearch;
   });
 

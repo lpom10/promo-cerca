@@ -46,9 +46,6 @@ const CanjeTickets = ({ empresaId }) => {
       setTicket(null);
       setCodigo('');
 
-      // Limpiar mensaje de éxito después de 3 segundos
-      setTimeout(() => setExitoCanjeado(false), 3000);
-
       // Enfocar input para siguiente escaneo
       inputRef.current?.focus();
     } catch (err) {
@@ -64,14 +61,29 @@ const CanjeTickets = ({ empresaId }) => {
 
       {/* Mensajes */}
       {error && <div className="alert alert-error">{error}</div>}
+      
       {exitoCanjeado && (
-        <div className="alert alert-success">
-          ✓ Ticket canjeado correctamente
+        <div className="exito-canjeado-container">
+          <div className="alert alert-success">
+            ✓ Ticket canjeado correctamente
+          </div>
+          <button 
+            className="btn-otro-ticket"
+            onClick={() => {
+              setExitoCanjeado(false);
+              setError('');
+              setCodigo('');
+              setTicket(null);
+              setTimeout(() => inputRef.current?.focus(), 100);
+            }}
+          >
+            🔄 Canjear otro ticket
+          </button>
         </div>
       )}
 
       {/* Búsqueda de código */}
-      {!ticket && (
+      {!ticket && !exitoCanjeado && (
         <form onSubmit={buscarTicket} className="buscar-form">
           <input
             ref={inputRef}
@@ -94,7 +106,7 @@ const CanjeTickets = ({ empresaId }) => {
       )}
 
       {/* Detalles del ticket encontrado */}
-      {ticket && !ticket.canjeado && (
+      {ticket && !exitoCanjeado && !ticket.canjeado && (
         <div className="ticket-detalles">
           <div className="ticket-header">
             <span className="codigo-grande">{ticket.codigo}</span>
@@ -155,13 +167,24 @@ const CanjeTickets = ({ empresaId }) => {
           ) : (
             <div className="ticket-canjeado-msg">
               ✓ Este ticket ya fue canjeado el {new Date(ticket.fechaCanjeado.toDate?.() || ticket.fechaCanjeado).toLocaleString()}
+              <button 
+                className="btn-cancelar" 
+                style={{marginTop: '1rem', width: '100%'}}
+                onClick={() => {
+                  setTicket(null);
+                  setCodigo('');
+                  inputRef.current?.focus();
+                }}
+              >
+                Volver
+              </button>
             </div>
           )}
         </div>
       )}
 
       {/* Estado inicial */}
-      {!ticket && !error && (
+      {!ticket && !error && !exitoCanjeado && (
         <div className="instrucciones">
           <p>📱 Escanea el código QR del cliente o ingresa el código manualmente</p>
           <p>Se mostrará la información del ticket para confirmar el canje</p>
