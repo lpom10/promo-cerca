@@ -7,19 +7,17 @@ import Locales from "./components/Locales.jsx";
 import Mapa from "./components/Mapa.jsx";
 import Registro from "./components/Registro.jsx";
 import Login from "./components/Login.jsx";
-import LoginTypeSelector from "./components/LoginTypeSelector.jsx";
 import ClienteDashboard from "./components/ClienteDashboard.jsx";
 import EmpresaDashboard from "./components/EmpresaDashboard.jsx";
 import AdminDashboard from "./components/AdminDashboard.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import GestorPromociones from './components/GestorPromociones';
 import NotificationBell from "./components/NotificationBell.jsx";
-import PerfilPublicoEmpresa from "./components/PerfilPublicoEmpresa.jsx";
-
+import PerfilEmpresaPublica from "./components/PerfilEmpresaPublica.jsx";   // ← Nuevo
 
 function AppContent() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user, userType, logout } = useAuth();
+  const { user, userType } = useAuth();
   const close = () => setMenuOpen(false);
 
   return (
@@ -39,7 +37,6 @@ function AppContent() {
           <span className={`bar ${menuOpen ? "open" : ""}`} />
         </button>
 
-        {/* Campana de notificaciones */}
         {user && <NotificationBell />}
 
         <nav className={`barra ${menuOpen ? "active" : ""}`}>
@@ -49,6 +46,7 @@ function AppContent() {
                 Locales
               </NavLink>
             </li>
+            
             {user ? (
               <>
                 <li>
@@ -62,7 +60,7 @@ function AppContent() {
                     } 
                     onClick={close}
                   >
-                    {userType === 'admin' ? '' : userType === 'empresa' ? '' : ''} Estadisticas
+                    Perfil
                   </NavLink>
                 </li>
                 {userType === 'empresa' && (
@@ -98,10 +96,10 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
 
-        {/* Perfil público de empresa (accesible sin login) */}
-        <Route path="/empresa/perfil/:empresaId" element={<PerfilPublicoEmpresa />} />
-        
-        {/* Rutas protegidas */}
+        {/* Perfil Público de Empresa */}
+        <Route path="/empresa/:empresaId" element={<PerfilEmpresaPublica />} />
+
+        {/* Rutas Protegidas */}
         <Route 
           path="/cliente/dashboard" 
           element={

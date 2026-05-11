@@ -47,7 +47,11 @@ const TicketModal = ({ ticket, local, onClose }) => {
             📋 Copiar código
           </button>
         )}
-        <Link to={`/PerfilEmpresas?id=${local.empresaId}`} className="perfil-empresa-btn">
+        <Link 
+          to={`/empresa/${local.empresaId}`} 
+          className="perfil-empresa-btn"
+          onClick={onClose}   // Cierra el modal al ir al perfil
+        >
           Ver perfil de la empresa
         </Link>
       </div>

@@ -1,16 +1,15 @@
-// src/firebase.js
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// Configuración de Firebase (reemplaza con tus claves reales de Firebase Console)
+// Configuración de Firebase desde variables de entorno
 const firebaseConfig = {
-  apiKey: "AIzaSyDndgGJAu9_LKb4XWfdPM5HQrYB4Vbdhsk",
-  authDomain: "promo-cerca-26495.firebaseapp.com",
-  projectId: "promo-cerca-26495",
-  storageBucket: "promo-cerca-26495.firebasestorage.app",
-  messagingSenderId: "789930623196",
-  appId: "1:789930623196:web:1da51efe73bbf7216f3419"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Inicializar Firebase
