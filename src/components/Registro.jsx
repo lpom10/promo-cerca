@@ -117,11 +117,23 @@ const Registro = () => {
     if (Object.keys(e2).length > 0) { setErrores(e2); return; }
     setErrores({});
     setLoading(true);
+
+    let user = null;
+
     try {
+      // ── PASO 1: Crear cuenta en Firebase Auth primero ──────────────────
+      // Esto establece la sesión (request.auth != null), lo que permite
+      // las consultas a Firestore que vienen después.
+      const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
+      user = userCredential.user;
+
+      // ── PASO 2: Verificar duplicados (ya autenticado) ──────────────────
       if (tipo === 'cliente') {
         const q = query(collection(db, 'usuarios'), where('cedula', '==', form.cedula));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
+          // Revertir: eliminar la cuenta de Auth recién creada
+          await user.delete();
           setErrores({ cedula: 'Esta cédula ya está registrada' });
           setLoading(false);
           return;
@@ -130,33 +142,25 @@ const Registro = () => {
         const q = query(collection(db, 'empresa'), where('ruc', '==', form.ruc));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
+          // Revertir: eliminar la cuenta de Auth recién creada
+          await user.delete();
           setErrores({ ruc: 'Este RUC ya está registrado' });
           setLoading(false);
           return;
         }
       }
 
-      console.log('Creando usuario en Auth...');
-      // Crear usuario en Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
-      const user = userCredential.user;
-      console.log('Usuario Auth creado:', user.uid);
-
-      // Determinar colección según tipo
+      // ── PASO 3: Guardar datos en Firestore ─────────────────────────────
       const coleccion = tipo === 'empresa' ? 'empresa' : 'usuarios';
-      
-      console.log(`Guardando datos en Firestore - colección: ${coleccion}...`);
-      // Guardar datos adicionales en Firestore
+
       const datosUsuario = {
         nombre: form.nombre,
         email: form.email,
         telefono: form.telefono || '',
-        // Estado según tipo de usuario
         estado: tipo === 'empresa' ? 'pendiente' : 'aprobado',
         createdAt: new Date(),
       };
 
-      // Agregar campos específicos según tipo
       if (tipo === 'empresa') {
         datosUsuario.negocio = form.negocio;
         datosUsuario.categoria = form.categoria;
@@ -169,10 +173,15 @@ const Registro = () => {
       }
 
       await setDoc(doc(db, coleccion, user.uid), datosUsuario);
-      console.log('Datos guardados en Firestore exitosamente');
 
       setStep(2);
     } catch (error) {
+      // Si Firestore falló después de crear el usuario en Auth,
+      // intentar limpiar la cuenta huérfana
+      if (user && error.code !== 'auth/email-already-in-use') {
+        try { await user.delete(); } catch (_) { /* ignorar */ }
+      }
+
       if (error.code === 'auth/email-already-in-use') {
         setErrores({ email: 'El email ya está registrado' });
       } else if (error.code === 'permission-denied') {
