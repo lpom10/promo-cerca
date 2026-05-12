@@ -18,6 +18,11 @@ const app = initializeApp(firebaseConfig);
 // Servicios
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+import { getStorage } from 'firebase/storage';
+
+// Initialize Firebase Storage
+export const storage = getStorage(app);
+
 export const googleProvider = new GoogleAuthProvider();
 
 export default app;

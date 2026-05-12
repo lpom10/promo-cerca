@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import '../styles/suscripciones.css';
+import PaymentModal from './PaymentModal';
 
 const GestorSuscripcion = () => {
   const { user } = useAuth();
@@ -10,6 +11,8 @@ const GestorSuscripcion = () => {
   const [historialSuscripciones, setHistorialSuscripciones] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [paymentPending, setPaymentPending] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     cargarSuscripciones();
@@ -76,38 +79,10 @@ const GestorSuscripcion = () => {
   ];
 
   const handlePlanSelect = async (plan) => {
-    const confirmacion = window.confirm(`Estás a punto de contratar el ${plan.nombre} por $${plan.precio}. ¿Confirmar pago simulado (Prueba)?`);
-    if (!confirmacion) return;
-
-    setLoading(true);
-    try {
-      // Simular tiempo de procesamiento de pasarela de pago
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      const fechaVencimiento = new Date();
-      fechaVencimiento.setDate(fechaVencimiento.getDate() + plan.duracion);
-
-      const nuevaSuscripcion = {
-        empresaId: user.uid,
-        plan: plan.id,
-        estado: 'activa',
-        precio: plan.precio,
-        duracion: plan.duracion,
-        fechaInicio: new Date(),
-        fechaVencimiento: fechaVencimiento,
-        metodoPago: 'pendiente', // Se actualizará cuando se integre con pasarela
-        renovacionAutomatica: true,
-        createdAt: new Date(),
-      };
-
-      await addDoc(collection(db, 'suscripciones'), nuevaSuscripcion);
-      cargarSuscripciones();
-      setSelectedPlan(null);
-      alert('¡Pago exitoso! Tu suscripción ha sido activada.');
-    } catch (error) {
-      console.error('Error al crear suscripción:', error);
-    }
-    setLoading(false);
+    // Open modal to confirm and upload receipt
+    setSelectedPlan({ ...plan, empresaId: user.uid });
+    setShowModal(true);
+    // No immediate processing here; modal will handle upload
   };
 
   return (
@@ -132,6 +107,36 @@ const GestorSuscripcion = () => {
             </p>
           </div>
         </div>
+      )}
+
+      {paymentPending && (
+        <div className="alert-info" style={{ 
+          backgroundColor: '#e3f2fd', 
+          color: '#1976d2', 
+          padding: '1rem', 
+          borderRadius: '8px', 
+          marginBottom: '1rem',
+          border: '1px solid #bbdefb',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <span>⏳</span>
+          <p style={{ margin: 0 }}><strong>Pago en revisión:</strong> Hemos recibido tu comprobante. Un administrador lo validará pronto para activar tu suscripción.</p>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showModal && selectedPlan && (
+        <PaymentModal
+          visible={showModal}
+          onClose={() => setShowModal(false)}
+          plan={selectedPlan}
+          onSuccess={() => {
+            setPaymentPending(true);
+            setShowModal(false);
+          }}
+        />
       )}
 
       <div className="planes-container">

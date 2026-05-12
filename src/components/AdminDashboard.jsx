@@ -2,19 +2,39 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { collection, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, query, where, updateDoc, doc, onSnapshot, addDoc } from 'firebase/firestore';
 
 const AdminDashboard = () => {
   const { user, userDetails, logout } = useAuth();
   const navigate = useNavigate();
   const [solicitudes, setSolicitudes] = useState([]);
   const [empresasAprobadas, setEmpresasAprobadas] = useState([]);
+  const [pagosPendientes, setPagosPendientes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('solicitudes');
 
   useEffect(() => {
     cargarSolicitudes();
     cargarEmpresasAprobadas();
+    const pagosRef = query(collection(db, 'pagos'), where('status', '==', 'espera'));
+    const unsubscribe = onSnapshot(pagosRef, async (snapshot) => {
+      const pagosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Fetch company names for each payment
+      const pagosConNombre = await Promise.all(pagosData.map(async (pago) => {
+        try {
+          const empresaDoc = await getDoc(doc(db, 'empresa', pago.empresaId));
+          return { ...pago, empresaNombre: empresaDoc.exists() ? empresaDoc.data().negocio : 'Empresa desconocida' };
+        } catch (error) {
+          return { ...pago, empresaNombre: 'Error al cargar nombre' };
+        }
+      }));
+      
+      setPagosPendientes(pagosConNombre);
+    }, (error) => {
+      console.error('Error listening to pagos:', error);
+    });
+    return () => unsubscribe();
   }, []);
 
   const cargarSolicitudes = async () => {
@@ -73,6 +93,35 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleApprovePago = async (pago) => {
+    try {
+      // 1. Actualizar el estado del pago
+      await updateDoc(doc(db, 'pagos', pago.id), { status: 'aprobado' });
+
+      // 2. Crear la suscripción para la empresa
+      const fechaVencimiento = new Date();
+      fechaVencimiento.setDate(fechaVencimiento.getDate() + 30); // 30 días de duración
+
+      await addDoc(collection(db, 'suscripciones'), {
+        empresaId: pago.empresaId,
+        plan: pago.planId,
+        estado: 'activa',
+        precio: pago.monto,
+        duracion: 30,
+        fechaInicio: new Date(),
+        fechaVencimiento: fechaVencimiento,
+        metodoPago: 'transferencia',
+        renovacionAutomatica: true,
+        createdAt: new Date(),
+      });
+
+      alert('Pago aprobado y suscripción activada');
+    } catch (error) {
+      console.error('Error al aprobar pago:', error);
+      alert('Error al aprobar el pago');
+    }
+  };
+
   const rechazarSolicitud = async (empresaId, motivo) => {
     try {
       await updateDoc(doc(db, 'empresa', empresaId), {
@@ -99,24 +148,24 @@ const AdminDashboard = () => {
         >
           📋 Solicitudes Pendientes ({solicitudes.length})
         </button>
-        <button 
-          className={`tab ${activeTab === 'empresas' ? 'active' : ''}`}
-          onClick={() => setActiveTab('empresas')}
-        >
-          🏢 Empresas Aprobadas
-        </button>
-        <button 
-          className={`tab ${activeTab === 'suscripciones' ? 'active' : ''}`}
-          onClick={() => setActiveTab('suscripciones')}
-        >
-          💳 Suscripciones
-        </button>
-        <button 
-          className={`tab ${activeTab === 'estadisticas' ? 'active' : ''}`}
-          onClick={() => setActiveTab('estadisticas')}
-        >
-          📊 Estadísticas
-        </button>
+          <button 
+            className={`tab ${activeTab === 'empresas' ? 'active' : ''}`}
+            onClick={() => setActiveTab('empresas')}
+          >
+            🏢 Empresas Aprobadas
+          </button>
+          <button 
+            className={`tab ${activeTab === 'suscripciones' ? 'active' : ''}`}
+            onClick={() => setActiveTab('suscripciones')}
+          >
+            💳 Suscripciones ({pagosPendientes.length})
+          </button>
+          <button 
+            className={`tab ${activeTab === 'estadisticas' ? 'active' : ''}`}
+            onClick={() => setActiveTab('estadisticas')}
+          >
+            📊 Estadísticas
+          </button>
       </div>
 
       <div className="admin-content">
@@ -193,11 +242,92 @@ const AdminDashboard = () => {
         )}
 
         {activeTab === 'suscripciones' && (
-          <div className="suscripciones-section">
-            <h2>Gestión de Suscripciones</h2>
-            <p>Aquí verás las suscripciones activas</p>
+          <div className="pagos-section">
+            <h2>Gestión de Suscripciones y Pagos</h2>
+            <p className="info-sub">Revisa los comprobantes de transferencia y aprueba las suscripciones.</p>
+            
+            {pagosPendientes.length === 0 ? (
+              <p className="info-texto">No hay pagos pendientes de revisión en este momento.</p>
+            ) : (
+              <div className="pagos-list">
+                {pagosPendientes.map(pago => (
+                  <div key={pago.id} className="pago-card" style={{ 
+                    border: '1px solid #ddd', 
+                    borderRadius: '8px', 
+                    padding: '1.5rem', 
+                    marginBottom: '1rem',
+                    backgroundColor: '#f9f9f9',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <h3 style={{ margin: '0 0 5px 0' }}>{pago.empresaNombre}</h3>
+                        <p style={{ margin: '0', fontSize: '0.9rem', color: '#666' }}>ID: {pago.empresaId}</p>
+                      </div>
+                      <span style={{ 
+                        backgroundColor: '#fff3e0', 
+                        color: '#ef6c00', 
+                        padding: '4px 10px', 
+                        borderRadius: '12px', 
+                        fontSize: '0.8rem',
+                        fontWeight: '600'
+                      }}>Pendiente</span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '10px' }}>
+                      <div>
+                        <p><strong>Plan solicitado:</strong> {pago.planId}</p>
+                        <p><strong>Monto a validar:</strong> <span style={{ color: '#2e7d32', fontWeight: 'bold' }}>${pago.monto}</span></p>
+                        <p><strong>Fecha:</strong> {pago.createdAt?.toDate?.() ? new Date(pago.createdAt.toDate()).toLocaleString() : 'N/A'}</p>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <p style={{ marginBottom: '5px' }}><strong>Comprobante:</strong></p>
+                        <a href={pago.receiptUrl} target="_blank" rel="noopener noreferrer">
+                          <img 
+                            src={pago.receiptUrl} 
+                            alt="Comprobante" 
+                            style={{ 
+                              maxWidth: '150px', 
+                              borderRadius: '4px', 
+                              border: '1px solid #ccc',
+                              cursor: 'zoom-in',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            }} 
+                          />
+                        </a>
+                      </div>
+                    </div>
+
+                    <div className="pago-actions" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                      <button 
+                        onClick={() => handleApprovePago(pago)} 
+                        className="btn-approve"
+                        style={{ flex: '1', padding: '10px', backgroundColor: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}
+                      >
+                        ✅ Aprobar y Activar Suscripción
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          const motivo = prompt('Motivo del rechazo:');
+                          if (motivo) {
+                            await updateDoc(doc(db, 'pagos', pago.id), { status: 'rechazado', motivo });
+                          }
+                        }} 
+                        className="btn-reject"
+                        style={{ padding: '10px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}
+                      >
+                        ❌ Rechazar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
+
 
         {activeTab === 'estadisticas' && (
           <div className="estadisticas-section">
