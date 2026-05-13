@@ -421,16 +421,7 @@ const Mapa = () => {
       </aside>
 
       <div className="mapa-container">
-        <div className="mapa-search-overlay">
-          <input
-            type="text"
-            className="mapa-search"
-            placeholder="Busca promociones o negocios"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          
-        </div>
+        
         <MapContainer
           center={[-4.007, -79.211]}
           zoom={15}

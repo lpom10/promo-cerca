@@ -13,13 +13,14 @@ const PerfilEmpresaPublica = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Cargar empresa
+  // 1. Cargar datos de la empresa
   useEffect(() => {
     if (!empresaId) return;
 
     const cargarEmpresa = async () => {
       try {
-        const empresaRef = doc(db, 'empresas', empresaId);
+        // CORRECCIÓN: 'empresas' en plural como en tu Firebase
+        const empresaRef = doc(db, 'empresa', empresaId);
         const snap = await getDoc(empresaRef);
 
         if (snap.exists()) {
@@ -28,17 +29,15 @@ const PerfilEmpresaPublica = () => {
           setError("Empresa no encontrada");
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error al cargar empresa:", err);
         setError("Error al cargar la empresa");
-      } finally {
-        setLoading(false);
       }
     };
 
     cargarEmpresa();
   }, [empresaId]);
 
-  // Cargar promociones
+  // 2. Cargar promociones en tiempo real
   useEffect(() => {
     if (!empresaId) return;
 
@@ -48,84 +47,53 @@ const PerfilEmpresaPublica = () => {
       where('activa', '==', true)
     );
 
-    const unsub = onSnapshot(q, (snapshot) => {
-      setPromociones(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const promosData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setPromociones(promosData);
+      setLoading(false);
+    }, (err) => {
+      console.error("Error en promociones:", err);
+      setLoading(false);
     });
 
-    return () => unsub();
+    return () => unsubscribe();
   }, [empresaId]);
 
-  if (loading) {
-    return (
-      <div className="perfil-publico-loading">
-        <div className="loader"></div>
-        <p>Cargando perfil de la empresa...</p>
-      </div>
-    );
-  }
-
-  if (error || !empresa) {
-    return (
-      <div className="perfil-publico-error">
-        <h2>❌ {error || "Empresa no encontrada"}</h2>
-        <button onClick={() => navigate(-1)} className="btn-volver">
-          ← Volver
-        </button>
-      </div>
-    );
-  }
+  if (loading) return <div className="perfil-publico-loading"><div className="loader"></div></div>;
+  if (error) return <div className="error-container">{error}</div>;
 
   return (
     <div className="perfil-publico-container">
-      {/* Header */}
-      <div className="perfil-publico-header">
+      <header className="perfil-publico-header">
         <button onClick={() => navigate(-1)} className="btn-volver-header">
           ← Volver
         </button>
-        <h1>{empresa.nombre || empresa.negocio}</h1>
-      </div>
+        <h1>{empresa?.nombreComercial || 'Perfil de Empresa'}</h1>
+      </header>
 
       <div className="perfil-publico-content">
-        {/* Información principal */}
         <div className="perfil-publico-info">
           <div className="perfil-publico-avatar">
-            {empresa.logo ? (
-              <img src={empresa.logo} alt={empresa.nombre} />
+            {empresa?.logoUrl ? (
+              <img src={empresa.logoUrl} alt="Logo" />
             ) : (
-              <div className="avatar-placeholder">🏪</div>
+              <div className="avatar-placeholder">{empresa?.nombreComercial?.charAt(0)}</div>
             )}
           </div>
-
           <div className="perfil-publico-detalles">
-            <h2>{empresa.nombre || empresa.negocio}</h2>
-            
-            {empresa.direccion && (
-              <p className="info-item">
-                📍 {empresa.direccion}
-              </p>
-            )}
-            {empresa.telefono && (
-              <p className="info-item">
-                📞 {empresa.telefono}
-              </p>
-            )}
-            {empresa.horarios && (
-              <p className="info-item">
-                🕒 {empresa.horarios}
-              </p>
-            )}
-
-            {empresa.descripcion && (
-              <p className="perfil-descripcion">{empresa.descripcion}</p>
-            )}
+            <h2>{empresa?.nombreComercial}</h2>
+            <p className="info-item">📍 {empresa?.direccion}</p>
+            <p className="info-item">📞 {empresa?.telefono}</p>
+            <p className="perfil-descripcion">{empresa?.descripcion}</p>
           </div>
         </div>
 
-        {/* Promociones */}
-        <div className="promociones-section">
+        <div className="promociones-seccion">
           <h3 className="section-title">
-            Promociones Activas 
-            <span className="count">({promociones.length})</span>
+            Promociones Activas <span className="count">{promociones.length}</span>
           </h3>
 
           {promociones.length === 0 ? (
@@ -136,19 +104,32 @@ const PerfilEmpresaPublica = () => {
             <div className="promociones-grid">
               {promociones.map((promo) => (
                 <div key={promo.id} className="promo-card-public">
-                  <div className="promo-card-content">
-                    <div className="promo-header">
-                      <span className="promo-emoji">{promo.emoji || '🏷️'}</span>
-                      <h4>{promo.titulo}</h4>
-                    </div>
-                    <p className="promo-descripcion">{promo.descripcion}</p>
+                  
+                  {/* CONTENEDOR DE IMAGEN */}
+                  <div className="promo-image-container">
+                    {promo.imagenUrl ? (
+                      <img 
+                        src={promo.imagenUrl} 
+                        alt={promo.titulo} 
+                        className="promo-image" 
+                      />
+                    ) : (
+                      <div className="promo-image-placeholder">
+                        <span className="promo-emoji-large">{promo.emoji || '🏷️'}</span>
+                      </div>
+                    )}
                     
                     {promo.descuento && (
-                      <div className="descuento-badge">
+                      <div className="descuento-badge-overlay">
                         -{promo.descuento}%
                       </div>
                     )}
+                  </div>
 
+                  <div className="promo-card-content">
+                    <h4>{promo.titulo}</h4>
+                    <p className="promo-descripcion">{promo.descripcion}</p>
+                    
                     <div className="promo-footer">
                       <span className="valido-hasta">
                         Válido hasta: {promo.fechaFin?.toDate 
