@@ -7,12 +7,10 @@ import {
   registrarVisualizacion,
   crearTicket,
   verificarDisponibilidadTickets,
-  obtenerMensajeDisponibilidad,
-  calcularTiempoRestante,
-  formatearTiempoRestante,
 } from '../services/ticketService';
 import { useAuth } from '../context/AuthContext';
 
+// --- COMPONENTE: MODAL DEL TICKET (Sin el botón de perfil) ---
 const TicketModal = ({ ticket, local, onClose }) => {
   const codigo = ticket?.codigo || 'ERROR';
   const catEmoji = categorias.find(c => c.id === local.categoria)?.emoji || '🏷️';
@@ -47,23 +45,16 @@ const TicketModal = ({ ticket, local, onClose }) => {
             📋 Copiar código
           </button>
         )}
-        <Link 
-          to={`/empresa/${local.empresaId}`} 
-          className="perfil-empresa-btn"
-          onClick={onClose}   // Cierra el modal al ir al perfil
-        >
-          Ver perfil de la empresa
-        </Link>
       </div>
     </div>
   );
 };
 
+// --- COMPONENTE: TARJETA DE LOCAL ---
 const LocalCard = ({ local, onTicket }) => {
   const { user, userType, userDetails } = useAuth();
   const fechaExpiracion = local.fechaHoraExpiracion || local.fechaFin;
   const fechaExpiracionStr = formatFechaHora(fechaExpiracion);
-  const disponibilidad = verificarDisponibilidadTickets(local);
   const imagen = local.imagen || local.image || '/placeholder.png';
 
   const isOwner = userType === 'empresa' && userDetails?.empresaId === local.empresaId;
@@ -93,28 +84,43 @@ const LocalCard = ({ local, onTicket }) => {
           {local.descuento && <div className="descuento-grande">-{local.descuento}%</div>}
         </div>
 
-        <div className="negocio-nombre">{local.empresaNombre}</div>
+        {/* El nombre del negocio ahora también es un link al perfil */}
+        <Link to={`/empresa/${local.empresaId}`} style={{ textDecoration: 'none' }}>
+            <div className="negocio-nombre">🏢 {local.empresaNombre}</div>
+        </Link>
 
         <p className="promo-descripcion">{local.descripcion}</p>
 
         <div className="promo-info">
-          <div className="categoria">{categorias.find(c => c.id === local.categoria)?.label || 'Promoción'}</div>
+          <div className="categoria">
+            {categorias.find(c => c.id === local.categoria)?.label || 'Promoción'}
+          </div>
         </div>
 
-        <div className="promo-fechas">{fechaExpiracionStr}</div>
+        <div className="promo-fechas">Vence: {fechaExpiracionStr}</div>
 
         <div className="promo-stats">
-          👁️ {local.visualizaciones || 0} visualizaciones · 🎟️ {local.ticketsGenerados || 0}{local.ticketsMaximos ? ` / ${local.ticketsMaximos}` : ''} tickets
+          <span className="visualizaciones">👁️ {local.visualizaciones || 0}</span>
+          <span className="tickets-info">🎟️ {local.ticketsGenerados || 0}{local.ticketsMaximos ? ` / ${local.ticketsMaximos}` : ''}</span>
         </div>
 
-        <div style={{ marginTop: 12 }} className="promo-actions">
+        <div className="promo-actions" style={{ marginTop: '15px' }}>
           {isOwner ? (
             <>
               <button className="btn-edit" onClick={handleEdit}>✏️ Editar</button>
               <button className="btn-delete" onClick={handleDelete}>🗑️ Eliminar</button>
             </>
           ) : (
-            <button className="btn-ticket" onClick={() => onTicket(local)}>🎫 Obtener ticket</button>
+            <>
+              {/* BOTÓN NUEVO: Visible para todos los usuarios antes de sacar ticket */}
+              <Link to={`/empresa/${local.empresaId}`} className="btn-edit" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                🔎 Perfil
+              </Link>
+              
+              <button className="btn-ticket" onClick={() => onTicket(local)}>
+                🎫 Ticket
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -122,12 +128,10 @@ const LocalCard = ({ local, onTicket }) => {
   );
 };
 
+// --- FUNCIONES AUXILIARES ---
 const normalizarTexto = (texto) => {
   if (!texto) return '';
-  return texto
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+  return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 };
 
 const formatFechaHora = (fecha) => {
@@ -136,6 +140,7 @@ const formatFechaHora = (fecha) => {
   return value.toLocaleString();
 };
 
+// --- COMPONENTE PRINCIPAL: LOCALES ---
 const Locales = () => {
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -146,33 +151,25 @@ const Locales = () => {
   const { user, userType, userDetails } = useAuth();
 
   const handleTicketClick = async (local) => {
-    // 1. Registrar visualización
     try {
       await registrarVisualizacion(local.id, local.empresaId, user?.uid || null);
     } catch (error) {
-      console.error('Error al registrar visualización:', error);
+      console.error('Error visualización:', error);
     }
 
-    // 2. Generar ticket real si está logueado como cliente
     if (user && userType === 'cliente') {
       try {
         const newTicket = await crearTicket(user.uid, local.id, local.empresaId, local, userDetails);
         setActiveTicket(newTicket);
+        setTicketLocal(local);
       } catch (error) {
-        console.error('Error al crear ticket:', error);
-        alert(error.message || 'No se pudo generar el ticket. Intenta de nuevo.');
-        return;
+        alert(error.message || 'Error al generar ticket.');
       }
     } else if (user) {
-      alert('Solo los clientes pueden generar tickets de descuento.');
-      return;
+      alert('Solo los clientes pueden generar tickets.');
     } else {
       alert('Debes iniciar sesión para obtener un ticket.');
-      // Opcional: navigate('/login')
-      return;
     }
-
-    setTicketLocal(local);
   };
 
   useEffect(() => { 
@@ -185,58 +182,52 @@ const Locales = () => {
   const localesFiltrados = useMemo(() => {
     const q = search.toLowerCase();
     return locales.filter((l) => {
-      const matchSearch =
-        !q ||
-        normalizarTexto(l.empresaNombre).includes(q) ||
-        normalizarTexto(l.descripcion).includes(q) ||
+      const matchSearch = !q || 
+        normalizarTexto(l.empresaNombre).includes(q) || 
         normalizarTexto(l.titulo).includes(q);
       const matchCat = catActiva === 'todos' || l.categoria === catActiva;
-      const disponible = verificarDisponibilidadTickets(l).disponible;
-      return matchSearch && matchCat && disponible;
+      return matchSearch && matchCat;
     });
   }, [search, catActiva, locales]); 
 
   return (
-    <div className="locales-page">
+    <div className="locales-page" style={{ padding: '20px' }}>
       <div className="locales-header">
         <h1 className="locales-titulo">Locales y Promociones</h1>
-        <input
-          type="text"
-          className="locales-search"
-          placeholder=" Buscar negocios, categorías o promociones..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <div className="categorias-bar">
+        <div className="search-box">
+            <input
+            type="text"
+            className="search-input"
+            placeholder=" Buscar negocios o promociones..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            />
+        </div>
+        <div className="filtros" style={{ marginTop: '15px' }}>
+          <button 
+            className={`filtro-btn ${catActiva === 'todos' ? 'active' : ''}`}
+            onClick={() => setCatActiva('todos')}
+          >
+            Todos
+          </button>
           {categorias.map((cat) => (
             <button
               key={cat.id}
-              className={`cat-btn ${catActiva === cat.id ? 'active' : ''}`}
+              className={`filtro-btn ${catActiva === cat.id ? 'active' : ''}`}
               onClick={() => setCatActiva(cat.id)}
             >
               {cat.emoji} {cat.label}
             </button>
           ))}
         </div>
-        <p className="locales-count">
-          {localesFiltrados.length === 0
-            ? 'Sin resultados'
-            : `${localesFiltrados.length} negocio${localesFiltrados.length !== 1 ? 's' : ''} encontrado${localesFiltrados.length !== 1 ? 's' : ''}`}
-        </p>
       </div>
 
       {localesFiltrados.length === 0 ? (
         <div className="no-results">
-          <p>😕 No encontramos negocios con esos criterios.</p>
-          <button
-            className="btn-limpiar"
-            onClick={() => { setSearch(''); setCatActiva('todos'); }}
-          >
-            Limpiar filtros
-          </button>
+          <p>No hay promociones disponibles.</p>
         </div>
       ) : (
-        <div className="locales-grid">
+        <div className="promociones-grid" style={{ marginTop: '25px' }}>
           {localesFiltrados.map((local) => (
             <LocalCard key={local.id} local={local} onTicket={handleTicketClick} />
           ))}

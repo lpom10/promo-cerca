@@ -1,17 +1,20 @@
-/* Estilos para Canje de Tickets en Empresa */
+/* Estilos para Canje de Tickets en Empresa - Unificado con tema naranja */
 
 .canje-tickets-container {
-  background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
-  border-radius: 12px;
+  background: #ffffff;
+  border-radius: 16px;
   padding: 2rem;
-  border: 1px solid #06b6d4;
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 10px 30px rgba(251, 75, 35, 0.1);
+  max-width: 700px;
+  margin: 2rem auto;
 }
 
 .canje-tickets-container h2 {
-  color: #06b6d4;
+  color: var(--color-primary);
   margin-top: 0;
   margin-bottom: 1.5rem;
-  font-size: 1.3rem;
+  font-size: 1.6rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -20,316 +23,117 @@
 /* Alertas */
 .alert {
   padding: 1rem;
-  border-radius: 8px;
+  border-radius: 12px;
   margin-bottom: 1.5rem;
   font-weight: 500;
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .alert-error {
-  background: rgba(239, 68, 68, 0.1);
-  color: #fca5a5;
+  background: #fee2e2;
+  color: #b91c1c;
   border: 1px solid #ef4444;
 }
 
 .alert-success {
-  background: rgba(74, 222, 128, 0.1);
-  color: #86efac;
-  border: 1px solid #4ade80;
-}
-
-/* Success container */
-.exito-canjeado-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
-  animation: slideIn 0.3s ease-out;
-  padding: 1rem 0;
-}
-
-.exito-canjeado-container .alert {
-  width: 100%;
-  margin-bottom: 0;
-}
-
-.btn-otro-ticket {
-  background: linear-gradient(135deg, #06b6d4, #0891b2);
-  color: #0f172a;
-  border: none;
-  padding: 1rem 2rem;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 1.1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.btn-otro-ticket:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(6, 182, 212, 0.4);
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #10b981;
 }
 
 /* Formulario de búsqueda */
 .buscar-form {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
 .buscar-form .codigo-input {
   flex: 1;
-  background: #0f172a;
-  border: 2px solid #06b6d4;
-  color: #06b6d4;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  font-size: 1rem;
+  background: #fff;
+  border: 2px solid var(--color-primary);
+  color: #1f2937;
+  padding: 0.9rem 1.2rem;
+  border-radius: 12px;
+  font-size: 1.1rem;
   font-weight: bold;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   text-transform: uppercase;
   font-family: 'Courier New', monospace;
-  transition: border-color 0.3s ease;
 }
 
 .buscar-form .codigo-input:focus {
   outline: none;
-  border-color: #0891b2;
-  box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+  border-color: var(--color-primary-dark);
+  box-shadow: 0 0 0 4px rgba(251, 75, 35, 0.15);
 }
 
 .buscar-form .btn-buscar {
-  background: linear-gradient(135deg, #06b6d4, #0891b2);
-  color: #0f172a;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  color: white;
   border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
+  padding: 0.9rem 2rem;
+  border-radius: 12px;
   font-weight: bold;
   cursor: pointer;
-  transition: all 0.3s ease;
   white-space: nowrap;
+  transition: all 0.3s ease;
 }
 
 .buscar-form .btn-buscar:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(6, 182, 212, 0.3);
-}
-
-.buscar-form .btn-buscar:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  box-shadow: 0 8px 20px rgba(251, 75, 35, 0.3);
 }
 
 /* Detalles del ticket */
 .ticket-detalles {
-  background: rgba(6, 182, 212, 0.05);
-  border: 2px solid #06b6d4;
-  border-radius: 12px;
-  padding: 1.5rem;
-  animation: slideIn 0.3s ease-out;
-}
-
-.ticket-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(6, 182, 212, 0.3);
+  background: #fffaf0;
+  border: 2px solid var(--color-primary);
+  border-radius: 16px;
+  padding: 1.8rem;
 }
 
 .codigo-grande {
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: bold;
-  color: #06b6d4;
+  color: var(--color-primary);
   font-family: 'Courier New', monospace;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
 }
 
-.estado {
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: bold;
-}
-
-.estado.generado {
-  background: rgba(74, 222, 128, 0.2);
-  color: #4ade80;
-  border: 1px solid #4ade80;
-}
-
-.estado.canjeado {
-  background: rgba(168, 85, 247, 0.2);
-  color: #a855f7;
-  border: 1px solid #a855f7;
-}
-
-/* Grid de información */
-.info-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.info-item {
-  background: rgba(30, 58, 138, 0.3);
-  padding: 0.75rem;
-  border-radius: 8px;
-  text-align: left;
-}
-
-.info-item label {
-  display: block;
-  color: #94a3b8;
-  font-size: 0.8rem;
-  margin-bottom: 0.25rem;
-  text-transform: uppercase;
-  font-weight: bold;
-}
-
-.info-item p {
-  color: #f1f5f9;
-  margin: 0;
-  font-size: 0.95rem;
-}
-
-.info-item .descuento {
-  color: #06b6d4;
-  font-size: 1.2rem;
-  font-weight: bold;
-}
-
-/* Botones de acción */
-.acciones {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.btn-canjear,
-.btn-cancelar {
+/* Botones principales */
+.btn-canjear {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  color: white;
   flex: 1;
-  padding: 0.75rem 1rem;
+  padding: 1rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-weight: bold;
   cursor: pointer;
+  font-size: 1.1rem;
   transition: all 0.3s ease;
-  font-size: 0.95rem;
-}
-
-.btn-canjear {
-  background: linear-gradient(135deg, #4ade80, #22c55e);
-  color: #0f172a;
 }
 
 .btn-canjear:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(74, 222, 128, 0.3);
-}
-
-.btn-canjear:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(251, 75, 35, 0.4);
 }
 
 .btn-cancelar {
-  background: transparent;
-  color: #cbd5e1;
-  border: 1px solid #cbd5e1;
-}
-
-.btn-cancelar:hover {
-  background: rgba(203, 213, 225, 0.1);
-  border-color: #f1f5f9;
-  color: #f1f5f9;
-}
-
-/* Mensaje de ticket canjeado */
-.ticket-canjeado-msg {
-  background: rgba(168, 85, 247, 0.1);
-  border: 1px solid #a855f7;
-  color: #a855f7;
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 2px solid #d1d5db;
+  flex: 1;
   padding: 1rem;
-  border-radius: 8px;
-  text-align: center;
+  border-radius: 12px;
   font-weight: bold;
+  cursor: pointer;
 }
 
-/* Instrucciones iniciales */
-.instrucciones {
-  background: rgba(6, 182, 212, 0.1);
-  border: 1px solid #06b6d4;
-  border-radius: 8px;
-  padding: 1.5rem;
-  text-align: center;
-  color: #cbd5e1;
-}
-
-.instrucciones p {
-  margin: 0.5rem 0;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.instrucciones p:first-child {
-  font-size: 1.1rem;
+.btn-otro-ticket {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 12px;
   font-weight: bold;
-  color: #06b6d4;
-  margin-bottom: 0.5rem;
-}
-
-/* Responsive */
-@media (max-width: 640px) {
-  .canje-tickets-container {
-    padding: 1rem;
-  }
-
-  .buscar-form {
-    flex-direction: column;
-  }
-
-  .buscar-form .btn-buscar {
-    width: 100%;
-  }
-
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .ticket-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .estado {
-    width: 100%;
-    text-align: center;
-  }
-
-  .acciones {
-    flex-direction: column;
-  }
-
-  .btn-canjear,
-  .btn-cancelar {
-    width: 100%;
-  }
 }
