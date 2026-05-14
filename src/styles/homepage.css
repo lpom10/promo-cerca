@@ -143,7 +143,7 @@
 
 /* Caja del Mapa */
 .mapa-box {
-  position: left;
+  position: relative;
   border-radius: 20px;
   overflow: hidden;
   width: 100%;
@@ -256,7 +256,7 @@
   }
 
   .mapa-embedded {
-    height: 350px;
+    height: 300px;
   }
 
   .mapa-title {
