@@ -128,18 +128,27 @@ const Mapa = () => {
     const cargarLocales = async () => {
       try {
         setLoading(true);
-        const empresasSnap = await getDocs(collection(db, 'empresa'));
-        const empresasMap = {};
-        empresasSnap.docs.forEach(d => { empresasMap[d.id] = { id: d.id, ...d.data() }; });
+        
+        // 🚀 OPTIMIZACIÓN: Disparamos ambas peticiones a Firebase AL MISMO TIEMPO
+        const [empresasSnap, promosSnap] = await Promise.all([
+          getDocs(collection(db, 'empresa')),
+          getDocs(collection(db, 'promociones'))
+        ]);
 
-        const snapshot = await getDocs(collection(db, 'promociones'));
-        const promos = snapshot.docs.map(doc => {
+        const empresasMap = {};
+        empresasSnap.docs.forEach(d => { 
+          empresasMap[d.id] = { id: d.id, ...d.data() }; 
+        });
+
+        const promos = promosSnap.docs.map(doc => {
           const data = { id: doc.id, ...doc.data() };
           const e = data.empresaId ? empresasMap[data.empresaId] : null;
+          
           const rawLat = data.lat !== undefined && data.lat !== null ? data.lat : e?.lat;
           const rawLng = data.lng !== undefined && data.lng !== null ? data.lng : e?.lng;
           const lat = rawLat !== undefined && rawLat !== null && rawLat !== '' ? Number(rawLat) : undefined;
           const lng = rawLng !== undefined && rawLng !== null && rawLng !== '' ? Number(rawLng) : undefined;
+          
           return {
             ...data,
             empresaNombre: data.empresaNombre || e?.nombre || e?.empresaNombre || 'Empresa',
@@ -149,7 +158,6 @@ const Mapa = () => {
           };
         });
 
-        console.log('Mapa: promociones fetched=', snapshot.docs.length, 'empresas fetched=', empresasSnap.docs.length, 'enriched promos=', promos.length);
         setLocales(promos);
       } catch (error) {
         console.error('Error cargando locales:', error);
@@ -157,6 +165,7 @@ const Mapa = () => {
         setLoading(false);
       }
     };
+    
     cargarLocales();
   }, []);
 
