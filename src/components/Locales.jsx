@@ -204,12 +204,8 @@ const Locales = () => {
             />
         </div>
         <div className="filtros" style={{ marginTop: '15px' }}>
-          <button 
-            className={`filtro-btn ${catActiva === 'todos' ? 'active' : ''}`}
-            onClick={() => setCatActiva('todos')}
-          >
-            Todos
-          </button>
+          
+           
           {categorias.map((cat) => (
             <button
               key={cat.id}

@@ -274,11 +274,11 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
                       className={errores.categoria ? 'input-error' : ''}
                     >
                       <option value="">Selecciona una categoría</option>
-                      <option value="restaurantes">🍽️ Restaurante</option>
-                      <option value="cafeterias">☕ Cafetería</option>
-                      <option value="tiendas">🛍️ Tienda</option>
-                      <option value="servicios">🔧 Servicios</option>
-                      <option value="salud">💊 Salud</option>
+                      <option value="restaurantes">Restaurante</option>
+                      <option value="cafeterias">Cafetería</option>
+                      <option value="tiendas">Tienda</option>
+                      <option value="servicios">Servicios</option>
+                      <option value="salud">Salud</option>
                     </select>
                     {errores.categoria && <span className="error">{errores.categoria}</span>}
                   </div>

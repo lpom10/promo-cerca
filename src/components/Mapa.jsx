@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+  import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -95,7 +95,6 @@ const Mapa = () => {
 
     locales.forEach((promo) => {
       if (promo.activa === false) return;
-      if (!verificarDisponibilidadTickets(promo).disponible) return;
       
       const key = promo.empresaId || promo.id;
       if (!empresasMap[key]) {
@@ -126,20 +125,14 @@ const Mapa = () => {
   }, [locales]);
 
   useEffect(() => {
-    console.log('Mapa: empresas computed=', empresas.length, empresas.map(e => ({ id: e.empresaId, nombre: e.empresaNombre, promoCount: e.promoCount })));
-  }, [empresas]);
-
-  useEffect(() => {
     const cargarLocales = async () => {
       try {
         setLoading(true);
-        // Obtener empresas para usar como fallback de ubicación/nombre
         const empresasSnap = await getDocs(collection(db, 'empresa'));
         const empresasMap = {};
         empresasSnap.docs.forEach(d => { empresasMap[d.id] = { id: d.id, ...d.data() }; });
 
         const snapshot = await getDocs(collection(db, 'promociones'));
-        // Enriquecer promociones con fallback a datos de empresa cuando falten coordenadas o nombre
         const promos = snapshot.docs.map(doc => {
           const data = { id: doc.id, ...doc.data() };
           const e = data.empresaId ? empresasMap[data.empresaId] : null;
@@ -167,7 +160,15 @@ const Mapa = () => {
     cargarLocales();
   }, []);
 
-  
+  // PARA EL MAPA: todas las empresas activas (sin filtro de disponibilidad)
+  const empresasParaMapa = empresas.filter((empresa) => {
+    const matchCat = catActiva === 'todos' || empresa.promociones.some((promo) => promo.categoria === catActiva);
+    const searchLower = search.toLowerCase();
+    const matchSearch = !searchLower || empresa.empresaNombre?.toLowerCase().includes(searchLower) || empresa.promociones.some((promo) => promo.titulo?.toLowerCase().includes(searchLower));
+    return matchCat && matchSearch;
+  });
+
+  // PARA EL SIDEBAR: solo promociones disponibles
   const promocionesFiltradas = locales.filter((promo) => {
     if (promo.activa === false) return false;
     if (!verificarDisponibilidadTickets(promo).disponible) return false;
@@ -181,22 +182,20 @@ const Mapa = () => {
     return matchCat && matchSearch;
   });
 
-  const empresasFiltradas = empresas.filter((empresa) => {
-    const matchCat = catActiva === 'todos' || empresa.promociones.some((promo) => promo.categoria === catActiva);
+  // PARA EL SIDEBAR: TODAS las promociones activas (para mostrar disponibilidad)
+  const todasPromos = locales.filter((promo) => {
+    if (promo.activa === false) return false;
+
+    const matchCat = catActiva === 'todos' || promo.categoria === catActiva;
     const searchLower = search.toLowerCase();
-    const matchSearch = !searchLower || empresa.empresaNombre?.toLowerCase().includes(searchLower) || empresa.promociones.some((promo) => promo.titulo?.toLowerCase().includes(searchLower));
+    const matchSearch = !searchLower || 
+      promo.empresaNombre?.toLowerCase().includes(searchLower) || 
+      promo.titulo?.toLowerCase().includes(searchLower);
+    
     return matchCat && matchSearch;
   });
 
-  const totalPromos = promocionesFiltradas.length;
-
-  useEffect(() => {
-    console.log('Mapa: promocionesFiltradas=', promocionesFiltradas.length);
-  }, [promocionesFiltradas]);
-
-  useEffect(() => {
-    console.log('Mapa: empresas coords=', empresas.map(e => ({ id: e.empresaId, lat: e.lat, lng: e.lng })));
-  }, [empresas]);
+  const totalPromos = todasPromos.length;
 
   // Component: render only markers inside current bounds and cluster them
   const VisibleMarkers = ({ items }) => {
@@ -329,8 +328,8 @@ const Mapa = () => {
       <div className="mapa-wrapper">
       <aside className="mapa-sidebar">
         <div className="mapa-sidebar-header">
-          <h2 className="mapa-sidebar-titulo">Emprendimientos cercanos <span className="mapa-count">({empresasFiltradas.length})</span></h2>
-          <div className="mapa-header-stats">Mostrando <strong>{empresasFiltradas.length}</strong> negocios · <strong>{totalPromos}</strong> promociones</div>
+          <h2 className="mapa-sidebar-titulo">Emprendimientos cercanos <span className="mapa-count">({empresasParaMapa.length})</span></h2>
+          <div className="mapa-header-stats">Mostrando <strong>{empresasParaMapa.length}</strong> negocios · <strong>{todasPromos.length}</strong> promociones</div>
         </div>
         <div className="mapa-sidebar-card">
           <div className="mapa-card-controls">
@@ -341,9 +340,7 @@ const Mapa = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <div className="mapa-range">Rango de búsqueda: <strong>10 km</strong>
-              <input type="range" min="3" max="100" value="10" readOnly />
-            </div>
+            
           </div>
           <div className="mapa-cats">
             {categorias.slice(0, 4).map((c) => (
@@ -368,10 +365,10 @@ const Mapa = () => {
             ))}
           </div>
           <div className="mapa-lista">
-          {promocionesFiltradas.length === 0 && (
+          {todasPromos.length === 0 && (
             <p className="mapa-sin-resultados">Sin resultados</p>
           )}
-          {promocionesFiltradas.slice(0, visibleCount).map((promo) => {
+          {todasPromos.slice(0, visibleCount).map((promo) => {
             const fechaExp = promo.fechaHoraExpiracion || promo.fechaFin;
             const tiempoRest = fechaExp ? calcularTiempoRestante(fechaExp) : null;
             const textoTiempo = tiempoRest ? formatearTiempoRestante(tiempoRest) : null;
@@ -411,7 +408,7 @@ const Mapa = () => {
               </div>
             );
           })}
-          {promocionesFiltradas.length > visibleCount && (
+          {todasPromos.length > visibleCount && (
             <div style={{ padding: 12, display: 'flex', justifyContent: 'center' }}>
               <button className="mapa-more-btn" onClick={() => setVisibleCount((v) => v + 6)}>Mostrar más</button>
             </div>
@@ -434,7 +431,7 @@ const Mapa = () => {
 
           <MapaFocus targetId={targetId} markerRefs={markerRefs} locales={empresas} />
 
-          <VisibleMarkers items={empresasFiltradas} />
+          <VisibleMarkers items={empresasParaMapa} />
         </MapContainer>
         {selected && (
           <div className="promo-overlay" onClick={closeOverlay}>

@@ -274,12 +274,12 @@ const EmpresaDashboard = () => {
 
   // ── Nav items ──────────────────────────────────────────
   const navItems = [
-    { id: 'resumen',     icon: '📊', label: 'Resumen' },
-    { id: 'canjear',     icon: '✅', label: 'Canjear' },
-    { id: 'tickets',     icon: '🎟️', label: 'Tickets' },
-    { id: 'promociones', icon: '📢', label: 'Promociones' },
-    { id: 'suscripcion', icon: '💳', label: 'Suscripción' },
-    { id: 'negocio',     icon: '🏪', label: 'Mi Negocio' },
+    { id: 'resumen',     label: 'Resumen' },
+    { id: 'canjear',     label: 'Canjear' },
+    { id: 'tickets',     label: 'Tickets' },
+    { id: 'promociones', label: 'Promociones' },
+    { id: 'suscripcion', label: 'Suscripción' },
+    { id: 'negocio',     label: 'Mi Negocio' },
   ];
 
   const categories = {

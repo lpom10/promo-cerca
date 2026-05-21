@@ -6,14 +6,12 @@
   display: flex;
   justify-content: center;
   padding: 32px 20px;
-  background: linear-gradient(
-    180deg,
-    #f8fafc 0%,
-    #eef2ff 100%
-  );
-  min-height: 100vh;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  /* Cambios aquí: */
+  height: calc(100vh - 64px); /* Ajusta los 64px según el alto real de tu barra naranja */
+  overflow: hidden; /* Esto mata el scroll de la ventana completa */
+  box-sizing: border-box;
 }
-
 /* Wrapper principal */
 .mapa-page .mapa-wrapper {
   width: 100%;
@@ -21,6 +19,7 @@
   display: flex;
   gap: 24px;
   align-items: stretch;
+  height: 100%; /* AÑADIR ESTO */
 }
 
 /* Desktop */
@@ -33,23 +32,26 @@
 /* ═══════════════════════════════════════════
    SIDEBAR
 ═══════════════════════════════════════════ */
-
 .mapa-sidebar {
   width: 380px;
   min-width: 380px;
+  height: 100%; /* AÑADIR ESTO */
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(14px);
   border-radius: 24px;
   overflow: hidden;
   border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow:
-    0 10px 30px rgba(15, 23, 42, 0.08),
-    0 4px 12px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.05);
   display: flex;
   flex-direction: column;
   position: relative;
 }
-
+.mapa-sidebar-card {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* Súper importante: evita que el flexbox se desborde */
+}
 /* Header */
 .mapa-sidebar-header {
   padding: 26px 24px 20px;
@@ -198,6 +200,8 @@
   position: relative;
   overflow: hidden;
   box-shadow: 0 4px 14px rgba(15,23,42,0.04);
+  
+  flex-shrink: 0; 
 }
 
 .mapa-item::before {
@@ -345,21 +349,25 @@
    MAPA
 ═══════════════════════════════════════════ */
 
-.mapa-container {
+.mapa-page .mapa-container {
   flex: 1;
   position: relative;
-  min-height: 720px;
+  /* Cambiar los valores de 720px por estos: */
+  height: 100%; 
+  min-height: 0; 
   border-radius: 28px;
   overflow: hidden;
   background: rgb(255, 255, 255);
-  
+  display: flex;
+  flex-direction: column;
 }
 
-.mapa-container .leaflet-container {
+.mapa-page .mapa-container .leaflet-container {
   width: 100% !important;
   height: 100% !important;
   border-radius: 28px;
   z-index: 1;
+  flex: 1 !important;
 }
 
 /* Empresa marker (custom SVG pin + badge) */
