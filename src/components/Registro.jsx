@@ -4,6 +4,18 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { doc, setDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
+import {
+  validarEmail,
+  validarPassword,
+  validarTelefono,
+  validarCedula,
+  validarRuc,
+  validarUbicacion,
+  sanitizar,
+  sanitizarNumero,
+} from '../utils/validators';
+import { rateLimiter } from '../utils/rateLimiter';
+import { handleError, logError } from '../utils/errorHandler';
 import '../styles/auth.css';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -60,79 +72,108 @@ const Registro = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
     if (name === 'cedula' || name === 'ruc' || name === 'telefono') {
-      const numericValue = value.replace(/\D/g, '');
-      setForm((f) => ({ ...f, [name]: numericValue }));
+      setForm((f) => ({ ...f, [name]: sanitizarNumero(value) }));
       return;
     }
-    setForm((f) => ({ ...f, [name]: value }));
-  };
+    
+    if (name === 'nombre' || name === 'negocio' || name === 'direccion') {
+      setForm((f) => ({ ...f, [name]: sanitizar(value) }));
+      return;
+    }
 
-  const validar = () => {
-    const e = {};
-    if (!form.nombre.trim())             e.nombre = 'El nombre es requerido';
-    if (!form.email.includes('@'))       e.email  = 'Correo no válido';
-    if (form.password.length < 8) {
-      e.password = 'Mínimo 8 caracteres';
-    } else {
-      const hasUpperCase = /[A-Z]/.test(form.password);
-      const hasLowerCase = /[a-z]/.test(form.password);
-      const hasNumbers = /\d/.test(form.password);
-      const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>\-_]/.test(form.password);
-      if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
-        e.password = 'Debe incluir al menos una mayúscula, minúscula, número y carácter especial';
-      }
+    // Validar nombre
+    if (!form.nombre.trim()) {
+      e.nombre = 'El nombre es requerido';
+    } else if (form.nombre.length < 3) {
+      e.nombre = 'El nombre debe tener al menos 3 caracteres';
     }
-    if (form.password !== form.confirmPassword) e.confirmPassword = 'Las contraseñas no coinciden';
-    if (!form.telefono) {
-      e.telefono = 'El teléfono es requerido';
-    } else if (form.telefono.length !== 10) {
-      e.telefono = 'El teléfono debe tener 10 dígitos';
+
+    // Validar email
+    if (!validarEmail(form.email)) {
+      e.email = 'Email inválido';
     }
+
+    // Validar contraseña
+    const passValidation = validarPassword(form.password);
+    if (!passValidation.valida) {
+      e.password = passValidation.error;
+    }
+
+    // Validar coincidencia de contraseña
+    if (form.password !== form.confirmPassword) {
+      e.confirmPassword = 'Las contraseñas no coinciden';
+    }
+
+    // Validar teléfono
+    if (!validarTelefono(form.telefono)) {
+      e.telefono = 'Teléfono inválido (debe tener 10 dígitos)';
+    }
+
     if (tipo === 'cliente') {
-      if (!form.cedula) {
-        e.cedula = 'La cédula es requerida';
-      } else if (form.cedula.length !== 10) {
-        e.cedula = 'La cédula debe tener 10 dígitos';
+      if (!validarCedula(form.cedula)) {
+        e.cedula = 'Cédula inválida (debe tener 10 dígitos)';
       }
     }
+
     if (tipo === 'empresa') {
-      if (!form.negocio.trim()) e.negocio = 'El nombre del negocio es requerido';
-      if (!form.categoria) e.categoria = 'Selecciona una categoría';      
-      if (!form.ruc) {
-        e.ruc = 'El RUC es requerido';
-      } else if (form.ruc.length !== 13) {
-        e.ruc = 'El RUC debe tener 13 dígitos';
+      if (!form.negocio.trim()) {
+        e.negocio = 'El nombre del negocio es requerido';
       }
-      if (!form.lat || !form.lng) {
+      if (!form.categoria) {
+        e.categoria = 'Selecciona una categoría';
+      }
+      if (!validarRuc(form.ruc)) {
+        e.ruc = 'RUC inválido (debe tener 13 dígitos)';
+      }
+      if (!form.direccion.trim()) {
+        e.direccion = 'La dirección es requerida';
+      }
+      const ubicValidation = validarUbicacion(form.lat, form.lng);
+      if (!ubicValidation.valida) {
         e.mapa = 'Debes seleccionar la ubicación en el mapa';
       }
     }
+
     return e;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validar rate limiting
+    const checkRateLimit = rateLimiter.check(
+      `registro_${form.email}`,
+      3, // 3 intentos
+      60000 // en 1 minuto
+    );
+
+    if (!checkRateLimit.permitido) {
+      setErrores({ general: checkRateLimit.mensaje });
+      return;
+    }
+
     const e2 = validar();
-    if (Object.keys(e2).length > 0) { setErrores(e2); return; }
+    if (Object.keys(e2).length > 0) {
+      setErrores(e2);
+      return;
+    }
+
     setErrores({});
     setLoading(true);
 
     let user = null;
 
     try {
-      // ── PASO 1: Crear cuenta en Firebase Auth primero ──────────────────
-      // Esto establece la sesión (request.auth != null), lo que permite
-      // las consultas a Firestore que vienen después.
       const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
       user = userCredential.user;
 
-      // ── PASO 2: Verificar duplicados (ya autenticado) ──────────────────
+      // Verificar duplicados
       if (tipo === 'cliente') {
         const q = query(collection(db, 'usuarios'), where('cedula', '==', form.cedula));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
-          // Revertir: eliminar la cuenta de Auth recién creada
           await user.delete();
           setErrores({ cedula: 'Esta cédula ya está registrada' });
           setLoading(false);
@@ -142,7 +183,6 @@ const Registro = () => {
         const q = query(collection(db, 'empresa'), where('ruc', '==', form.ruc));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
-          // Revertir: eliminar la cuenta de Auth recién creada
           await user.delete();
           setErrores({ ruc: 'Este RUC ya está registrado' });
           setLoading(false);
@@ -150,7 +190,6 @@ const Registro = () => {
         }
       }
 
-      // ── PASO 3: Guardar datos en Firestore ─────────────────────────────
       const coleccion = tipo === 'empresa' ? 'empresa' : 'usuarios';
 
       const datosUsuario = {
@@ -174,23 +213,22 @@ const Registro = () => {
 
       await setDoc(doc(db, coleccion, user.uid), datosUsuario);
 
+      rateLimiter.reset(`registro_${form.email}`);
       setStep(2);
     } catch (error) {
-      // Si Firestore falló después de crear el usuario en Auth,
-      // intentar limpiar la cuenta huérfana
-      if (user && error.code !== 'auth/email-already-in-use') {
-        try { await user.delete(); } catch (_) { /* ignorar */ }
+      if (user) {
+        try {
+          await user.delete();
+        } catch (_) {
+          logError(_, { accion: 'cleanup_user_delete' });
+        }
       }
 
-      if (error.code === 'auth/email-already-in-use') {
-        setErrores({ email: 'El email ya está registrado' });
-      } else if (error.code === 'permission-denied') {
-        setErrores({ general: 'Permisos de Firestore insuficientes. Verifica las reglas de seguridad.' });
-      } else {
-        setErrores({ general: `Error: ${error.message}` });
-      }
+      const errorInfo = handleError(error, { accion: 'registro', tipo });
+      setErrores({ general: errorInfo.mensaje });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleGoogleRegister = async () => {

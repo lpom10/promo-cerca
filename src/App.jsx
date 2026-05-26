@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Routes, Route, Link, NavLink, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 import TextField from "./components/TextField.jsx";
 import Locales from "./components/Locales.jsx";
@@ -13,7 +14,7 @@ import AdminDashboard from "./components/AdminDashboard.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import GestorPromociones from './components/GestorPromociones';
 import NotificationBell from "./components/NotificationBell.jsx";
-import PerfilEmpresaPublica from "./components/PerfilEmpresaPublica.jsx";   // ← Nuevo
+import PerfilEmpresaPublica from "./components/PerfilEmpresaPublica.jsx";
 
 function AppContent() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -144,9 +145,11 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary name="App">
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

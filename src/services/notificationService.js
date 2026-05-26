@@ -12,6 +12,7 @@ import {
   Timestamp,
   onSnapshot,
 } from 'firebase/firestore';
+import { logError } from '../utils/errorHandler';
 
 // Tipos de notificaciones
 export const NOTIFICATION_TYPES = {
@@ -29,12 +30,25 @@ export const NOTIFICATION_TYPES = {
 // Crear notificación
 export const crearNotificacion = async (usuarioId, tipo, titulo, mensaje, datos = {}) => {
   try {
+    if (!usuarioId || typeof usuarioId !== 'string') {
+      throw new Error('Usuario ID inválido');
+    }
+    if (!tipo || typeof tipo !== 'string') {
+      throw new Error('Tipo de notificación inválido');
+    }
+    if (!titulo || typeof titulo !== 'string' || titulo.length > 200) {
+      throw new Error('Título inválido');
+    }
+    if (!mensaje || typeof mensaje !== 'string' || mensaje.length > 1000) {
+      throw new Error('Mensaje inválido');
+    }
+
     const notificacion = {
       usuarioId,
       tipo,
       titulo,
       mensaje,
-      datos,
+      datos: datos || {},
       leida: false,
       createdAt: Timestamp.now(),
     };
@@ -42,7 +56,7 @@ export const crearNotificacion = async (usuarioId, tipo, titulo, mensaje, datos 
     const docRef = await addDoc(collection(db, 'notificaciones'), notificacion);
     return { id: docRef.id, ...notificacion };
   } catch (error) {
-    console.error('Error creando notificación:', error);
+    logError(error, { accion: 'crearNotificacion', usuarioId });
     throw error;
   }
 };
@@ -50,6 +64,9 @@ export const crearNotificacion = async (usuarioId, tipo, titulo, mensaje, datos 
 // Obtener notificaciones de usuario
 export const obtenerNotificaciones = async (usuarioId, limite = 20) => {
   try {
+    if (!usuarioId) throw new Error('Usuario ID requerido');
+    if (limite < 1 || limite > 100) limite = 20;
+
     const q = query(
       collection(db, 'notificaciones'),
       where('usuarioId', '==', usuarioId),
@@ -59,7 +76,7 @@ export const obtenerNotificaciones = async (usuarioId, limite = 20) => {
     const snapshot = await getDocs(q);
     return snapshot.docs.slice(0, limite).map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    console.error('Error obteniendo notificaciones:', error);
+    logError(error, { accion: 'obtenerNotificaciones', usuarioId });
     throw error;
   }
 };
@@ -67,18 +84,28 @@ export const obtenerNotificaciones = async (usuarioId, limite = 20) => {
 // Suscribirse a cambios de notificaciones (real-time)
 export const suscribirseNotificaciones = (usuarioId, callback) => {
   try {
+    if (!usuarioId) throw new Error('Usuario ID requerido');
+    if (typeof callback !== 'function') throw new Error('Callback debe ser una función');
+
     const q = query(
       collection(db, 'notificaciones'),
       where('usuarioId', '==', usuarioId),
       orderBy('createdAt', 'desc')
     );
 
-    return onSnapshot(q, snapshot => {
-      const notificaciones = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      callback(notificaciones);
-    });
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const notificaciones = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        callback(notificaciones);
+      },
+      (error) => {
+        logError(error, { accion: 'suscribirseNotificaciones', usuarioId });
+        callback([]);
+      }
+    );
   } catch (error) {
-    console.error('Error suscribiendo a notificaciones:', error);
+    logError(error, { accion: 'suscribirseNotificaciones', usuarioId });
     throw error;
   }
 };
@@ -86,10 +113,11 @@ export const suscribirseNotificaciones = (usuarioId, callback) => {
 // Marcar como leída
 export const marcarComoLeida = async (notificacionId) => {
   try {
+    if (!notificacionId) throw new Error('Notificación ID requerida');
     const notifRef = doc(db, 'notificaciones', notificacionId);
     await updateDoc(notifRef, { leida: true });
   } catch (error) {
-    console.error('Error marcando como leída:', error);
+    logError(error, { accion: 'marcarComoLeida', notificacionId });
     throw error;
   }
 };
@@ -97,6 +125,7 @@ export const marcarComoLeida = async (notificacionId) => {
 // Marcar todas como leídas
 export const marcarTodoComoLeido = async (usuarioId) => {
   try {
+    if (!usuarioId) throw new Error('Usuario ID requerido');
     const q = query(
       collection(db, 'notificaciones'),
       where('usuarioId', '==', usuarioId),
@@ -110,7 +139,7 @@ export const marcarTodoComoLeido = async (usuarioId) => {
 
     await Promise.all(batch);
   } catch (error) {
-    console.error('Error marcando todo como leído:', error);
+    logError(error, { accion: 'marcarTodoComoLeido', usuarioId });
     throw error;
   }
 };
@@ -118,9 +147,10 @@ export const marcarTodoComoLeido = async (usuarioId) => {
 // Eliminar notificación
 export const eliminarNotificacion = async (notificacionId) => {
   try {
+    if (!notificacionId) throw new Error('Notificación ID requerida');
     await deleteDoc(doc(db, 'notificaciones', notificacionId));
   } catch (error) {
-    console.error('Error eliminando notificación:', error);
+    logError(error, { accion: 'eliminarNotificacion', notificacionId });
     throw error;
   }
 };
@@ -128,6 +158,7 @@ export const eliminarNotificacion = async (notificacionId) => {
 // Obtener conteo de no leídas
 export const obtenerConteoNoLeidas = async (usuarioId) => {
   try {
+    if (!usuarioId) throw new Error('Usuario ID requerido');
     const q = query(
       collection(db, 'notificaciones'),
       where('usuarioId', '==', usuarioId),
@@ -137,7 +168,7 @@ export const obtenerConteoNoLeidas = async (usuarioId) => {
     const snapshot = await getDocs(q);
     return snapshot.docs.length;
   } catch (error) {
-    console.error('Error obteniendo conteo:', error);
+    logError(error, { accion: 'obtenerConteoNoLeidas', usuarioId });
     return 0;
   }
 };
@@ -145,86 +176,42 @@ export const obtenerConteoNoLeidas = async (usuarioId) => {
 // Crear notificación de promoción vencimiento
 export const crearNotificacionVencimiento = async (usuarioId, promocion) => {
   const diasFaltantes = Math.ceil(
-    (new Date(promocion.fechaFin.toDate?.() || promocion.fechaFin) - new Date()) / (1000 * 60 * 60 * 24)
+    (new Date(promocion.fechaFin?.toDate?.() || promocion.fechaFin) - new Date()) / (1000 * 60 * 60 * 24)
   );
 
-  let tipo, titulo, mensaje;
-
-  if (diasFaltantes === 0) {
-    tipo = NOTIFICATION_TYPES.PROMO_EXPIRED;
-    titulo = '📢 Promoción Vencida';
-    mensaje = `"${promocion.titulo}" ya no está disponible`;
-  } else if (diasFaltantes === 1) {
-    tipo = NOTIFICATION_TYPES.PROMO_EXPIRING;
-    titulo = '⏰ Promoción por vencer';
-    mensaje = `"${promocion.titulo}" vence mañana`;
-  } else if (diasFaltantes <= 3) {
-    tipo = NOTIFICATION_TYPES.PROMO_EXPIRING;
-    titulo = '⏰ Promoción por vencer';
-    mensaje = `"${promocion.titulo}" vence en ${diasFaltantes} días`;
-  }
-
-  if (tipo) {
-    return crearNotificacion(usuarioId, tipo, titulo, mensaje, { promocionId: promocion.id });
-  }
-};
-
-// Crear notificación de empresa aprobada
-export const crearNotificacionAprobacion = async (empresaId, aprobada = true) => {
-  const tipo = aprobada ? NOTIFICATION_TYPES.EMPRESA_APPROVED : NOTIFICATION_TYPES.EMPRESA_REJECTED;
-  const titulo = aprobada ? '✅ Empresa Aprobada' : '❌ Empresa Rechazada';
-  const mensaje = aprobada
-    ? 'Tu empresa ha sido aprobada. ¡Ya puedes crear promociones!'
-    : 'Tu solicitud de empresa fue rechazada. Contacta soporte para más información.';
-
-  return crearNotificacion(empresaId, tipo, titulo, mensaje);
-};
-
-// Crear notificación de ticket canjeado
-export const crearNotificacionTicketCanjeado = async (empresaId, clienteNombre, promocion) => {
-  const titulo = '🎉 Ticket Canjeado';
-  const mensaje = `${clienteNombre} canjeó "${promocion.titulo}"`;
-
   return crearNotificacion(
-    empresaId,
-    NOTIFICATION_TYPES.TICKET_CANJEAD,
-    titulo,
-    mensaje,
-    { promocionId: promocion.id, clienteNombre }
+    usuarioId,
+    NOTIFICATION_TYPES.PROMO_EXPIRING,
+    'Promoción próxima a vencer',
+    `La promoción "${promocion.titulo}" vence en ${diasFaltantes} días`,
+    { promocionId: promocion.id }
   );
 };
 
 // Crear notificación de tickets agotados
 export const crearNotificacionTicketsAgotados = async (empresaId, promocion) => {
-  const titulo = '🎟️ Tickets Agotados';
-  const mensaje = `Los tickets para "${promocion.titulo}" se han agotado.`;
-
   return crearNotificacion(
     empresaId,
     NOTIFICATION_TYPES.TICKETS_EXHAUSTED,
-    titulo,
-    mensaje,
-    { 
-      promocionId: promocion.id,
-      promocionTitulo: promocion.titulo,
-      ticketsMaximos: promocion.ticketsMaximos 
-    }
+    'Tickets agotados',
+    `Los tickets de la promoción "${promocion.titulo}" se han agotado`,
+    { promocionId: promocion.id }
   );
 };
 
-// Obtener mensajes por tipo
+// Obtener icono y color según tipo de notificación
 export const obtenerMensajePorTipo = (tipo) => {
-  const mensajes = {
-    [NOTIFICATION_TYPES.NEW_PROMO]: { icon: '📢', color: '#06b6d4' },
-    [NOTIFICATION_TYPES.PROMO_EXPIRING]: { icon: '⏰', color: '#ffc107' },
-    [NOTIFICATION_TYPES.PROMO_EXPIRED]: { icon: '🔴', color: '#dc3545' },
-    [NOTIFICATION_TYPES.TICKET_CANJEAD]: { icon: '🎉', color: '#28a745' },
-    [NOTIFICATION_TYPES.EMPRESA_APPROVED]: { icon: '✅', color: '#28a745' },
-    [NOTIFICATION_TYPES.EMPRESA_REJECTED]: { icon: '❌', color: '#dc3545' },
-    [NOTIFICATION_TYPES.NEW_REVIEW]: { icon: '⭐', color: '#ffc107' },
-    [NOTIFICATION_TYPES.REFERRAL_BONUS]: { icon: '💰', color: '#ffc107' },
-    [NOTIFICATION_TYPES.TICKETS_EXHAUSTED]: { icon: '🎟️', color: '#dc3545' },
+  const mapa = {
+    [NOTIFICATION_TYPES.NEW_PROMO]: { icon: '🎉', color: '#4CAF50' },
+    [NOTIFICATION_TYPES.PROMO_EXPIRING]: { icon: '⏰', color: '#FF9800' },
+    [NOTIFICATION_TYPES.PROMO_EXPIRED]: { icon: '❌', color: '#F44336' },
+    [NOTIFICATION_TYPES.TICKET_CANJEAD]: { icon: '🎟️', color: '#2196F3' },
+    [NOTIFICATION_TYPES.EMPRESA_APPROVED]: { icon: '✅', color: '#4CAF50' },
+    [NOTIFICATION_TYPES.EMPRESA_REJECTED]: { icon: '🚫', color: '#F44336' },
+    [NOTIFICATION_TYPES.NEW_REVIEW]: { icon: '⭐', color: '#9C27B0' },
+    [NOTIFICATION_TYPES.REFERRAL_BONUS]: { icon: '🎁', color: '#00BCD4' },
+    [NOTIFICATION_TYPES.TICKETS_EXHAUSTED]: { icon: '🔴', color: '#FF5722' },
   };
 
-  return mensajes[tipo] || { icon: '📢', color: '#06b6d4' };
+  return mapa[tipo] ?? { icon: '🔔', color: '#607D8B' };
 };

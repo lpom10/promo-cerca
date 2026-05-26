@@ -5,6 +5,9 @@ import { auth, googleProvider, db } from '../firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { validarEmail, sanitizar } from '../utils/validators';
+import { rateLimiter } from '../utils/rateLimiter';
+import { handleError, logError } from '../utils/errorHandler';
 import '../styles/auth.css';
 
 /* SVG logo de Google inline */
@@ -93,7 +96,6 @@ const Login = () => {
           setErrores({ general: 'Datos inconsistentes en la base de datos' });
           return null;
         }
-        // Validar estado del cliente
         return { type: 'cliente', data: userData };
       }
 
@@ -101,13 +103,12 @@ const Login = () => {
       userDocSnap = await getDoc(doc(db, 'empresa', firebaseUser.uid));
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
-        // Validar que empresa esté aprobada
         if (userData.estado === 'pendiente') {
           setErrores({ general: 'Tu solicitud aún está pendiente de aprobación' });
           return null;
         } else if (userData.estado === 'rechazado') {
           setErrores({
-            general: `Tu solicitud fue rechazada${userData.motivoRechazo ? ': ' + userData.motivoRechazo : ''}`
+            general: 'Tu solicitud de empresa fue rechazada. Contacta con soporte.',
           });
           return null;
         }
@@ -125,11 +126,11 @@ const Login = () => {
         return { type: 'admin', data: userData };
       }
 
-      // Usuario no existe en ninguna colección
-      setErrores({ general: 'Usuario no registrado en el sistema' });
+      setErrores({ general: 'Usuario no encontrado en el sistema' });
       return null;
     } catch (error) {
-      setErrores({ general: 'Error al buscar usuario: ' + error.message });
+      logError(error, { accion: 'detectUserType' });
+      setErrores({ general: 'Error al verificar usuario. Intenta de nuevo.' });
       return null;
     }
   };
@@ -137,28 +138,50 @@ const Login = () => {
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setErrores({});
+
+    // Validar rate limiting
+    const checkRateLimit = rateLimiter.check(
+      `login_${form.email}`,
+      5, // 5 intentos
+      60000 // en 1 minuto
+    );
+
+    if (!checkRateLimit.permitido) {
+      setErrores({ general: checkRateLimit.mensaje });
+      setLoading(false);
+      return;
+    }
+
+    // Validar inputs
+    if (!form.email || !form.password) {
+      setErrores({ general: 'Email y contraseña son requeridos' });
+      setLoading(false);
+      return;
+    }
+
+    if (!validarEmail(form.email)) {
+      setErrores({ email: 'Email inválido' });
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Sign in con email y contraseña
       const cred = await signInWithEmailAndPassword(auth, form.email, form.password);
       
-      // Detectar tipo de usuario
       const result = await detectUserType(cred.user);
       
       if (result) {
         setDetectedUserType(result.type);
-        redirectByUserType(result.type);
+        rateLimiter.reset(`login_${form.email}`);
       }
     } catch (error) {
-      const errorMsg = error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password'
-        ? 'Correo o contraseña incorrectos'
-        : error.code === 'auth/too-many-requests'
-        ? 'Demasiados intentos fallidos. Intenta más tarde.'
-        : error.message;
-      setErrores({ general: errorMsg });
+      const errorInfo = handleError(error, { accion: 'login_email' });
+      setErrores({ general: errorInfo.mensaje });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
@@ -199,10 +222,12 @@ const Login = () => {
       if (error.code === 'auth/popup-closed-by-user') {
         setErrores({ general: 'Inicio de sesión cancelado' });
       } else {
-        setErrores({ general: `Error: ${error.message}` });
+        const errorInfo = handleError(error, { accion: 'login_google' });
+        setErrores({ general: errorInfo.mensaje });
       }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   if (user && authUserType) {

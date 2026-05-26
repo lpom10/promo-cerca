@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Environment variables - NUNCA COMMITEARTODOS
+.env
+.env.local
+.env.*.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +27,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# API Keys y secrets
+.env.*.secret
+firebase-key.json
+service-account-key.json
