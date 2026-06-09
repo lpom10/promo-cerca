@@ -352,7 +352,6 @@
 .mapa-page .mapa-container {
   flex: 1;
   position: relative;
-  /* Cambiar los valores de 720px por estos: */
   height: 100%; 
   min-height: 0; 
   border-radius: 28px;

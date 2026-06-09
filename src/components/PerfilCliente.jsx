@@ -1,11 +1,12 @@
 // src/components/PerfilCliente.jsx
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { signOut, updateProfile } from 'firebase/auth';
 import { logError } from '../utils/errorHandler';
+import { obtenerFavoritos, eliminarPromocionFavorita, eliminarEmpresaFavorita } from '../services/favoritosService';
 import '../styles/perfil.css';
 
 const PerfilCliente = () => {
@@ -20,6 +21,9 @@ const PerfilCliente = () => {
     foto: ''
   });
   const [tabs, setTabs] = useState('info');
+  const [favoritos, setFavoritos] = useState([]);
+  const [loadingFavs, setLoadingFavs] = useState(false);
+  const [favTab, setFavTab] = useState('promociones');
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -42,6 +46,44 @@ const PerfilCliente = () => {
     };
     cargarDatos();
   }, [user]);
+
+  // Cargar favoritos cuando se abre esa pestaña
+  useEffect(() => {
+    if (tabs !== 'favoritos' || !user) return;
+    const cargarFavoritos = async () => {
+      setLoadingFavs(true);
+      try {
+        const favs = await obtenerFavoritos(user.uid);
+        setFavoritos(favs);
+      } catch (error) {
+        logError(error, { accion: 'cargarFavoritos', userId: user.uid, componente: 'PerfilCliente' });
+      } finally {
+        setLoadingFavs(false);
+      }
+    };
+    cargarFavoritos();
+  }, [tabs, user]);
+
+  const handleRemoveFav = async (fav) => {
+    try {
+      if (fav.tipo === 'promocion') {
+        await eliminarPromocionFavorita(user.uid, fav.promocionId);
+      } else {
+        await eliminarEmpresaFavorita(user.uid, fav.empresaId);
+      }
+      setFavoritos(prev => prev.filter(f => f.id !== fav.id));
+    } catch (error) {
+      logError(error, { accion: 'removeFavorito', userId: user.uid, componente: 'PerfilCliente' });
+    }
+  };
+
+  const formatFecha = (fecha) => {
+    if (!fecha) return '';
+    try {
+      const value = fecha.toDate ? fecha.toDate() : new Date(fecha);
+      return value.toLocaleDateString('es-ES');
+    } catch { return ''; }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -214,10 +256,111 @@ const PerfilCliente = () => {
 
         {tabs === 'favoritos' && (
           <div className="tab-pane">
-            <div className="empty-state">
-              <p>⭐ No tienes favoritos guardados</p>
-              <p className="subtitle">Guarda tus promociones y empresas favoritas aquí</p>
+            {/* Separador: Promociones / Empresas */}
+            <div className="fav-subtabs">
+              <button
+                className={`fav-subtab-btn ${favTab === 'promociones' ? 'active' : ''}`}
+                onClick={() => setFavTab('promociones')}
+              >
+                🏷️ Promociones
+              </button>
+              <button
+                className={`fav-subtab-btn ${favTab === 'empresas' ? 'active' : ''}`}
+                onClick={() => setFavTab('empresas')}
+              >
+                🏢 Empresas
+              </button>
             </div>
+
+            {loadingFavs ? (
+              <div className="empty-state">
+                <p>⏳</p>
+                <p>Cargando favoritos...</p>
+              </div>
+            ) : favTab === 'promociones' ? (
+              (() => {
+                const promos = favoritos.filter(f => f.tipo === 'promocion');
+                return promos.length === 0 ? (
+                  <div className="empty-state">
+                    <p>🏷️</p>
+                    <p>Sin promociones favoritas</p>
+                    <p className="subtitle">Dale al ❤️ en las tarjetas de promoción</p>
+                  </div>
+                ) : (
+                  <div className="fav-grid">
+                    {promos.map(fav => (
+                      <div key={fav.id} className="fav-card">
+                        {fav.imagen
+                          ? <img src={fav.imagen} alt={fav.titulo} className="fav-card-img" />
+                          : <div className="fav-card-img-placeholder">🏷️</div>
+                        }
+                        <div className="fav-card-body">
+                          <div className="fav-card-header">
+                            <h4 className="fav-card-title">{fav.titulo}</h4>
+                            <button
+                              className="fav-remove-btn"
+                              onClick={() => handleRemoveFav(fav)}
+                              title="Quitar de favoritos"
+                            >❤️</button>
+                          </div>
+                          {fav.descuento && (
+                            <span className="fav-badge">-{fav.descuento}%</span>
+                          )}
+                          <p className="fav-empresa-name">🏢 {fav.empresaNombre}</p>
+                          {fav.fechaFin && (
+                            <p className="fav-vence">⏰ Vence: {formatFecha(fav.fechaFin)}</p>
+                          )}
+                          <Link to={`/empresa/${fav.empresaId}`} className="fav-link">
+                            Ver empresa →
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()
+            ) : (
+              (() => {
+                const empresas = favoritos.filter(f => f.tipo === 'empresa');
+                return empresas.length === 0 ? (
+                  <div className="empty-state">
+                    <p>🏢</p>
+                    <p>Sin empresas favoritas</p>
+                    <p className="subtitle">Agrégalas desde el ❤️ en su perfil público</p>
+                  </div>
+                ) : (
+                  <div className="fav-grid">
+                    {empresas.map(fav => (
+                      <div key={fav.id} className="fav-card">
+                        {fav.imagen
+                          ? <img src={fav.imagen} alt={fav.nombre} className="fav-card-img" />
+                          : <div className="fav-card-img-placeholder">🏢</div>
+                        }
+                        <div className="fav-card-body">
+                          <div className="fav-card-header">
+                            <h4 className="fav-card-title">{fav.nombre}</h4>
+                            <button
+                              className="fav-remove-btn"
+                              onClick={() => handleRemoveFav(fav)}
+                              title="Quitar de favoritos"
+                            >❤️</button>
+                          </div>
+                          {fav.categoria && (
+                            <span className="fav-cat-badge">{fav.categoria}</span>
+                          )}
+                          {fav.descripcion && (
+                            <p className="fav-desc">{fav.descripcion}</p>
+                          )}
+                          <Link to={`/empresa/${fav.empresaId}`} className="fav-link">
+                            Ver perfil →
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()
+            )}
           </div>
         )}
       </div>

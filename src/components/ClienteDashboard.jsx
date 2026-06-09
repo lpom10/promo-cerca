@@ -459,8 +459,8 @@ const ClienteDashboard = () => {
                           <td style={{ fontFamily: 'monospace', color: '#06b6d4', fontSize: '.82rem' }}>
                             {t.codigo || '—'}
                           </td>
-                          <td style={{ color: '#e2e8f0' }}>{t._promo?.titulo || '—'}</td>
-                          <td style={{ color: '#94a3b8' }}>{t._empresa?.negocio || '—'}</td>
+                          <td style={{ color: '#000000' }}>{t._promo?.titulo || '—'}</td>
+                          <td style={{ color: '#000000' }}>{t._empresa?.negocio || '—'}</td>
                           <td style={{ color: '#f59e0b', fontWeight: 600 }}>
                             {t._promo?.descuento ? `${t._promo.descuento}%` : '—'}
                           </td>

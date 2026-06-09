@@ -339,3 +339,37 @@
   border-top: 1px solid #f1f5f9;
   padding-top: 10px;
 }
+/* ── Botón Favorito (Corazón) en Perfil de Empresa ── */
+.btn-fav-empresa {
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+  flex-shrink: 0;
+}
+
+.btn-fav-empresa:hover {
+  transform: scale(1.13);
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.30);
+  border-color: #fb4c23;
+}
+
+.btn-fav-empresa.active {
+  border-color: #ef4444;
+  background: #fff5f5;
+}
+
+.btn-fav-empresa:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}

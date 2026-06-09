@@ -374,14 +374,14 @@
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: #64748b;
+  color: #000000;
   font-weight: 600;
   white-space: nowrap;
 }
 .dpro-table td {
   padding: 12px 16px;
   border-bottom: 1px solid #f1f5f9;
-  color: #475569;
+  color: #000000;
   vertical-align: middle;
 }
 .dpro-table tbody tr:last-child td { border-bottom: none; }

@@ -4,16 +4,16 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 // Lazy-loaded route components for code splitting
-const TextField = React.lazy(() => import("./components/TextField.jsx"));
-const Locales = React.lazy(() => import("./components/Locales.jsx"));
-const Mapa = React.lazy(() => import("./components/Mapa.jsx"));
-const Registro = React.lazy(() => import("./components/Registro.jsx"));
-const Login = React.lazy(() => import("./components/Login.jsx"));
-const ClienteDashboard = React.lazy(() => import("./components/ClienteDashboard.jsx"));
-const EmpresaDashboard = React.lazy(() => import("./components/EmpresaDashboard.jsx"));
-const AdminDashboard = React.lazy(() => import("./components/AdminDashboard.jsx"));
-const GestorPromociones = React.lazy(() => import('./components/GestorPromociones.jsx'));
-const PerfilEmpresaPublica = React.lazy(() => import("./components/PerfilEmpresaPublica.jsx"));
+const TextField = React.lazy(() => import("./components/TextField"));
+const Locales = React.lazy(() => import("./components/Locales"));
+const Mapa = React.lazy(() => import("./components/Mapa"));
+const Registro = React.lazy(() => import("./components/Registro"));
+const Login = React.lazy(() => import("./components/Login"));
+const ClienteDashboard = React.lazy(() => import("./components/ClienteDashboard"));
+const EmpresaDashboard = React.lazy(() => import("./components/EmpresaDashboard"));
+const AdminDashboard = React.lazy(() => import("./components/AdminDashboard"));
+const GestorPromociones = React.lazy(() => import("./components/GestorPromociones"));
+const PerfilEmpresaPublica = React.lazy(() => import("./components/PerfilEmpresaPublica"));
 
 // Static imports for components needed immediately
 import ProtectedRoute from "./components/ProtectedRoute.jsx";

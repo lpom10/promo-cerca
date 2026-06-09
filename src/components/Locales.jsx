@@ -5,6 +5,7 @@ import { collection, onSnapshot, query, limit, orderBy, startAfter, getDocs } fr
 import { db } from '../firebase';
 import { logError } from '../utils/errorHandler';
 import { LoadingSpinner } from './LoadingSpinner';
+import { togglePromocionFavorita, obtenerFavoritos } from '../services/favoritosService';
 import {
   registrarVisualizacion,
   crearTicket,
@@ -58,8 +59,51 @@ const LocalCard = ({ local, onTicket }) => {
   const fechaExpiracion = local.fechaHoraExpiracion || local.fechaFin;
   const fechaExpiracionStr = formatFechaHora(fechaExpiracion);
   const imagen = local.imagen || local.image || '/placeholder.png';
+  
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [loadingFav, setLoadingFav] = useState(false);
 
   const isOwner = userType === 'empresa' && userDetails?.empresaId === local.empresaId;
+
+  // Cargar estado de favorito
+  useEffect(() => {
+    const cargarFavorito = async () => {
+      if (!user) return;
+      try {
+        const favs = await obtenerFavoritos(user.uid);
+        const esFav = favs.some(f => f.tipo === 'promocion' && f.promocionId === local.id);
+        setIsFavorite(esFav);
+      } catch (err) {
+        logError(err, { accion: 'cargarFavorito', componente: 'LocalCard' });
+      }
+    };
+    cargarFavorito();
+  }, [user, local.id]);
+
+  const handleToggleFavorite = async () => {
+    if (!user) {
+      alert('Debes iniciar sesión para agregar favoritos.');
+      return;
+    }
+
+    setLoadingFav(true);
+    try {
+      await togglePromocionFavorita(user.uid, local.id, {
+        titulo: local.titulo,
+        empresaNombre: local.empresaNombre,
+        empresaId: local.empresaId,
+        descuento: local.descuento,
+        imagen: local.imagen,
+        fechaFin: local.fechaFin,
+      });
+      setIsFavorite(!isFavorite);
+    } catch (err) {
+      logError(err, { accion: 'toggleFavorito', componente: 'LocalCard', promocionId: local.id });
+      alert('Error al guardar favorito.');
+    } finally {
+      setLoadingFav(false);
+    }
+  };
 
   const handleEdit = () => {
     window.location.href = `/GestorPromociones?id=${local.id}`;
@@ -77,8 +121,35 @@ const LocalCard = ({ local, onTicket }) => {
 
   return (
     <div className="promo-card">
-      <div className="promo-imagen">
+      <div className="promo-imagen" style={{ position: 'relative' }}>
         <img src={imagen} alt={local.titulo || local.empresaNombre} />
+        {/* Botón de favorito estilo Instagram */}
+        {!isOwner && user && userType === 'cliente' && (
+          <button
+            onClick={handleToggleFavorite}
+            disabled={loadingFav}
+            style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              background: 'rgba(255, 255, 255, 0.9)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              cursor: loadingFav ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '22px',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            }}
+            title={isFavorite ? 'Remover de favoritos' : 'Agregar a favoritos'}
+          >
+            {isFavorite ? '❤️' : '🤍'}
+          </button>
+        )}
       </div>
       <div className="promo-content">
         <div className="promo-header">

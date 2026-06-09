@@ -3,13 +3,17 @@
    ───────────────────────────────────────────────────────── */
 
 :root {
-  /* Colores primarios */
-  --color-primary: #06b6d4;
-  --color-primary-dark: #0891b2;
-  --color-primary-light: #cffafe;
+  /* Colores primarios - TOMATOSOS/NARANJA */
+  --color-primary: #fb4b23;
+  --color-primary-dark: #e63800;
+  --color-primary-light: #ff8052;
 
   /* Colores secundarios */
-  --color-accent: #2563eb;
+  --color-secondary: #ffb84d;
+  --color-accent: #f2cf50;
+  --color-highlight: #ffcc00;
+
+  /* Colores de estado */
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;

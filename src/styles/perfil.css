@@ -422,3 +422,185 @@
     font-size: 12px;
   }
 }
+
+/* ─────────────────────────────────────── */
+/* Favoritos: Sub-tabs (Promociones / Empresas) */
+/* ─────────────────────────────────────── */
+
+.fav-subtabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 22px;
+  padding: 4px;
+  background: #0f172a;
+  border-radius: 10px;
+  border: 1px solid #334155;
+}
+
+.fav-subtab-btn {
+  flex: 1;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 7px;
+  transition: all 0.2s;
+}
+
+.fav-subtab-btn:hover {
+  color: #cbd5e1;
+  background: #1e293b;
+}
+
+.fav-subtab-btn.active {
+  background: #ffc22f;
+  color: #0f172a;
+}
+
+/* ─────────────────────────────────────── */
+/* Favoritos: Grid de Cards */
+/* ─────────────────────────────────────── */
+
+.fav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.fav-card {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.fav-card:hover {
+  border-color: #ffc22f;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.fav-card-img {
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+}
+
+.fav-card-img-placeholder {
+  width: 100%;
+  height: 100px;
+  background: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38px;
+}
+
+.fav-card-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.fav-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.fav-card-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.3;
+}
+
+.fav-remove-btn {
+  background: none;
+  border: none;
+  font-size: 17px;
+  cursor: pointer;
+  padding: 2px;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: transform 0.2s;
+  opacity: 0.85;
+}
+
+.fav-remove-btn:hover {
+  transform: scale(1.25);
+  opacity: 1;
+}
+
+.fav-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  background: linear-gradient(135deg, #fb4c23, #ffc22f);
+  color: #fff;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  align-self: flex-start;
+}
+
+.fav-cat-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  background: rgba(255, 194, 47, 0.12);
+  color: #ffc22f;
+  border: 1px solid rgba(255, 194, 47, 0.4);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+.fav-empresa-name {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.fav-vence {
+  margin: 0;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.fav-desc {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.fav-link {
+  display: inline-block;
+  color: #ffc22f;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  margin-top: 2px;
+  transition: color 0.2s;
+}
+
+.fav-link:hover {
+  color: #fb4c23;
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .fav-grid {
+    grid-template-columns: 1fr;
+  }
+}
