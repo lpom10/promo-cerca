@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit, orderBy } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { logError } from '../utils/errorHandler';
 import { categorias } from '../data/categorias';
+import { LoadingSpinner } from './LoadingSpinner';
 import { crearTicket, registrarVisualizacion, obtenerPromocionesTrending, verificarDisponibilidadTickets, obtenerMensajeDisponibilidad, calcularTiempoRestante, formatearTiempoRestante } from '../services/ticketService';
 import VisualizarTicket from './VisualizarTicket';
 import '../styles/promociones.css';
@@ -35,12 +37,16 @@ const ListarPromociones = () => {
         q = query(
           collection(db, 'promociones'),
           where('categoria', '==', filtroCategoria),
-          where('activa', '==', true)
+          where('activa', '==', true),
+          orderBy('createdAt', 'desc'),
+          limit(20)
         );
       } else {
         q = query(
           collection(db, 'promociones'),
-          where('activa', '==', true)
+          where('activa', '==', true),
+          orderBy('createdAt', 'desc'),
+          limit(20)
         );
       }
 
@@ -83,7 +89,7 @@ const ListarPromociones = () => {
 
       setPromociones(data);
     } catch (error) {
-      console.error('Error cargando promociones:', error);
+      logError(error, { accion: 'cargarPromociones', componente: 'ListarPromociones' });
       setError('Error al cargar promociones');
     }
     setLoading(false);
@@ -94,7 +100,7 @@ const ListarPromociones = () => {
       const trending = await obtenerPromocionesTrending(5);
       setTrending(trending);
     } catch (error) {
-      console.error('Error cargando trending:', error);
+      logError(error, { accion: 'cargarTrending', componente: 'ListarPromociones' });
     }
   };
 
@@ -103,7 +109,7 @@ const ListarPromociones = () => {
     try {
       await registrarVisualizacion(promo.id, promo.empresaId, user?.uid || null);
     } catch (error) {
-      console.error('Error registrando visualización:', error);
+      logError(error, { accion: 'registrarVisualizacion', promocionId: promo.id, componente: 'ListarPromociones' });
     }
 
     // Si no es cliente, no puede generar ticket
@@ -242,7 +248,7 @@ const ListarPromociones = () => {
 
       {/* Lista de Promociones */}
       {loading ? (
-        <div className="loading">⏳ Cargando promociones...</div>
+        <LoadingSpinner message="Cargando promociones..." />
       ) : promociones.length === 0 ? (
         <div className="sin-promociones">
           <p>📭 No hay promociones disponibles en esta categoría</p>

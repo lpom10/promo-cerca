@@ -5,6 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { signOut, updateProfile } from 'firebase/auth';
+import { logError } from '../utils/errorHandler';
 import '../styles/perfil.css';
 
 const PerfilEmpresa = () => {
@@ -43,7 +44,7 @@ const PerfilEmpresa = () => {
             });
           }
         } catch (error) {
-          console.error('Error:', error);
+          logError(error, { accion: 'cargarDatosEmpresa', userId: user.uid, componente: 'PerfilEmpresa' });
         }
       }
       setLoading(false);
@@ -63,7 +64,7 @@ const PerfilEmpresa = () => {
       setDatosEmpresa({ ...datosEmpresa, ...form });
       setEditando(false);
     } catch (error) {
-      console.error('Error al guardar:', error);
+      logError(error, { accion: 'guardarCambios', userId: user.uid, componente: 'PerfilEmpresa' });
     }
     setLoading(false);
   };
@@ -74,7 +75,7 @@ const PerfilEmpresa = () => {
       logout();
       navigate('/');
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      logError(error, { accion: 'logout', userId: user.uid, componente: 'PerfilEmpresa' });
     }
   };
 

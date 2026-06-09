@@ -1,20 +1,33 @@
-import { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { Routes, Route, Link, NavLink, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 
-import TextField from "./components/TextField.jsx";
-import Locales from "./components/Locales.jsx";
-import Mapa from "./components/Mapa.jsx";
-import Registro from "./components/Registro.jsx";
-import Login from "./components/Login.jsx";
-import ClienteDashboard from "./components/ClienteDashboard.jsx";
-import EmpresaDashboard from "./components/EmpresaDashboard.jsx";
-import AdminDashboard from "./components/AdminDashboard.jsx";
+// Lazy-loaded route components for code splitting
+const TextField = React.lazy(() => import("./components/TextField.jsx"));
+const Locales = React.lazy(() => import("./components/Locales.jsx"));
+const Mapa = React.lazy(() => import("./components/Mapa.jsx"));
+const Registro = React.lazy(() => import("./components/Registro.jsx"));
+const Login = React.lazy(() => import("./components/Login.jsx"));
+const ClienteDashboard = React.lazy(() => import("./components/ClienteDashboard.jsx"));
+const EmpresaDashboard = React.lazy(() => import("./components/EmpresaDashboard.jsx"));
+const AdminDashboard = React.lazy(() => import("./components/AdminDashboard.jsx"));
+const GestorPromociones = React.lazy(() => import('./components/GestorPromociones.jsx'));
+const PerfilEmpresaPublica = React.lazy(() => import("./components/PerfilEmpresaPublica.jsx"));
+
+// Static imports for components needed immediately
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import GestorPromociones from './components/GestorPromociones';
 import NotificationBell from "./components/NotificationBell.jsx";
-import PerfilEmpresaPublica from "./components/PerfilEmpresaPublica.jsx";
+
+// Loading fallback component for lazy routes
+const LoadingFallback = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f0f4f8' }}>
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+      <div style={{ fontSize: '1.1rem', color: '#64748b' }}>Cargando...</div>
+    </div>
+  </div>
+);
 
 function AppContent() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -91,49 +104,57 @@ function AppContent() {
       </div>
 
       <Routes>
-        <Route path="/" element={<TextField />} />
-        <Route path="/locales" element={<Locales />} />
-        <Route path="/mapa" element={<Mapa />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/registro" element={<Registro />} />
+        <Route path="/" element={<Suspense fallback={<LoadingFallback />}><TextField /></Suspense>} />
+        <Route path="/locales" element={<Suspense fallback={<LoadingFallback />}><Locales /></Suspense>} />
+        <Route path="/mapa" element={<Suspense fallback={<LoadingFallback />}><Mapa /></Suspense>} />
+        <Route path="/login" element={<Suspense fallback={<LoadingFallback />}><Login /></Suspense>} />
+        <Route path="/registro" element={<Suspense fallback={<LoadingFallback />}><Registro /></Suspense>} />
 
         {/* Perfil Público de Empresa */}
-        <Route path="/empresa/:empresaId" element={<PerfilEmpresaPublica />} />
+        <Route path="/empresa/:empresaId" element={<Suspense fallback={<LoadingFallback />}><PerfilEmpresaPublica /></Suspense>} />
 
         {/* Rutas Protegidas */}
         <Route 
           path="/cliente/dashboard" 
           element={
-            <ProtectedRoute requiredUserType="cliente">
-              <ClienteDashboard />
-            </ProtectedRoute>
+            <Suspense fallback={<LoadingFallback />}>
+              <ProtectedRoute requiredUserType="cliente">
+                <ClienteDashboard />
+              </ProtectedRoute>
+            </Suspense>
           } 
         />
         
         <Route 
           path="/empresa/dashboard" 
           element={
-            <ProtectedRoute requiredUserType="empresa">
-              <EmpresaDashboard />
-            </ProtectedRoute>
+            <Suspense fallback={<LoadingFallback />}>
+              <ProtectedRoute requiredUserType="empresa">
+                <EmpresaDashboard />
+              </ProtectedRoute>
+            </Suspense>
           } 
         />
 
         <Route
           path="/empresa/gestionar-promociones"
           element={
-            <ProtectedRoute requiredUserType="empresa">
-              <GestorPromociones />
-            </ProtectedRoute>
+            <Suspense fallback={<LoadingFallback />}>
+              <ProtectedRoute requiredUserType="empresa">
+                <GestorPromociones />
+              </ProtectedRoute>
+            </Suspense>
           }
         />
         
         <Route 
           path="/admin/dashboard" 
           element={
-            <ProtectedRoute requiredUserType="admin">
-              <AdminDashboard />
-            </ProtectedRoute>
+            <Suspense fallback={<LoadingFallback />}>
+              <ProtectedRoute requiredUserType="admin">
+                <AdminDashboard />
+              </ProtectedRoute>
+            </Suspense>
           } 
         />
 

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { signOut, updateProfile } from 'firebase/auth';
+import { logError } from '../utils/errorHandler';
 import '../styles/perfil.css';
 
 const PerfilCliente = () => {
@@ -34,7 +35,7 @@ const PerfilCliente = () => {
             });
           }
         } catch (error) {
-          console.error('Error:', error);
+          logError(error, { accion: 'cargarDatosUsuario', userId: user.uid, componente: 'PerfilCliente' });
         }
       }
       setLoading(false);
@@ -71,7 +72,7 @@ const PerfilCliente = () => {
       });
       setEditando(false);
     } catch (error) {
-      console.error('Error al guardar:', error);
+      logError(error, { accion: 'guardarCambios', userId: user.uid, componente: 'PerfilCliente' });
     }
     setLoading(false);
   };
@@ -82,7 +83,7 @@ const PerfilCliente = () => {
       logout();
       navigate('/');
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      logError(error, { accion: 'logout', userId: user.uid, componente: 'PerfilCliente' });
     }
   };
 

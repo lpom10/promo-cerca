@@ -11,6 +11,7 @@ import {
   Timestamp,
   increment,
 } from 'firebase/firestore';
+import { logError } from '../utils/errorHandler';
 import { crearNotificacion, crearNotificacionTicketsAgotados } from './notificationService';
 
 // Generar código único para ticket
@@ -26,6 +27,23 @@ export const generarCodigoTicket = () => {
 // Crear ticket para cliente
 export const crearTicket = async (usuarioId, promocionId, empresaId, promocionData, usuarioData) => {
   try {
+    // 🔐 VALIDACIÓN DE ENTRADA
+    if (!usuarioId || typeof usuarioId !== 'string') {
+      throw new Error('Usuario ID inválido');
+    }
+    if (!promocionId || typeof promocionId !== 'string') {
+      throw new Error('Promoción ID inválido');
+    }
+    if (!empresaId || typeof empresaId !== 'string') {
+      throw new Error('Empresa ID inválido');
+    }
+    if (!promocionData || typeof promocionData !== 'object') {
+      throw new Error('Datos de promoción inválidos');
+    }
+    if (usuarioData && typeof usuarioData !== 'object') {
+      throw new Error('Datos de usuario inválidos');
+    }
+    
     // Verificar que no exista ya un ticket para esta promoción
     const q = query(
       collection(db, 'tickets'),
@@ -104,7 +122,7 @@ export const crearTicket = async (usuarioId, promocionId, empresaId, promocionDa
     
     return { id: docRef.id, ...ticket };
   } catch (error) {
-    console.error('Error creando ticket:', error);
+    logError(error, { accion: 'crearTicket' });
     throw error;
   }
 };
@@ -112,6 +130,11 @@ export const crearTicket = async (usuarioId, promocionId, empresaId, promocionDa
 // Obtener ticket por código (para validar en local)
 export const obtenerTicketPorCodigo = async (codigo) => {
   try {
+    // 🔐 VALIDACIÓN
+    if (!codigo || typeof codigo !== 'string' || codigo.length === 0) {
+      throw new Error('Código de ticket inválido');
+    }
+    
     const q = query(
       collection(db, 'tickets'),
       where('codigo', '==', codigo)
@@ -125,7 +148,7 @@ export const obtenerTicketPorCodigo = async (codigo) => {
     const doc = snapshot.docs[0];
     return { id: doc.id, ...doc.data() };
   } catch (error) {
-    console.error('Error obteniendo ticket:', error);
+    logError(error, { accion: 'obtenerTicketPorCodigo' });
     throw error;
   }
 };
@@ -133,6 +156,14 @@ export const obtenerTicketPorCodigo = async (codigo) => {
 // Canjear ticket
 export const canjearTicket = async (ticketId, empresaId) => {
   try {
+    // 🔐 VALIDACIÓN
+    if (!ticketId || typeof ticketId !== 'string') {
+      throw new Error('Ticket ID inválido');
+    }
+    if (!empresaId || typeof empresaId !== 'string') {
+      throw new Error('Empresa ID inválido');
+    }
+    
     const ticketRef = doc(db, 'tickets', ticketId);
     const ticketSnap = await getDoc(ticketRef);
 
@@ -160,7 +191,7 @@ export const canjearTicket = async (ticketId, empresaId) => {
 
     return { id: ticketId, ...ticket, estado: 'canjeado', fechaCanjeado: new Date() };
   } catch (error) {
-    console.error('Error canjeando ticket:', error);
+    logError(error, { accion: 'canjearTicket', ticketId });
     throw error;
   }
 };
@@ -168,6 +199,11 @@ export const canjearTicket = async (ticketId, empresaId) => {
 // Obtener tickets de usuario
 export const obtenerTicketsUsuario = async (usuarioId) => {
   try {
+    // 🔐 VALIDACIÓN
+    if (!usuarioId || typeof usuarioId !== 'string') {
+      throw new Error('Usuario ID inválido');
+    }
+    
     const q = query(
       collection(db, 'tickets'),
       where('usuarioId', '==', usuarioId)
@@ -176,7 +212,7 @@ export const obtenerTicketsUsuario = async (usuarioId) => {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    console.error('Error obteniendo tickets:', error);
+    logError(error, { accion: 'obtenerTicketsUsuario' });
     throw error;
   }
 };
@@ -184,6 +220,11 @@ export const obtenerTicketsUsuario = async (usuarioId) => {
 // Obtener tickets de empresa (para validar en local)
 export const obtenerTicketsEmpresa = async (empresaId) => {
   try {
+    // 🔐 VALIDACIÓN
+    if (!empresaId || typeof empresaId !== 'string') {
+      throw new Error('Empresa ID inválido');
+    }
+    
     const q = query(
       collection(db, 'tickets'),
       where('empresaId', '==', empresaId)
@@ -192,7 +233,7 @@ export const obtenerTicketsEmpresa = async (empresaId) => {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    console.error('Error obteniendo tickets empresa:', error);
+    logError(error, { accion: 'obtenerTicketsEmpresa' });
     throw error;
   }
 };
@@ -200,6 +241,17 @@ export const obtenerTicketsEmpresa = async (empresaId) => {
 // Registrar visualización de promoción
 export const registrarVisualizacion = async (promocionId, empresaId, usuarioId = null) => {
   try {
+    // 🔐 VALIDACIÓN
+    if (!promocionId || typeof promocionId !== 'string') {
+      throw new Error('Promoción ID inválido');
+    }
+    if (!empresaId || typeof empresaId !== 'string') {
+      throw new Error('Empresa ID inválido');
+    }
+    if (usuarioId && typeof usuarioId !== 'string') {
+      throw new Error('Usuario ID inválido');
+    }
+    
     await addDoc(collection(db, 'vistas'), {
       promocionId,
       empresaId,
@@ -214,7 +266,7 @@ export const registrarVisualizacion = async (promocionId, empresaId, usuarioId =
     });
 
   } catch (error) {
-    console.error('Error registrando visualización:', error);
+    logError(error, { accion: 'registrarVisualizacion' });
     // No lanzar error, es secundario
   }
 };
@@ -270,8 +322,11 @@ export const obtenerMensajeDisponibilidad = (disponibilidad) => {
 
 // Obtener promociones trending
 export const obtenerPromocionesTrending = async (limite = 5) => {
-  try {
-    const q = query(
+  try {    // 🔐 VALIDACIÓN
+    if (typeof limite !== 'number' || limite < 1 || limite > 100) {
+      limite = 5;
+    }
+        const q = query(
       collection(db, 'promociones'),
       where('activa', '==', true)
     );
@@ -285,7 +340,7 @@ export const obtenerPromocionesTrending = async (limite = 5) => {
       .sort((a, b) => (b.visualizaciones || 0) - (a.visualizaciones || 0))
       .slice(0, limite);
   } catch (error) {
-    console.error('Error obteniendo trending:', error);
+    logError(error, { accion: 'obtenerPromocionesTrending' });
     throw error;
   }
 };
@@ -294,6 +349,14 @@ export const obtenerPromocionesTrending = async (limite = 5) => {
 // Obtener estadísticas de vistas por periodo
 export const obtenerEstadisticasVistas = async (promocionId, dias = 7) => {
   try {
+    // 🔐 VALIDACIÓN
+    if (!promocionId || typeof promocionId !== 'string') {
+      throw new Error('Promoción ID inválido');
+    }
+    if (typeof dias !== 'number' || dias < 1 || dias > 365) {
+      dias = 7;
+    }
+    
     const fechaInicio = new Date();
     fechaInicio.setDate(fechaInicio.getDate() - dias);
 
@@ -306,7 +369,7 @@ export const obtenerEstadisticasVistas = async (promocionId, dias = 7) => {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data());
   } catch (error) {
-    console.error('Error obteniendo estadísticas:', error);
+    logError(error, { accion: 'obtenerEstadisticasVistas' });
     throw error;
   }
 };
@@ -314,6 +377,11 @@ export const obtenerEstadisticasVistas = async (promocionId, dias = 7) => {
 // Obtener estadísticas completas de tickets para una promoción
 export const obtenerEstadisticasTickets = async (promocionId) => {
   try {
+    // 🔐 VALIDACIÓN
+    if (!promocionId || typeof promocionId !== 'string') {
+      throw new Error('Promoción ID inválido');
+    }
+    
     // Obtener todos los tickets de la promoción
     const q = query(
       collection(db, 'tickets'),
@@ -335,7 +403,7 @@ export const obtenerEstadisticasTickets = async (promocionId) => {
       tickets: tickets,
     };
   } catch (error) {
-    console.error('Error obteniendo estadísticas de tickets:', error);
+    logError(error, { accion: 'obtenerEstadisticasTickets' });
     throw error;
   }
 };
@@ -381,7 +449,7 @@ export const validarReasignacionLimites = async (promocionId, nuevoTicketsMaximo
     
     return validacion;
   } catch (error) {
-    console.error('Error validando reasignación de límites:', error);
+    logError(error, { accion: 'validarReasignacionLimites' });
     throw error;
   }
 };

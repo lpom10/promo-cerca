@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, query, limit, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { categorias } from '../data/categorias';
 import { verificarDisponibilidadTickets } from '../services/ticketService';
+import { logError } from '../utils/errorHandler';
 import fondo from '../assets/fondo.png';
 import '../styles/homepage.css';
 import '../styles/mapa.css';
@@ -35,14 +36,33 @@ const TextField = () => {
   const [promociones, setPromociones] = useState([]);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Escuchamos empresas primero para no chocar con promesas de Firebase
-    const unsubEmpresas = onSnapshot(collection(db, 'empresa'), (empSnap) => {
-      const empresasMap = {};
-      empSnap.forEach(d => { empresasMap[d.id] = { id: d.id, ...d.data() }; });
+  // Estado para mapeo de empresas
+  const [empresasMap, setEmpresasMap] = useState({});
 
-      // Luego escuchamos promociones
-      const unsubPromos = onSnapshot(collection(db, 'promociones'), (promoSnap) => {
+  // Listener #1: Cargar empresas con limit
+  useEffect(() => {
+    const cargarEmpresas = async () => {
+      try {
+        const qe = query(collection(db, 'empresa'), limit(100));
+        const empSnap = await getDocs(qe);
+        const newEmpresasMap = {};
+        empSnap.forEach(d => { newEmpresasMap[d.id] = { id: d.id, ...d.data() }; });
+        setEmpresasMap(newEmpresasMap);
+      } catch (err) {
+        logError(err, { accion: 'cargarEmpresas', componente: 'TextField' });
+      }
+    };
+    
+    cargarEmpresas();
+  }, []);
+
+  // Listener #2: Cargar promociones con limit (depende de empresasMap)
+  useEffect(() => {
+    const cargarPromociones = async () => {
+      try {
+        const qp = query(collection(db, 'promociones'), orderBy('createdAt', 'desc'), limit(30));
+        const promoSnap = await getDocs(qp);
+        
         const promosEnriquecidas = promoSnap.docs.map(doc => {
           const data = { id: doc.id, ...doc.data() };
           const e = data.empresaId ? empresasMap[data.empresaId] : null;
@@ -65,13 +85,16 @@ const TextField = () => {
         });
         
         setPromociones(promosEnriquecidas);
-      }, (err) => console.error("Error cargando promos:", err));
+      } catch (err) {
+        logError(err, { accion: 'cargarPromociones', componente: 'TextField' });
+      }
+    };
+    
+    if (Object.keys(empresasMap).length > 0) {
+      cargarPromociones();
+    }
+  }, [empresasMap]);
 
-      return () => unsubPromos();
-    }, (err) => console.error("Error cargando empresas:", err));
-
-    return () => unsubEmpresas();
-  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -89,15 +112,17 @@ const TextField = () => {
       const estado = verificarDisponibilidadTickets(p);
       ticketsDisponibles = estado ? estado.disponible : true;
     } catch (error) {
-      console.warn("Fallo verificando tickets en promo:", p.id);
+      logError(error, { accion: 'verificarTickets', promocionId: p.id, componente: 'TextField' });
     }
 
     return tieneCoords && estaActiva && ticketsDisponibles;
   });
 
-  // Log para revisar la consola
+  // Verificar pines en desarrollo
   useEffect(() => {
-    console.log("🗺️ PINES LISTOS PARA DIBUJAR:", promoMap);
+    if (import.meta.env.MODE === 'development') {
+      console.debug("🗺️ PINES LISTOS:", promoMap.length);
+    }
   }, [promoMap]);
 
   const getEmoji = (categoriaId) => categorias.find(c => c.id === categoriaId)?.emoji || '🏷️';

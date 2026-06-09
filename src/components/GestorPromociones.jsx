@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { logError } from '../utils/errorHandler';
 import '../styles/promociones.css';
 
 const GestorPromociones = ({ onNavigateToSuscripcion }) => {
@@ -39,7 +40,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
       }));
       setPromociones(data);
     } catch (error) {
-      console.error('Error cargando promociones:', error);
+      logError(error, { accion: 'cargarPromociones', userId: user.uid, componente: 'GestorPromociones' });
     }
   };
 
@@ -58,7 +59,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
         setSuscripcion(null);
       }
     } catch (error) {
-      console.error('Error cargando suscripción:', error);
+      logError(error, { accion: 'cargarSuscripcion', userId: user.uid, componente: 'GestorPromociones' });
     }
   };
 
@@ -160,7 +161,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
       setShowForm(false);
       cargarPromociones();
     } catch (error) {
-      console.error('Error guardando promoción:', error);
+      logError(error, { accion: 'guardarPromocion', userId: user.uid, componente: 'GestorPromociones' });
       setErrores({ general: 'Error al guardar la promoción' });
     }
     setLoading(false);
@@ -190,7 +191,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
         await deleteDoc(doc(db, 'promociones', id));
         cargarPromociones();
       } catch (error) {
-        console.error('Error eliminando promoción:', error);
+        logError(error, { accion: 'eliminarPromocion', promocionId: id, componente: 'GestorPromociones' });
       }
     }
   };

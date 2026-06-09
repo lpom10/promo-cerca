@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { logError } from '../utils/errorHandler';
 import '../styles/suscripciones.css';
 import PaymentModal from './PaymentModal';
 
@@ -35,7 +36,7 @@ const GestorSuscripcion = () => {
       setSuscripcionActiva(activa || null);
       setHistorialSuscripciones(suscripciones);
     } catch (error) {
-      console.error('Error cargando suscripciones:', error);
+      logError(error, { accion: 'cargarSuscripciones', userId: user.uid, componente: 'GestorSuscripcion' });
     }
   };
 

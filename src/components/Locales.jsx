@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { categorias } from '../data/categorias';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, orderBy, startAfter, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
+import { logError } from '../utils/errorHandler';
+import { LoadingSpinner } from './LoadingSpinner';
 import {
   registrarVisualizacion,
   crearTicket,
@@ -68,7 +70,7 @@ const LocalCard = ({ local, onTicket }) => {
     try {
       alert('Eliminar: acción pendiente de implementar.');
     } catch (err) {
-      console.error(err);
+      logError(err, { accion: 'eliminarPromocion', componente: 'Locales' });
       alert('Error al eliminar.');
     }
   };
@@ -147,14 +149,17 @@ const Locales = () => {
   const [catActiva, setCatActiva] = useState('todos');
   const [ticketLocal, setTicketLocal] = useState(null);
   const [activeTicket, setActiveTicket] = useState(null);
-  const [locales, setLocales] = useState([]); 
+  const [locales, setLocales] = useState([]);
+  const [allLocalesCache, setAllLocalesCache] = useState([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { user, userType, userDetails } = useAuth();
 
   const handleTicketClick = async (local) => {
     try {
       await registrarVisualizacion(local.id, local.empresaId, user?.uid || null);
     } catch (error) {
-      console.error('Error visualización:', error);
+      logError(error, { accion: 'registrarVisualizacion', localId: local.id, componente: 'Locales' });
     }
 
     if (user && userType === 'cliente') {
@@ -173,10 +178,23 @@ const Locales = () => {
   };
 
   useEffect(() => { 
-    const unsub = onSnapshot(collection(db, 'promociones'), (snapshot) => {
-      setLocales(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsub();
+    // Initial load: Get all promociones (cached in memory for client-side search)
+    const cargarPromocionesInicial = async () => {
+      try {
+        setLoading(true);
+        const q = query(collection(db, 'promociones'), orderBy('createdAt', 'desc'), limit(100));
+        const snapshot = await getDocs(q);
+        const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setAllLocalesCache(docs);
+        setLocales(docs);
+      } catch (error) {
+        logError(error, { accion: 'cargarPromocionesInicial', componente: 'Locales' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    cargarPromocionesInicial();
   }, []);
 
   const localesFiltrados = useMemo(() => {
@@ -218,7 +236,9 @@ const Locales = () => {
         </div>
       </div>
 
-      {localesFiltrados.length === 0 ? (
+      {loading ? (
+        <LoadingSpinner message="Cargando promociones..." />
+      ) : localesFiltrados.length === 0 ? (
         <div className="no-results">
           <p>No hay promociones disponibles.</p>
         </div>

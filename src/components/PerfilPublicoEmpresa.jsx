@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
+import { logError } from '../utils/errorHandler';
 import '../styles/perfil-empresa-publica.css';
 
 const PerfilPublicoEmpresa = () => {
@@ -36,7 +37,7 @@ const PerfilPublicoEmpresa = () => {
         setPromociones(promos);
       } catch (err) {
         setError('Error al cargar el perfil');
-        console.error(err);
+        logError(err, { accion: 'cargarDatosEmpresa', empresaId, componente: 'PerfilPublicoEmpresa' });
       } finally {
         setLoading(false);
       }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { logError } from '../utils/errorHandler';
 import '../styles/PerfilEmpresaPublica.css';
 
 const PerfilEmpresaPublica = () => {
@@ -29,7 +30,7 @@ const PerfilEmpresaPublica = () => {
           setError("Empresa no encontrada");
         }
       } catch (err) {
-        console.error("Error al cargar empresa:", err);
+        logError(err, { accion: 'cargarEmpresa', empresaId, componente: 'PerfilEmpresaPublica' });
         setError("Error al cargar la empresa");
       }
     };
@@ -55,7 +56,7 @@ const PerfilEmpresaPublica = () => {
       setPromociones(promosData);
       setLoading(false);
     }, (err) => {
-      console.error("Error en promociones:", err);
+      logError(err, { accion: 'cargarPromocionesTiempoReal', empresaId, componente: 'PerfilEmpresaPublica' });
       setLoading(false);
     });
 

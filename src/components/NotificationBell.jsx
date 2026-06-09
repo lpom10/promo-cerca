@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { logError } from '../utils/errorHandler';
 import {
   suscribirseNotificaciones,
   marcarComoLeida,
@@ -62,7 +63,7 @@ const NotificationBell = () => {
     try {
       await eliminarNotificacion(id);
     } catch (error) {
-      console.error('Error eliminando notificación:', error);
+      logError(error, { accion: 'eliminarNotificacion', notificacionId: id, componente: 'NotificationBell' });
     }
   };
 
@@ -70,7 +71,7 @@ const NotificationBell = () => {
     try {
       await marcarTodoComoLeido(user.uid);
     } catch (error) {
-      console.error('Error marcando como leído:', error);
+      logError(error, { accion: 'marcarTodoComoLeido', userId: user.uid, componente: 'NotificationBell' });
     }
   };
 

@@ -1,7 +1,9 @@
-  import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
+import { logError } from '../utils/errorHandler';
+import { LoadingSpinner } from './LoadingSpinner';
 import "leaflet/dist/leaflet.css";
 import '../styles/mapa.css';
 
@@ -9,7 +11,7 @@ import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 import { categorias } from '../data/categorias';
-import { collection, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs, limit, query, orderBy } from 'firebase/firestore';
 import { verificarDisponibilidadTickets, obtenerMensajeDisponibilidad, calcularTiempoRestante, formatearTiempoRestante, crearTicket, registrarVisualizacion } from '../services/ticketService';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -129,10 +131,10 @@ const Mapa = () => {
       try {
         setLoading(true);
         
-        // 🚀 OPTIMIZACIÓN: Disparamos ambas peticiones a Firebase AL MISMO TIEMPO
+        // 🚀 OPTIMIZACIÓN: Disparamos ambas peticiones a Firebase AL MISMO TIEMPO con LIMIT
         const [empresasSnap, promosSnap] = await Promise.all([
-          getDocs(collection(db, 'empresa')),
-          getDocs(collection(db, 'promociones'))
+          getDocs(query(collection(db, 'empresa'), limit(100))),
+          getDocs(query(collection(db, 'promociones'), orderBy('createdAt', 'desc'), limit(100)))
         ]);
 
         const empresasMap = {};
@@ -160,7 +162,7 @@ const Mapa = () => {
 
         setLocales(promos);
       } catch (error) {
-        console.error('Error cargando locales:', error);
+        logError(error, { accion: 'cargarLocales', componente: 'Mapa' });
       } finally {
         setLoading(false);
       }
@@ -191,7 +193,6 @@ const Mapa = () => {
     return matchCat && matchSearch;
   });
 
-  // PARA EL SIDEBAR: TODAS las promociones activas (para mostrar disponibilidad)
   const todasPromos = locales.filter((promo) => {
     if (promo.activa === false) return false;
 
@@ -206,7 +207,6 @@ const Mapa = () => {
 
   const totalPromos = todasPromos.length;
 
-  // Component: render only markers inside current bounds and cluster them
   const VisibleMarkers = ({ items }) => {
     const map = useMap();
     const [clusters, setClusters] = useState([]);
@@ -215,7 +215,6 @@ const Mapa = () => {
     const rebuildClusters = () => {
       const zoom = map.getZoom();
       const bounds = map.getBounds();
-      // cell size changes with zoom to approximate clustering
       const cell = Math.max(0.001, 0.5 / Math.pow(2, Math.max(0, zoom - 3)));
 
       const buckets = {};
@@ -318,7 +317,7 @@ const Mapa = () => {
       const ticket = await crearTicket(user.uid, promo.id, selected.empresa.empresaId, promo, userDetails);
       setGeneratedTicket(ticket);
     } catch (err) {
-      console.error('Error creando ticket:', err);
+      logError(err, { accion: 'crearTicket', componente: 'Mapa' });
       setTicketError(err?.message || 'Error al generar ticket');
     } finally {
       setTicketLoading(false);
@@ -427,21 +426,24 @@ const Mapa = () => {
       </aside>
 
       <div className="mapa-container">
-        
-        <MapContainer
-          center={[-4.007, -79.211]}
-          zoom={15}
-          style={{ height: '100%', width: '100%' }}
-        >
-          <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-            attribution='&copy; <a href="https://carto.com/">Carto</a> contributors'
-          />
+        {loading ? (
+          <LoadingSpinner message="Cargando mapa..." />
+        ) : (
+          <MapContainer
+            center={[-4.007, -79.211]}
+            zoom={15}
+            style={{ height: '100%', width: '100%' }}
+          >
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+              attribution='&copy; <a href="https://carto.com/">Carto</a> contributors'
+            />
 
-          <MapaFocus targetId={targetId} markerRefs={markerRefs} locales={empresas} />
+            <MapaFocus targetId={targetId} markerRefs={markerRefs} locales={empresas} />
 
-          <VisibleMarkers items={empresasParaMapa} />
-        </MapContainer>
+            <VisibleMarkers items={empresasParaMapa} />
+          </MapContainer>
+        )}
         {selected && (
           <div className="promo-overlay" onClick={closeOverlay}>
             <div className="promo-overlay-card" onClick={(e) => e.stopPropagation()}>

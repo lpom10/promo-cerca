@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import ListarPromociones from './ListarPromociones';
 import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
+import { logError } from '../utils/errorHandler';
 import '../styles/dashboard-pro.css';
 
 // ── Helpers ────────────────────────────────────────────────
@@ -212,7 +212,7 @@ const ClienteDashboard = () => {
         favoritosCount:   myFavoritos.length,
       });
     } catch (err) {
-      console.error('Error cargando dashboard cliente:', err);
+      logError(err, { accion: 'cargarDashboardCliente', componente: 'ClienteDashboard' });
     }
     setLoading(false);
   };
@@ -244,7 +244,6 @@ const ClienteDashboard = () => {
     { id: 'inicio',     icon: '🏠', label: 'Inicio' },
     { id: 'tickets',    icon: '🎟️', label: 'Mis Tickets' },
     { id: 'favoritos',  icon: '❤️', label: 'Favoritos' },
-    { id: 'explorar',   icon: '🔍', label: 'Explorar' },
     { id: 'perfil',     icon: '👤', label: 'Mi Perfil' },
   ];
 
@@ -487,7 +486,13 @@ const ClienteDashboard = () => {
                 <div className="dpro-empty" style={{ minHeight: 300 }}>
                   <div className="dpro-empty-icon">💔</div>
                   <div className="dpro-empty-text">Aún no tienes favoritos guardados</div>
-                  
+                  <button
+                    className="dpro-btn primary"
+                    style={{ marginTop: 16 }}
+                    onClick={() => navigate('/locales')}
+                  >
+                    🗺️ Ir a Locales
+                  </button>
                 </div>
               ) : (
                 <>
@@ -555,14 +560,6 @@ const ClienteDashboard = () => {
                   )}
                 </>
               )}
-            </>
-          )}
-
-          {/* ── EXPLORAR ── */}
-          {activeTab === 'explorar' && (
-            <>
-              <div className="dpro-section-title">🔍 Explorar Promociones</div>
-              <ListarPromociones />
             </>
           )}
 

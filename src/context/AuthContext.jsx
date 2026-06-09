@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { logError } from '../utils/errorHandler';
 
 const AuthContext = createContext();
 
@@ -49,7 +50,7 @@ export const AuthProvider = ({ children }) => {
             setUserDetails(data);
           }
         } catch (error) {
-          console.error('Error fetching user details:', error);
+          logError(error, { accion: 'obtenerDetallesUsuario', componente: 'AuthContext' });
         }
       } else {
         setUserType(null);

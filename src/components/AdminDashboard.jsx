@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, getDocs, query, where, updateDoc, doc, onSnapshot, addDoc } from 'firebase/firestore';
+import { logError } from '../utils/errorHandler';
 
 const AdminDashboard = () => {
   const { user, userDetails, logout } = useAuth();
@@ -32,7 +33,7 @@ const AdminDashboard = () => {
       
       setPagosPendientes(pagosConNombre);
     }, (error) => {
-      console.error('Error listening to pagos:', error);
+      logError(error, { accion: 'escucharPagos', componente: 'AdminDashboard' });
     });
     return () => unsubscribe();
   }, []);
@@ -51,7 +52,7 @@ const AdminDashboard = () => {
       }));
       setSolicitudes(data);
     } catch (error) {
-      console.error('Error cargando solicitudes:', error);
+      logError(error, { accion: 'cargarSolicitudes', componente: 'AdminDashboard' });
     }
     setLoading(false);
   };
@@ -69,7 +70,7 @@ const AdminDashboard = () => {
       }));
       setEmpresasAprobadas(data);
     } catch (error) {
-      console.error('Error cargando empresas aprobadas:', error);
+      logError(error, { accion: 'cargarEmpresasAprobadas', componente: 'AdminDashboard' });
     }
   };
 
@@ -89,7 +90,7 @@ const AdminDashboard = () => {
         setEmpresasAprobadas(prev => [...prev, { ...empresaAprobada, estado: 'aprobado' }]);
       }
     } catch (error) {
-      console.error('Error aprobando solicitud:', error);
+      logError(error, { accion: 'aprobarSolicitud', empresaId, componente: 'AdminDashboard' });
     }
   };
 
@@ -117,7 +118,7 @@ const AdminDashboard = () => {
 
       alert('Pago aprobado y suscripción activada');
     } catch (error) {
-      console.error('Error al aprobar pago:', error);
+      logError(error, { accion: 'aprobarPago', pagoId: pago.id, componente: 'AdminDashboard' });
       alert('Error al aprobar el pago');
     }
   };
@@ -130,7 +131,7 @@ const AdminDashboard = () => {
       });
       setSolicitudes(solicitudes.filter(s => s.id !== empresaId));
     } catch (error) {
-      console.error('Error rechazando solicitud:', error);
+      logError(error, { accion: 'rechazarSolicitud', empresaId, componente: 'AdminDashboard' });
     }
   };
 
