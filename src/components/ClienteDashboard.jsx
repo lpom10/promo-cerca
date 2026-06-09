@@ -487,13 +487,7 @@ const ClienteDashboard = () => {
                 <div className="dpro-empty" style={{ minHeight: 300 }}>
                   <div className="dpro-empty-icon">💔</div>
                   <div className="dpro-empty-text">Aún no tienes favoritos guardados</div>
-                  <button
-                    className="dpro-btn primary"
-                    style={{ marginTop: 16 }}
-                    onClick={() => setActiveTab('explorar')}
-                  >
-                    🔍 Explorar Promociones
-                  </button>
+                  
                 </div>
               ) : (
                 <>
