@@ -31,6 +31,19 @@ const customIcon = L.divIcon({
   iconAnchor: [24, 60],
 });
 
+// Habilita/deshabilita zoom con rueda según si el mouse está sobre el mapa
+const ScrollWheelZoom = ({ enabled }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (enabled) {
+      map.scrollWheelZoom.enable();
+    } else {
+      map.scrollWheelZoom.disable();
+    }
+  }, [enabled, map]);
+  return null;
+};
+
 const VisibleMarkers = ({ promociones, navigate, getEmoji }) => {
   const map = useMap();
   const [visibleItems, setVisibleItems] = useState([]);
@@ -87,6 +100,7 @@ const VisibleMarkers = ({ promociones, navigate, getEmoji }) => {
 const HomePage = () => {
   const [search, setSearch] = useState('');
   const [promociones, setPromociones] = useState([]);
+  const [mapHovered, setMapHovered] = useState(false);
   const navigate = useNavigate();
   const [empresasMap, setEmpresasMap] = useState({});
 
@@ -207,7 +221,11 @@ const HomePage = () => {
         {/* ── Mitad Derecha: Mapa + Botón ── */}
         <div className="hp-right">
           <div className="hp-map-wrapper">
-            <div className="hp-map-container">
+            <div
+              className="hp-map-container"
+              onMouseEnter={() => setMapHovered(true)}
+              onMouseLeave={() => setMapHovered(false)}
+            >
               <MapContainer
                 center={[-4.007, -79.211]}
                 zoom={14}
@@ -218,6 +236,7 @@ const HomePage = () => {
                   url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
                   attribution='&copy; <a href="https://carto.com/">Carto</a>'
                 />
+                <ScrollWheelZoom enabled={mapHovered} />
                 <VisibleMarkers
                   promociones={activePromos}
                   navigate={navigate}

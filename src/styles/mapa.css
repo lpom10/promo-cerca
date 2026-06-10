@@ -58,9 +58,9 @@
   background:
     linear-gradient(
       135deg,
-      #4338ca,
-      #6366f1,
-      #8b5cf6
+      #fb4c23,
+      #ff8052,
+      #ffb84d
     );
   color: white;
   position: relative;
@@ -670,4 +670,3 @@
   .promo-overlay-card { grid-template-columns: 1fr; }
   .promo-overlay-hero img, .promo-overlay-placeholder { height:180px }
 }
-
