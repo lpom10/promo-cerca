@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { db } from '../firebase';
-import { collection, getDocs, query, where, updateDoc, doc, onSnapshot, addDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, updateDoc, doc, onSnapshot, addDoc, getDoc, deleteDoc, orderBy } from 'firebase/firestore';
 import { logError } from '../utils/errorHandler';
 
 const AdminDashboard = () => {
@@ -11,8 +11,12 @@ const AdminDashboard = () => {
   const [solicitudes, setSolicitudes] = useState([]);
   const [empresasAprobadas, setEmpresasAprobadas] = useState([]);
   const [pagosPendientes, setPagosPendientes] = useState([]);
+  const [todasPromociones, setTodasPromociones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('solicitudes');
+
+  // Estado para estadísticas
+  const [stats, setStats] = useState({ totalTickets: 0, totalEmpresas: 0, totalPromos: 0 });
 
   useEffect(() => {
     cargarSolicitudes();
@@ -37,6 +41,42 @@ const AdminDashboard = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'estadisticas') {
+      cargarEstadisticas();
+    }
+    if (activeTab === 'promociones') {
+      cargarTodasPromociones();
+    }
+  }, [activeTab]);
+
+  const cargarEstadisticas = async () => {
+    try {
+      const [ticketsSnap, empresasSnap, promosSnap] = await Promise.all([
+        getDocs(collection(db, 'tickets')),
+        getDocs(collection(db, 'empresa')),
+        getDocs(collection(db, 'promociones'))
+      ]);
+      setStats({
+        totalTickets: ticketsSnap.size,
+        totalEmpresas: empresasSnap.size,
+        totalPromos: promosSnap.size
+      });
+    } catch (error) {
+      logError(error, { accion: 'cargarEstadisticas', componente: 'AdminDashboard' });
+    }
+  };
+
+  const cargarTodasPromociones = async () => {
+    try {
+      const q = query(collection(db, 'promociones'), orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      setTodasPromociones(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (error) {
+      logError(error, { accion: 'cargarTodasPromociones', componente: 'AdminDashboard' });
+    }
+  };
 
   const cargarSolicitudes = async () => {
     try {
@@ -91,6 +131,30 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       logError(error, { accion: 'aprobarSolicitud', empresaId, componente: 'AdminDashboard' });
+    }
+  };
+
+  const eliminarEmpresa = async (empresaId) => {
+    if (!window.confirm('¿Estás seguro de eliminar esta empresa? Se borrarán sus datos permanentemente.')) return;
+    try {
+      await deleteDoc(doc(db, 'empresa', empresaId));
+      setEmpresasAprobadas(empresasAprobadas.filter(e => e.id !== empresaId));
+      alert('Empresa eliminada correctamente');
+    } catch (error) {
+      logError(error, { accion: 'eliminarEmpresa', empresaId, componente: 'AdminDashboard' });
+      alert('Error al eliminar la empresa');
+    }
+  };
+
+  const eliminarPromocionAdmin = async (promocionId) => {
+    if (!window.confirm('¿Deseas eliminar esta promoción permanentemente?')) return;
+    try {
+      await deleteDoc(doc(db, 'promociones', promocionId));
+      setTodasPromociones(todasPromociones.filter(p => p.id !== promocionId));
+      alert('Promoción eliminada');
+    } catch (error) {
+      logError(error, { accion: 'eliminarPromocionAdmin', promocionId, componente: 'AdminDashboard' });
+      alert('Error al eliminar la promoción');
     }
   };
 
@@ -160,6 +224,12 @@ const AdminDashboard = () => {
             onClick={() => setActiveTab('suscripciones')}
           >
             💳 Suscripciones ({pagosPendientes.length})
+          </button>
+          <button 
+            className={`tab ${activeTab === 'promociones' ? 'active' : ''}`}
+            onClick={() => setActiveTab('promociones')}
+          >
+            📢 Promociones
           </button>
           <button 
             className={`tab ${activeTab === 'estadisticas' ? 'active' : ''}`}
@@ -234,6 +304,58 @@ const AdminDashboard = () => {
                       <p><strong>Dirección:</strong> {empresa.direccion}</p>
                       <p><strong>RUC:</strong> {empresa.ruc}</p>
                       <p><strong>Aprobado desde:</strong> {empresa.createdAt ? new Date(empresa.createdAt.toDate()).toLocaleDateString() : 'N/A'}</p>
+                    </div>
+                    <div className="solicitud-actions">
+                      <Link 
+                        to={`/empresa/${empresa.id}`}
+                        className="btn-approve"
+                        style={{ textDecoration: 'none', textAlign: 'center', backgroundColor: '#2196F3' }}
+                      >
+                        🔎 Perfil
+                      </Link>
+                      <button 
+                        onClick={() => eliminarEmpresa(empresa.id)}
+                        className="btn-reject"
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'promociones' && (
+          <div className="promociones-admin-section">
+            <h2>Gestión Global de Promociones</h2>
+            {todasPromociones.length === 0 ? (
+              <p className="info-texto">No hay promociones activas.</p>
+            ) : (
+              <div className="solicitudes-list">
+                {todasPromociones.map(promo => (
+                  <div key={promo.id} className="solicitud-card">
+                    <div className="solicitud-info">
+                      <h3>{promo.titulo}</h3>
+                      <p><strong>Empresa:</strong> {promo.empresaNombre}</p>
+                      <p><strong>Descuento:</strong> {promo.descuento}%</p>
+                      <p><strong>Creada:</strong> {promo.createdAt ? new Date(promo.createdAt.toDate()).toLocaleDateString() : 'N/A'}</p>
+                    </div>
+                    <div className="solicitud-actions">
+                      <Link 
+                        to={`/empresa/${promo.empresaId}`}
+                        className="btn-approve"
+                        style={{ textDecoration: 'none', textAlign: 'center', backgroundColor: '#2196F3' }}
+                      >
+                        🏢 Empresa
+                      </Link>
+                      <button 
+                        onClick={() => eliminarPromocionAdmin(promo.id)}
+                        className="btn-reject"
+                      >
+                        🗑️ Borrar Promoción
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -333,7 +455,20 @@ const AdminDashboard = () => {
         {activeTab === 'estadisticas' && (
           <div className="estadisticas-section">
             <h2>Estadísticas del Sistema</h2>
-            <p>Aquí verás las estadísticas generales</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginTop: '20px' }}>
+              <div className="stat-card" style={{ padding: '20px', background: '#e3f2fd', borderRadius: '12px', textAlign: 'center' }}>
+                <h3>🎟️ Tickets Generados</h3>
+                <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1976d2' }}>{stats.totalTickets}</p>
+              </div>
+              <div className="stat-card" style={{ padding: '20px', background: '#e8f5e9', borderRadius: '12px', textAlign: 'center' }}>
+                <h3>🏢 Empresas Totales</h3>
+                <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#388e3c' }}>{stats.totalEmpresas}</p>
+              </div>
+              <div className="stat-card" style={{ padding: '20px', background: '#fff3e0', borderRadius: '12px', textAlign: 'center' }}>
+                <h3>📢 Promos Activas</h3>
+                <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f57c00' }}>{stats.totalPromos}</p>
+              </div>
+            </div>
           </div>
         )}
       </div>

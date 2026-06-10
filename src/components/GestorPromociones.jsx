@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { categorias } from '../data/categorias';
 import { logError } from '../utils/errorHandler';
 import '../styles/promociones.css';
 
@@ -107,10 +108,11 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
       return;
     }
 
-    if (!suscripcion && !editingId) {
+    // COMENTADO PARA FASE DE PRUEBAS: Permitir crear promociones sin validar suscripción
+    /* if (!suscripcion && !editingId) {
       setErrores({ general: 'Necesitas una suscripción activa para crear promociones' });
       return;
-    }
+    } */
 
     setErrores({});
     setLoading(true);
@@ -212,7 +214,8 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
         )}
       </div>
 
-      {suscripcion ? (
+      {/* COMENTADO PARA FASE DE PRUEBAS: Se fuerza a true para bypass de validación visual */}
+      {true || suscripcion ? (
         <>
           {!showForm && (
             <button onClick={() => setShowForm(true)} className="btn-crear-promo">
@@ -274,12 +277,10 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
                       onChange={handleChange}
                       className={errores.categoria ? 'input-error' : ''}
                     >
-                      <option value="">Selecciona una categoría</option>
-                      <option value="restaurantes">Restaurante</option>
-                      <option value="cafeterias">Cafetería</option>
-                      <option value="tiendas">Tienda</option>
-                      <option value="servicios">Servicios</option>
-                      <option value="salud">Salud</option>
+                      <option value="">Selecciona una categoría...</option>
+                      {categorias.filter(cat => cat.id !== 'todos').map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.label}</option>
+                      ))}
                     </select>
                     {errores.categoria && <span className="error">{errores.categoria}</span>}
                   </div>
@@ -440,7 +441,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
             )}
           </div>
         </>
-      ) : (
+      ) : ( /* El bloque original de suscripción requerida se mantiene aquí por si se necesita restaurar rápidamente */
         <div className="suscripcion-requerida">
           <h3>Necesitas una suscripción activa</h3>
           <p>Para crear y gestionar promociones, necesitas tener una suscripción activa.</p>

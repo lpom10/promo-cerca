@@ -14,6 +14,7 @@ import {
   sanitizar,
   sanitizarNumero,
 } from '../utils/validators';
+import { categorias } from '../data/categorias';
 import { rateLimiter } from '../utils/rateLimiter';
 import { handleError, logError } from '../utils/errorHandler';
 import '../styles/auth.css';
@@ -72,68 +73,56 @@ const Registro = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+    let newValue = value;
+
+    // Aplicar sanitización solo a campos específicos
     if (name === 'cedula' || name === 'ruc' || name === 'telefono') {
-      setForm((f) => ({ ...f, [name]: sanitizarNumero(value) }));
-      return;
+      newValue = sanitizarNumero(value);
+    } else if (name === 'nombre' || name === 'negocio' || name === 'direccion') {
+      newValue = sanitizar(value);
     }
+
+    // Actualizar el estado del formulario para TODOS los campos
+    setForm((f) => ({ ...f, [name]: newValue }));
+
+    // Limpiar el mensaje de error del campo actual mientras el usuario escribe
+    if (errores[name]) {
+      setErrores(prev => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
+  };
+
+  // Extraemos la lógica de validación a una función dedicada
+  const validar = () => {
+    const e = {};
     
-    if (name === 'nombre' || name === 'negocio' || name === 'direccion') {
-      setForm((f) => ({ ...f, [name]: sanitizar(value) }));
-      return;
-    }
+    if (!form.nombre.trim()) e.nombre = 'El nombre es requerido';
+    else if (form.nombre.length < 3) e.nombre = 'El nombre debe tener al menos 3 caracteres';
 
-    // Validar nombre
-    if (!form.nombre.trim()) {
-      e.nombre = 'El nombre es requerido';
-    } else if (form.nombre.length < 3) {
-      e.nombre = 'El nombre debe tener al menos 3 caracteres';
-    }
+    if (!validarEmail(form.email)) e.email = 'Email inválido';
 
-    // Validar email
-    if (!validarEmail(form.email)) {
-      e.email = 'Email inválido';
-    }
-
-    // Validar contraseña
     const passValidation = validarPassword(form.password);
-    if (!passValidation.valida) {
-      e.password = passValidation.error;
-    }
+    if (!passValidation.valida) e.password = passValidation.error;
 
-    // Validar coincidencia de contraseña
-    if (form.password !== form.confirmPassword) {
-      e.confirmPassword = 'Las contraseñas no coinciden';
-    }
+    if (form.password !== form.confirmPassword) e.confirmPassword = 'Las contraseñas no coinciden';
 
-    // Validar teléfono
-    if (!validarTelefono(form.telefono)) {
-      e.telefono = 'Teléfono inválido (debe tener 10 dígitos)';
-    }
+    if (!validarTelefono(form.telefono)) e.telefono = 'Teléfono inválido (debe tener 10 dígitos)';
 
     if (tipo === 'cliente') {
-      if (!validarCedula(form.cedula)) {
-        e.cedula = 'Cédula inválida (debe tener 10 dígitos)';
-      }
+      if (!validarCedula(form.cedula)) e.cedula = 'Cédula inválida (debe tener 10 dígitos)';
     }
 
     if (tipo === 'empresa') {
-      if (!form.negocio.trim()) {
-        e.negocio = 'El nombre del negocio es requerido';
-      }
-      if (!form.categoria) {
-        e.categoria = 'Selecciona una categoría';
-      }
-      if (!validarRuc(form.ruc)) {
-        e.ruc = 'RUC inválido (debe tener 13 dígitos)';
-      }
-      if (!form.direccion.trim()) {
-        e.direccion = 'La dirección es requerida';
-      }
+      if (!form.negocio.trim()) e.negocio = 'El nombre del negocio es requerido';
+      if (!form.categoria) e.categoria = 'Selecciona una categoría';
+      if (!validarRuc(form.ruc)) e.ruc = 'RUC inválido (debe tener 13 dígitos)';
+      if (!form.direccion.trim()) e.direccion = 'La dirección es requerida';
+      
       const ubicValidation = validarUbicacion(form.lat, form.lng);
-      if (!ubicValidation.valida) {
-        e.mapa = 'Debes seleccionar la ubicación en el mapa';
-      }
+      if (!ubicValidation.valida) e.mapa = 'Debes seleccionar la ubicación en el mapa';
     }
 
     return e;
@@ -390,8 +379,8 @@ const Registro = () => {
               {/* Nombre */}
               <div className="auth-field">
                 <label className="auth-label">Nombre completo</label>
-                <input
-                  className={`auth-input${errores.nombre ? ' is-error' : ''}`}
+                <input // Eliminada la clase 'is-error'
+                  className="auth-input"
                   name="nombre" value={form.nombre} onChange={handleChange}
                   placeholder="Tu nombre y apellido"
                 />
@@ -401,8 +390,8 @@ const Registro = () => {
               {/* Email */}
               <div className="auth-field">
                 <label className="auth-label">Correo electrónico</label>
-                <input
-                  className={`auth-input${errores.email ? ' is-error' : ''}`}
+                <input // Eliminada la clase 'is-error'
+                  className="auth-input"
                   type="email" name="email" value={form.email} onChange={handleChange}
                   placeholder="correo@ejemplo.com"
                 />
@@ -412,8 +401,8 @@ const Registro = () => {
               {/* Contraseña */}
               <div className="auth-field">
                 <label className="auth-label">Contraseña</label>
-                <input
-                  className={`auth-input${errores.password ? ' is-error' : ''}`}
+                <input // Eliminada la clase 'is-error'
+                  className="auth-input"
                   type="password" name="password" value={form.password} onChange={handleChange}
                   placeholder="Mínimo 8 caracteres"
                 />
@@ -423,8 +412,8 @@ const Registro = () => {
               {/* Confirmar contraseña */}
               <div className="auth-field">
                 <label className="auth-label">Confirmar contraseña</label>
-                <input
-                  className={`auth-input${errores.confirmPassword ? ' is-error' : ''}`}
+                <input // Eliminada la clase 'is-error'
+                  className="auth-input"
                   type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange}
                   placeholder="Repite tu contraseña"
                 />
@@ -437,8 +426,8 @@ const Registro = () => {
                   <label className="auth-label">
                     Cédula <span className="required-tag">obligatorio</span>
                   </label>
-                  <input
-                    className={`auth-input${errores.cedula ? ' is-error' : ''}`}
+                  <input // Eliminada la clase 'is-error'
+                    className="auth-input"
                     name="cedula" value={form.cedula} onChange={handleChange}
                     placeholder="ingrese su cedula"
                     maxLength="10"
@@ -452,8 +441,8 @@ const Registro = () => {
                 <label className="auth-label">
                   Teléfono <span className="required-tag">obligatorio</span>
                 </label>
-                <input
-                  className={`auth-input${errores.telefono ? ' is-error' : ''}`}
+                <input // Eliminada la clase 'is-error'
+                  className="auth-input"
                   name="telefono" value={form.telefono} onChange={handleChange}
                   placeholder="0991234567"
                   maxLength="10"
@@ -473,7 +462,7 @@ const Registro = () => {
                   <div className="auth-field">
                     <label className="auth-label">Nombre del negocio</label>
                     <input
-                      className={`auth-input${errores.negocio ? ' is-error' : ''}`}
+                      className="auth-input" // Eliminada la clase 'is-error'
                       name="negocio" value={form.negocio} onChange={handleChange}
                       placeholder="Nombre de tu empresa o negocio"
                     />
@@ -483,16 +472,13 @@ const Registro = () => {
                   <div className="auth-field">
                     <label className="auth-label">Categoría</label>
                     <select
-                      className={`auth-input${errores.categoria ? ' is-error' : ''}`}
+                      className="auth-input" // Eliminada la clase 'is-error'
                       name="categoria" value={form.categoria} onChange={handleChange}
                     >
                       <option value="">Selecciona una categoría...</option>
-                      <option value="grestaurantes">Gastronomia</option>
-                      <option value="moda_accesorios">Moda y Accesorios</option>
-                      <option value="salud_belleza"> Salud Y Belleza</option>
-                      <option value="tecnologia">Tecnologia</option>
-                      <option value="entretenimiento">Entretenimiento</option>
-                      <option value="servicios">Servicios</option>
+                      {categorias.filter(cat => cat.id !== 'todos').map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.label}</option>
+                      ))}
                     </select>
                     {errores.categoria && <span className="auth-field-error">{errores.categoria}</span>}
                   </div>
@@ -512,8 +498,8 @@ const Registro = () => {
                     <label className="auth-label">
                       RUC <span className="required-tag">obligatorio</span>
                     </label>
-                    <input
-                      className={`auth-input${errores.ruc ? ' is-error' : ''}`}
+                    <input // Eliminada la clase 'is-error'
+                      className="auth-input"
                       name="ruc" value={form.ruc} onChange={handleChange}
                       placeholder="1234567890001"
                     />
@@ -525,7 +511,7 @@ const Registro = () => {
                       Ubicación en el mapa <span className="required-tag">obligatorio</span>
                     </label>
                     <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 8px 0' }}>Haz clic en el mapa para fijar la ubicación de tu negocio.</p>
-                    <div style={{ height: '200px', width: '100%', borderRadius: '12px', overflow: 'hidden', border: errores.mapa ? '2px solid #e53935' : '1.5px solid var(--auth-border)', position: 'relative', zIndex: 1 }}>
+                    <div style={{ height: '200px', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '1.5px solid var(--auth-border)', position: 'relative', zIndex: 1 }}> {/* Eliminado el borde de error */}
                       <MapContainer center={[-4.007, -79.211]} zoom={13} style={{ height: '100%', width: '100%' }}>
                         <TileLayer
                           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

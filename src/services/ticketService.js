@@ -10,6 +10,7 @@ import {
   getDocs,
   Timestamp,
   increment,
+  runTransaction,
 } from 'firebase/firestore';
 import { logError } from '../utils/errorHandler';
 import { crearNotificacion, crearNotificacionTicketsAgotados } from './notificationService';
@@ -93,26 +94,33 @@ export const crearTicket = async (usuarioId, promocionId, empresaId, promocionDa
 
     const docRef = await addDoc(collection(db, 'tickets'), ticket);
     
-    // Incrementar contador de tickets generados en la promoción
     const promoRef = doc(db, 'promociones', promocionId);
-    
-    // Obtener datos actuales de la promoción
-    const promoSnap = await getDoc(promoRef);
-    const promoActual = promoSnap.data();
-    const nuevoConteo = (promoActual.ticketsGenerados || 0) + 1;
-    
-    // Actualizar estadísticas y contador
-    await updateDoc(promoRef, {
-      ticketsGenerados: increment(1),
-      estadisticas: {
-        ticketsGenerados: nuevoConteo,
-        porcentajeUso: promoActual.ticketsMaximos ? Math.round((nuevoConteo / promoActual.ticketsMaximos) * 100) : 0,
-        ultimoTicketGenerado: Timestamp.now(),
+
+    // 🛡️ USO DE TRANSACCIÓN PARA EVITAR SOBREVENTA
+    const nuevoConteo = await runTransaction(db, async (transaction) => {
+      const promoDoc = await transaction.get(promoRef);
+      if (!promoDoc.exists()) throw new Error("La promoción ya no existe");
+
+      const data = promoDoc.data();
+      const conteoActual = data.ticketsGenerados || 0;
+
+      if (data.ticketsMaximos && conteoActual >= data.ticketsMaximos) {
+        throw new Error("Lo sentimos, se acaban de agotar los tickets");
       }
+
+      const siguienteConteo = conteoActual + 1;
+      transaction.update(promoRef, {
+        ticketsGenerados: increment(1),
+        estadisticas: {
+          ticketsGenerados: siguienteConteo,
+          porcentajeUso: data.ticketsMaximos ? Math.round((siguienteConteo / data.ticketsMaximos) * 100) : 0,
+          ultimoTicketGenerado: Timestamp.now(),
+        }
+      });
+      return siguienteConteo;
     });
     
-    // Notificar si se alcanzó el límite de tickets
-    if (promoActual.ticketsMaximos && nuevoConteo >= promoActual.ticketsMaximos) {
+    if (promocionData.ticketsMaximos && nuevoConteo >= promocionData.ticketsMaximos) {
       await crearNotificacionTicketsAgotados(empresaId, {
         ...promocionData,
         id: promocionId,
@@ -127,18 +135,63 @@ export const crearTicket = async (usuarioId, promocionId, empresaId, promocionDa
   }
 };
 
+// Verificar y notificar tickets próximos a expirar (1 hora antes)
+export const verificarNotificacionesExpiracion = async (usuarioId) => {
+  try {
+    const ahora = new Date();
+    const unaHoraDespues = new Date(ahora.getTime() + 60 * 60 * 1000);
+
+    const q = query(
+      collection(db, 'tickets'),
+      where('usuarioId', '==', usuarioId),
+      where('estado', '==', 'generado')
+    );
+
+    const snapshot = await getDocs(q);
+    
+    for (const doc of snapshot.docs) {
+      const ticket = doc.data();
+      
+      let fechaExp;
+      if (ticket.fechaHoraExpiracion && typeof ticket.fechaHoraExpiracion.toDate === 'function') {
+        fechaExp = ticket.fechaHoraExpiracion.toDate();
+      } else if (ticket.fechaHoraExpiracion) {
+        fechaExp = new Date(ticket.fechaHoraExpiracion);
+      }
+      // Si fechaExp es null/undefined o Invalid Date, no se procesará
+      
+      if (fechaExp && !isNaN(fechaExp.getTime()) && fechaExp > ahora && fechaExp <= unaHoraDespues) {
+        await crearNotificacion(usuarioId, {
+          tipo: 'recordatorio_expiracion',
+          titulo: '¡Tu ticket está por expirar!',
+          mensaje: `Tu ticket para "${ticket.promocionTitulo}" vence en menos de una hora. ¡Canjéalo pronto!`,
+          promocionId: ticket.promocionId,
+          createdAt: Timestamp.now(),
+          leida: false
+        });
+      }
+    }
+  } catch (error) {
+    logError(error, { accion: 'verificarNotificacionesExpiracion', usuarioId });
+  }
+};
+
 // Obtener ticket por código (para validar en local)
-export const obtenerTicketPorCodigo = async (codigo) => {
+export const obtenerTicketPorCodigo = async (codigo, empresaId = null) => {
   try {
     // 🔐 VALIDACIÓN
     if (!codigo || typeof codigo !== 'string' || codigo.length === 0) {
       throw new Error('Código de ticket inválido');
     }
     
-    const q = query(
-      collection(db, 'tickets'),
-      where('codigo', '==', codigo)
-    );
+    const constraints = [where('codigo', '==', codigo)];
+    
+    // Si se proporciona empresaId, lo agregamos a la consulta para cumplir con las reglas de seguridad
+    if (empresaId) {
+      constraints.push(where('empresaId', '==', empresaId));
+    }
+    
+    const q = query(collection(db, 'tickets'), ...constraints);
     
     const snapshot = await getDocs(q);
     if (snapshot.empty) {

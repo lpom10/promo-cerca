@@ -68,10 +68,11 @@ const PaymentModal = ({ visible, onClose, plan, onSuccess }) => {
   const handleSubmit = async () => {
     setError(null);
 
-    if (!file) {
+    // COMENTADO PARA FASE DE PRUEBAS: No obligar a subir imagen para pruebas de flujo
+    /* if (!file) {
       setError('Por favor selecciona una imagen del comprobante');
       return;
-    }
+    } */
 
     if (!plan || !plan.id || !plan.empresaId) {
       setError('Error: Información del plan incompleta');
@@ -83,20 +84,22 @@ const PaymentModal = ({ visible, onClose, plan, onSuccess }) => {
 
     try {
       // Validar que el archivo aún existe
-      if (!file) throw new Error('Archivo no encontrado');
-
-      // Upload a Storage con nombre seguro
-      const sanitizedFileName = file.name
-        .replace(/[^a-zA-Z0-9.-]/g, '_')
-        .substring(0, 100);
+      let url = 'https://via.placeholder.com/300?text=Comprobante+de+Prueba';
       
-      const storageRef = ref(
-        storage,
-        `comprobantes/${plan.empresaId}_${Date.now()}_${sanitizedFileName}`
-      );
-      
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
+      if (file) {
+        // Upload a Storage con nombre seguro solo si hay archivo
+        const sanitizedFileName = file.name
+          .replace(/[^a-zA-Z0-9.-]/g, '_')
+          .substring(0, 100);
+        
+        const storageRef = ref(
+          storage,
+          `comprobantes/${plan.empresaId}_${Date.now()}_${sanitizedFileName}`
+        );
+        
+        await uploadBytes(storageRef, file);
+        url = await getDownloadURL(storageRef);
+      }
 
       // Crear registro de pago
       await addDoc(collection(db, 'pagos'), {

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { db } from '../firebase';
-import { collection, getDocs, query, where, limit, orderBy } from 'firebase/firestore';
+import { useState, useEffect, useMemo } from 'react';
+import { db } from '../firebase'; // Asegúrate de que 'db' está correctamente inicializado
+import { collection, getDocs, query, where, limit, orderBy, startAfter, doc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { logError } from '../utils/errorHandler';
 import { categorias } from '../data/categorias';
@@ -14,63 +14,88 @@ const ListarPromociones = () => {
   const [promociones, setPromociones] = useState([]);
   const [trending, setTrending] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTrending, setLoadingTrending] = useState(true); // Nuevo estado para trending
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [ordenamiento, setOrdenamiento] = useState('vencimiento'); // vencimiento | trending | descuento
   const [ticketSeleccionado, setTicketSeleccionado] = useState(null);
   const [promocionActual, setPromocionActual] = useState(null);
   const [mostrarTrending, setMostrarTrending] = useState(false);
+  const [debouncedBusqueda, setDebouncedBusqueda] = useState('');
+
+  // Estados para paginación
+  const [lastVisible, setLastVisible] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
 
+  // Separamos Trending: Solo carga al montar el componente
   useEffect(() => {
-    cargarPromociones();
     cargarTrending();
-  }, [filtroCategoria, ordenamiento]);
+  }, []);
 
-  const cargarPromociones = async () => {
+  // Carga de promociones principales
+  useEffect(() => {
+    setLastVisible(null);
+    setHasMore(true);
+    cargarPromociones(true);
+  }, [filtroCategoria, ordenamiento, debouncedBusqueda]);
+
+  // Debounce para la búsqueda
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedBusqueda(busqueda);
+    }, 400); 
+    return () => clearTimeout(handler);
+  }, [busqueda]);
+
+  const cargarPromociones = async (reset = false) => {
     try {
-      setLoading(true);
+      if (reset) setLoading(true);
+      else setLoadingMore(true);
       setError('');
-      let q;
+      
+      const pageSize = 12;
+      const constraints = [
+        where('activa', '==', true),
+        orderBy('createdAt', 'desc'),
+        limit(pageSize)
+      ];
 
       if (filtroCategoria) {
-        q = query(
-          collection(db, 'promociones'),
-          where('categoria', '==', filtroCategoria),
-          where('activa', '==', true),
-          orderBy('createdAt', 'desc'),
-          limit(20)
-        );
-      } else {
-        q = query(
-          collection(db, 'promociones'),
-          where('activa', '==', true),
-          orderBy('createdAt', 'desc'),
-          limit(20)
-        );
+        constraints.unshift(where('categoria', '==', filtroCategoria));
       }
 
-      const snapshot = await getDocs(q);
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
+      if (!reset && lastVisible) {
+        constraints.push(startAfter(lastVisible));
+      }
 
-      let data = snapshot.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        .filter(promo => {
+      const q = query(collection(db, 'promociones'), ...constraints);
+      const snapshot = await getDocs(q);
+
+      const nuevosDatos = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      setHasMore(snapshot.docs.length === pageSize);
+
+      let dataFull = reset ? nuevosDatos : [...promociones, ...nuevosDatos];
+
+      // Filtrado por disponibilidad
+      let data = dataFull.filter(promo => {
           const disponibilidad = verificarDisponibilidadTickets(promo);
           return disponibilidad.disponible;
         });
 
-      // Aplicar búsqueda
-      if (busqueda.trim()) {
-        const searchLower = busqueda.toLowerCase();
+      // Aplicar búsqueda (ahora con el valor debounced)
+      if (debouncedBusqueda.trim()) {
+        const searchLower = debouncedBusqueda.toLowerCase();
         data = data.filter(promo =>
-          promo.titulo.toLowerCase().includes(searchLower) ||
-          promo.descripcion.toLowerCase().includes(searchLower) ||
-          promo.empresaNombre.toLowerCase().includes(searchLower)
+          promo.titulo?.toLowerCase().includes(searchLower) ||
+          promo.descripcion?.toLowerCase().includes(searchLower) ||
+          promo.empresaNombre?.toLowerCase().includes(searchLower)
         );
       }
 
@@ -79,7 +104,7 @@ const ListarPromociones = () => {
         data.sort((a, b) => {
           const fechaA = a.fechaFin.toDate?.() || new Date(a.fechaFin);
           const fechaB = b.fechaFin.toDate?.() || new Date(b.fechaFin);
-          return fechaA - fechaB;
+          return fechaA.getTime() - fechaB.getTime();
         });
       } else if (ordenamiento === 'trending') {
         data.sort((a, b) => (b.visualizaciones || 0) - (a.visualizaciones || 0));
@@ -91,36 +116,48 @@ const ListarPromociones = () => {
     } catch (error) {
       logError(error, { accion: 'cargarPromociones', componente: 'ListarPromociones' });
       setError('Error al cargar promociones');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
-    setLoading(false);
-  };
-
+  };  
   const cargarTrending = async () => {
     try {
+      setLoadingTrending(true);
       const trending = await obtenerPromocionesTrending(5);
       setTrending(trending);
     } catch (error) {
       logError(error, { accion: 'cargarTrending', componente: 'ListarPromociones' });
     }
   };
-
+  
   const handleClickTicket = async (promo) => {
-    // Registrar visualización
+    // 1. Verificar si el usuario está logueado y es cliente
+    if (!user) {
+      setError('Debes iniciar sesión para generar tickets.');
+      return;
+    }
+    if (userType !== 'cliente') {
+      setError('Solo los clientes pueden generar tickets.');
+      return;
+    }
+
+    // 2. Registrar visualización (puede ser asíncrono y no bloquear la UI)
     try {
       await registrarVisualizacion(promo.id, promo.empresaId, user?.uid || null);
     } catch (error) {
       logError(error, { accion: 'registrarVisualizacion', promocionId: promo.id, componente: 'ListarPromociones' });
+      // No se detiene el flujo principal por un error de visualización
     }
 
-    // Si no es cliente, no puede generar ticket
-    if (userType !== 'cliente') {
-      setError('Solo los clientes pueden generar tickets');
-      return;
-    }
-
-    // Generar ticket
+    // 3. Generar ticket
     try {
       setError('');
+      // Se asume que crearTicket ya maneja la lógica de disponibilidad
+      // y lanzará un error si no hay tickets o la promo está vencida.
+      // Si no, se debería verificar aquí antes de llamar a crearTicket.
+      // const disponibilidad = verificarDisponibilidadTickets(promo);
+      // if (!disponibilidad.disponible) { throw new Error(disponibilidad.razon); }
       const ticket = await crearTicket(user.uid, promo.id, promo.empresaId, promo, userDetails);
       setTicketSeleccionado(ticket);
       setPromocionActual(promo);
@@ -129,26 +166,13 @@ const ListarPromociones = () => {
     }
   };
 
-  const categoriasFormato = [
+  const categoriasFormato = useMemo(() => [
     { valor: '', etiqueta: '🗂️ Todas' },
     ...categorias.slice(1).map(cat => ({
       valor: cat.id,
       etiqueta: `${cat.emoji} ${cat.label}`
     }))
-  ];
-
-  const isPromoVencida = (fechaFin) => {
-    const fecha = fechaFin.toDate?.() || new Date(fechaFin);
-    return fecha < new Date();
-  };
-
-  const diasFaltantes = (fechaFin) => {
-    const fecha = fechaFin.toDate?.() || new Date(fechaFin);
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const diferencia = Math.ceil((fecha - hoy) / (1000 * 60 * 60 * 24));
-    return diferencia;
-  };
+  ], []);
 
   return (
     <div className="listar-promociones">
@@ -171,7 +195,7 @@ const ListarPromociones = () => {
           <button onClick={() => setError('')} className="close-alert">✕</button>
         </div>
       )}
-
+    
       {/* Panel de Control */}
       <div className="filtro-container">
         <h2>🎯 Promociones Disponibles</h2>
@@ -184,7 +208,7 @@ const ListarPromociones = () => {
               placeholder="🔍 Buscar por nombre, descripción o empresa..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              onKeyUp={cargarPromociones}
+              // onKeyUp ya no es necesario aquí, el debounce lo maneja
               className="search-input"
             />
           </div>
@@ -229,7 +253,7 @@ const ListarPromociones = () => {
       {/* Panel de Trending */}
       {mostrarTrending && trending.length > 0 && (
         <div className="trending-panel">
-          <h3>🔥 Top 5 Más Visto</h3>
+          <h3>🔥 Top 5 Más Visto</h3> {/* Se añade un estado de carga para trending */}
           <div className="trending-grid">
             {trending.map((promo, idx) => (
               <div key={promo.id} className="trending-card">
@@ -248,7 +272,7 @@ const ListarPromociones = () => {
 
       {/* Lista de Promociones */}
       {loading ? (
-        <LoadingSpinner message="Cargando promociones..." />
+        <LoadingSpinner message="Cargando promociones..." /> // Se añade un estado de carga para trending
       ) : promociones.length === 0 ? (
         <div className="sin-promociones">
           <p>📭 No hay promociones disponibles en esta categoría</p>
@@ -256,7 +280,7 @@ const ListarPromociones = () => {
       ) : (
         <div className="promociones-grid">
           {promociones.map(promo => {
-            const dias = diasFaltantes(promo.fechaFin);
+            const dias = calcularTiempoRestante(promo.fechaFin)?.dias || 0; // Usar calcularTiempoRestante
             const vencida = dias < 0;
             const disponibilidad = verificarDisponibilidadTickets(promo);
             const mensajeDisponibilidad = obtenerMensajeDisponibilidad(disponibilidad);
@@ -334,7 +358,7 @@ const ListarPromociones = () => {
                       title={
                         userType !== 'cliente' 
                           ? 'Solo clientes pueden generar tickets' 
-                          : !disponibilidad.disponible
+                          : !disponibilidad.disponible // Se añade un estado de carga para trending
                           ? disponibilidad.razon
                           : vencida 
                           ? 'Promoción vencida' 
@@ -348,6 +372,19 @@ const ListarPromociones = () => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Botón Cargar Más */}
+      {!loading && hasMore && promociones.length > 0 && (
+        <div className="pagination-container" style={{ textAlign: 'center', margin: '2rem 0' }}>
+          <button 
+            onClick={() => cargarPromociones(false)} 
+            className="btn-cargar-mas"
+            disabled={loadingMore}
+          >
+            {loadingMore ? 'Cargando...' : 'Ver más promociones'}
+          </button>
         </div>
       )}
     </div>

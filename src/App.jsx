@@ -14,6 +14,7 @@ const EmpresaDashboard = React.lazy(() => import("./components/EmpresaDashboard"
 const AdminDashboard = React.lazy(() => import("./components/AdminDashboard"));
 const GestorPromociones = React.lazy(() => import("./components/GestorPromociones"));
 const PerfilEmpresaPublica = React.lazy(() => import("./components/PerfilEmpresaPublica"));
+const CanjeTickets = React.lazy(() => import("./components/CanjeTickets"));
 
 // Static imports for components needed immediately
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
@@ -41,66 +42,77 @@ function AppContent() {
           Promo Cerca
         </Link>
 
-        <button
-          className="hamburger"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Menú"
-        >
-          <span className={`bar ${menuOpen ? "open" : ""}`} />
-          <span className={`bar ${menuOpen ? "open" : ""}`} />
-          <span className={`bar ${menuOpen ? "open" : ""}`} />
-        </button>
+        <div className="navbar-right-group">
+          <button
+            className="hamburger"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Menú"
+          >
+            <span className={`bar ${menuOpen ? "open" : ""}`} />
+            <span className={`bar ${menuOpen ? "open" : ""}`} />
+            <span className={`bar ${menuOpen ? "open" : ""}`} />
+          </button>
 
-        {user && <NotificationBell />}
+          {user && <NotificationBell />}
 
-        <nav className={`barra ${menuOpen ? "active" : ""}`}>
-          <ul>
-            <li>
-              <NavLink to="/locales" onClick={close}>
-                Locales
-              </NavLink>
-            </li>
-            
-            {user ? (
-              <>
+          <nav className={`barra ${menuOpen ? "active" : ""}`}>
+            <ul>
+              {userType !== 'empresa' && (
                 <li>
-                  <NavLink 
-                    to={
-                      userType === 'admin' 
-                        ? '/admin/dashboard' 
-                        : userType === 'empresa' 
-                        ? '/empresa/dashboard' 
-                        : '/cliente/dashboard'
-                    } 
-                    onClick={close}
-                  >
-                    Perfil
+                  <NavLink to="/locales" onClick={close}>
+                    Locales
                   </NavLink>
                 </li>
-                {userType === 'empresa' && (
+              )}
+
+              {user ? (
+                <>
                   <li>
-                    <NavLink to="/empresa/gestionar-promociones" onClick={close}>
-                      Gestionar Promociones
+                    <NavLink
+                      to={
+                        userType === 'admin'
+                          ? '/admin/dashboard'
+                        : userType === 'empresa'
+                        ? '/empresa/dashboard'
+                        : '/cliente/dashboard'
+                      }
+                      onClick={close}
+                    >
+                      Perfil
                     </NavLink>
                   </li>
+                  {userType === 'empresa' && (
+                    <>
+                      <li>
+                        <NavLink to="/empresa/canjear-tickets" onClick={close}>
+                          Canjear Tickets
+                        </NavLink>
+                      </li>
+                      <li>
+                        <NavLink to="/empresa/gestionar-promociones" onClick={close}>
+                          Gestionar Promociones
+                        </NavLink>
+                    </li>
+                  </>
                 )}
               </>
             ) : (
-              <>
-                <li>
-                  <NavLink to="/login" onClick={close}>
-                    Iniciar Sesión
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to="/registro" onClick={close}>
-                    Registrarse
-                  </NavLink>
-                </li>
-              </>
-            )}
-          </ul>
-        </nav>
+                <>
+                  <li>
+                    <NavLink to="/login" onClick={close}>
+                      Iniciar Sesión
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink to="/registro" onClick={close}>
+                      Registrarse
+                    </NavLink>
+                  </li>
+                </>
+              )}
+            </ul>
+          </nav>
+        </div>
       </div>
 
       <Routes>
@@ -109,10 +121,6 @@ function AppContent() {
         <Route path="/mapa" element={<Suspense fallback={<LoadingFallback />}><Mapa /></Suspense>} />
         <Route path="/login" element={<Suspense fallback={<LoadingFallback />}><Login /></Suspense>} />
         <Route path="/registro" element={<Suspense fallback={<LoadingFallback />}><Registro /></Suspense>} />
-
-        {/* Perfil Público de Empresa */}
-        <Route path="/empresa/:empresaId" element={<Suspense fallback={<LoadingFallback />}><PerfilEmpresaPublica /></Suspense>} />
-
         {/* Rutas Protegidas */}
         <Route 
           path="/cliente/dashboard" 
@@ -136,6 +144,17 @@ function AppContent() {
           } 
         />
 
+        <Route 
+          path="/empresa/canjear-tickets" 
+          element={
+            <Suspense fallback={<LoadingFallback />}>
+              <ProtectedRoute requiredUserType="empresa">
+                <CanjeTickets empresaId={user?.uid} />
+              </ProtectedRoute>
+            </Suspense>
+          } 
+        />
+
         <Route
           path="/empresa/gestionar-promociones"
           element={
@@ -147,6 +166,9 @@ function AppContent() {
           }
         />
         
+        {/* Perfil Público de Empresa (al final para no interceptar rutas estáticas) */}
+        <Route path="/empresa/:empresaId" element={<Suspense fallback={<LoadingFallback />}><PerfilEmpresaPublica /></Suspense>} />
+
         <Route 
           path="/admin/dashboard" 
           element={

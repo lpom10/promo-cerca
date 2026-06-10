@@ -13,7 +13,7 @@ const ProtectedRoute = ({ children, requiredUserType, requiredStatus = null }) =
   }
 
   if (!user) {
-    return <Navigate to="/login-tipo" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // Verificar tipo de usuario si es requerido

@@ -6,8 +6,8 @@ import GestorSuscripcion from './GestorSuscripcion';
 import {
   doc, updateDoc, collection, query, where, getDocs, onSnapshot
 } from 'firebase/firestore';
-import CanjeTickets from './CanjeTickets';
 import { db } from '../firebase';
+import { categorias } from '../data/categorias';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -275,21 +275,11 @@ const EmpresaDashboard = () => {
   // ── Nav items ──────────────────────────────────────────
   const navItems = [
     { id: 'resumen',     label: 'Resumen' },
-    { id: 'canjear',     label: 'Canjear' },
     { id: 'tickets',     label: 'Tickets' },
     { id: 'promociones', label: 'Promociones' },
     { id: 'suscripcion', label: 'Suscripción' },
     { id: 'negocio',     label: 'Mi Negocio' },
   ];
-
-  const categories = {
-    gastronomia:        'Gastronomía',
-    moda_accesorios:    'Moda y Accesorios',
-    salud_belleza:      'Salud y Belleza',
-    tecnologia:         'Tecnología',
-    entretenimiento:    'Entretenimiento',
-    servicios:          'Servicios',
-  };
 
   // ── Render ─────────────────────────────────────────────
   return (
@@ -518,13 +508,6 @@ const EmpresaDashboard = () => {
               </>
             )}
 
-            {/* ── CANJEAR ── */}
-            {activeTab === 'canjear' && (
-              <div className="dpro-panel animate-fade-in">
-                <CanjeTickets empresaId={user.uid} />
-              </div>
-            )}
-
             {/* ── TICKETS ── */}
             {activeTab === 'tickets' && (
               <>
@@ -639,12 +622,12 @@ const EmpresaDashboard = () => {
                         {editMode
                           ? (
                             <select value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})}>
-                              {Object.entries(categories).map(([v, l]) => (
-                                <option key={v} value={v}>{l}</option>
+                              {categorias.filter(c => c.id !== 'todos').map(cat => (
+                                <option key={cat.id} value={cat.id}>{cat.label}</option>
                               ))}
                             </select>
                           )
-                          : <p>{categories[userDetails?.categoria] || userDetails?.categoria || '—'}</p>}
+                          : <p>{categorias.find(c => c.id === userDetails?.categoria)?.label || userDetails?.categoria || '—'}</p>}
                       </div>
                       {/* Teléfono */}
                       <div className="dpro-form-group">

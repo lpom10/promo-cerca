@@ -24,7 +24,7 @@ const CanjeTickets = ({ empresaId }) => {
     setExitoCanjeado(false);
 
     try {
-      const foundTicket = await obtenerTicketPorCodigo(codigo.toUpperCase());
+      const foundTicket = await obtenerTicketPorCodigo(codigo.toUpperCase(), empresaId);
       setTicket(foundTicket);
     } catch (err) {
       setError(err.message);

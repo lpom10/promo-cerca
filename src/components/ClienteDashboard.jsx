@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { logError } from '../utils/errorHandler';
+import { verificarNotificacionesExpiracion } from '../services/ticketService';
 import '../styles/dashboard-pro.css';
 
 // ── Helpers ────────────────────────────────────────────────
@@ -80,7 +81,11 @@ const ClienteDashboard = () => {
 
   // ── Fetch data ──────────────────────────────────────────
   useEffect(() => {
-    if (user) fetchClientData();
+    if (user) {
+      fetchClientData();
+      // Verificar expiraciones al entrar
+      verificarNotificacionesExpiracion(user.uid);
+    }
   }, [user]);
 
   const fetchClientData = async () => {

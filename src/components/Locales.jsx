@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { categorias } from '../data/categorias';
-import { collection, onSnapshot, query, limit, orderBy, startAfter, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, orderBy, startAfter, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { logError } from '../utils/errorHandler';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -63,7 +63,8 @@ const LocalCard = ({ local, onTicket }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [loadingFav, setLoadingFav] = useState(false);
 
-  const isOwner = userType === 'empresa' && userDetails?.empresaId === local.empresaId;
+  const isOwner = userType === 'empresa' && user?.uid === local.empresaId;
+  const isAdmin = userType === 'admin';
 
   // Cargar estado de favorito
   useEffect(() => {
@@ -112,7 +113,9 @@ const LocalCard = ({ local, onTicket }) => {
   const handleDelete = async () => {
     if (!confirm('¿Eliminar promoción? Esta acción no se puede deshacer.')) return;
     try {
-      alert('Eliminar: acción pendiente de implementar.');
+      await deleteDoc(doc(db, 'promociones', local.id));
+      alert('Promoción eliminada correctamente.');
+      window.location.reload();
     } catch (err) {
       logError(err, { accion: 'eliminarPromocion', componente: 'Locales' });
       alert('Error al eliminar.');
@@ -178,9 +181,12 @@ const LocalCard = ({ local, onTicket }) => {
         </div>
 
         <div className="promo-actions" style={{ marginTop: '15px' }}>
-          {isOwner ? (
+          {(isOwner || isAdmin) ? (
             <>
-              <button className="btn-edit" onClick={handleEdit}>✏️ Editar</button>
+              <Link to={`/empresa/${local.empresaId}`} className="btn-edit" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2196F3' }}>
+                🔎 Perfil
+              </Link>
+              {isOwner && <button className="btn-edit" onClick={handleEdit}>✏️ Editar</button>}
               <button className="btn-delete" onClick={handleDelete}>🗑️ Eliminar</button>
             </>
           ) : (
