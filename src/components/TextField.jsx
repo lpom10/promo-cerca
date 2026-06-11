@@ -8,6 +8,7 @@ import { categorias } from '../data/categorias';
 import { verificarDisponibilidadTickets } from '../services/ticketService';
 import { logError } from '../utils/errorHandler';
 import fondo from '../assets/fondo.png';
+import Footer from './Footer';
 import '../styles/homepage.css';
 import '../styles/mapa.css';
 
@@ -187,6 +188,7 @@ const HomePage = () => {
   const getEmoji = (categoriaId) => categorias.find(c => c.id === categoriaId)?.emoji || '🏷️';
 
   return (
+    <>
     <div className="hp-fullscreen" style={{ backgroundImage: `url(${fondo})` }}>
       {/* Overlay oscuro sobre toda la ventana */}
       <div className="hp-overlay" />
@@ -252,6 +254,8 @@ const HomePage = () => {
 
       </div>
     </div>
+    <Footer />
+    </>
   );
 };
 
