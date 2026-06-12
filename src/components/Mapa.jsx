@@ -134,7 +134,11 @@ const Mapa = () => {
         // 🚀 OPTIMIZACIÓN: Disparamos ambas peticiones a Firebase AL MISMO TIEMPO con LIMIT
         const [empresasSnap, promosSnap] = await Promise.all([
           getDocs(query(collection(db, 'empresa'), limit(100))),
-          getDocs(query(collection(db, 'promociones'), orderBy('createdAt', 'desc'), limit(100)))
+          getDocs(query(
+            collection(db, 'promociones'), 
+            where('estado', '==', 'aprobado'),
+            orderBy('createdAt', 'desc'), 
+            limit(100)))
         ]);
 
         const empresasMap = {};

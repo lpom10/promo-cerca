@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { validarEmail, sanitizar } from '../utils/validators';
 import { rateLimiter } from '../utils/rateLimiter';
 import { handleError, logError } from '../utils/errorHandler';
+import logo from '../assets/logo.png';
 import '../styles/auth.css';
 
 /* SVG logo de Google inline */
@@ -23,33 +24,33 @@ const GoogleIcon = () => (
 /* Datos de marca para cada tipo */
 const brandData = {
   cliente: {
-    badge: '👤 Cliente',
+    badge: 'Cliente',
     title: 'Bienvenido de vuelta',
     subtitle: 'Inicia sesión para explorar las mejores promociones',
     features: [
-      { icon: '🗺️', text: 'Promociones geolocalizadas a tu alrededor' },
-      { icon: '🔖', text: 'Guarda tus favoritos y descuentos preferidos' },
-      { icon: '🎟️', text: 'Genera y canjea tickets de promociones' },
+      { text: 'Promociones geolocalizadas a tu alrededor' },
+      { text: 'Guarda tus favoritos y descuentos preferidos' },
+      { text: 'Genera y canjea tickets de promociones' },
     ],
   },
   empresa: {
-    badge: '🏢 Empresa',
+    badge: 'Empresa',
     title: 'Panel de empresa',
     subtitle: 'Gestiona tus promociones y llega a más clientes',
     features: [
-      { icon: '📈', text: 'Publica y administra promociones' },
-      { icon: '📊', text: 'Monitorea el rendimiento de campañas' },
-      { icon: '🎯', text: 'Llega a más clientes de tu zona' },
+      { text: 'Publica y administra promociones' },
+      { text: 'Monitorea el rendimiento de campañas' },
+      { text: 'Llega a más clientes de tu zona' },
     ],
   },
   admin: {
-    badge: '🛡️ Admin',
+    badge: 'Administrador',
     title: 'Acceso administrativo',
     subtitle: 'Panel exclusivo para administradores',
     features: [
-      { icon: '✅', text: 'Aprueba empresas registradas' },
-      { icon: '👥', text: 'Administra usuarios' },
-      { icon: '⚙️', text: 'Supervisa el sistema' },
+      { text: 'Aprueba empresas registradas' },
+      { text: 'Administra usuarios' },
+      { text: 'Supervisa el sistema' },
     ],
   },
 };
@@ -241,15 +242,13 @@ const Login = () => {
       <div className="auth-panel-brand">
         <div className="brand-content">
           <div className="brand-logo-wrap">
-            <span className="brand-logo-icon">📍</span>
-            <span className="brand-logo-text">Promo Cerca</span>
+            <img src={logo} alt="Promo Cerca Logo" className="brand-logo-img" style={{ maxWidth: '180px', marginBottom: '20px' }} />
           </div>
           <p className="brand-tagline">{brand.title}</p>
           <p className="brand-desc">{brand.subtitle}</p>
           <div className="brand-features">
             {brand.features.map((f, i) => (
               <div className="brand-feature" key={i}>
-                <span className="brand-feature-icon">{f.icon}</span>
                 <span>{f.text}</span>
               </div>
             ))}
@@ -264,7 +263,7 @@ const Login = () => {
 
             {/* Cabecera */}
             <div className="auth-header">
-              <h2 className="auth-title">Iniciar sesión unificado</h2>
+              <h2 className="auth-title">Iniciar sesión</h2>
               <p className="auth-subtitle">Ingresa con tu correo para acceder</p>
             </div>
 

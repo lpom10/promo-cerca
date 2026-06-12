@@ -287,7 +287,7 @@ const EmpresaDashboard = () => {
       {/* Top bar */}
       <div className="dpro-topbar">
         <div className="dpro-topbar-left">
-          <div className="dpro-avatar">🏢</div>
+          <div className="dpro-avatar">E</div>
           <div>
             <div className="dpro-topbar-name">{userDetails?.negocio || 'Mi Empresa'}</div>
             <div className="dpro-topbar-role">Panel de Empresa</div>
@@ -303,7 +303,6 @@ const EmpresaDashboard = () => {
       {userStatus !== 'aprobado' && (
         <div className="dpro-waiting">
           <div className="dpro-waiting-icon">
-            {userStatus === 'pendiente' ? '⏳' : '❌'}
           </div>
           <h2>
             {userStatus === 'pendiente' ? 'Solicitud en revisión' : 'Solicitud rechazada'}
@@ -331,7 +330,6 @@ const EmpresaDashboard = () => {
                     className={`dpro-nav-item ${activeTab === item.id ? 'active' : ''}`}
                     onClick={() => setActiveTab(item.id)}
                   >
-                    <span className="dpro-nav-icon">{item.icon}</span>
                     {item.label}
                   </button>
                 )
@@ -349,7 +347,7 @@ const EmpresaDashboard = () => {
                   <div className={`dpro-susc-bar ${!suscActiva ? 'expired' : ''}`}>
                     <div>
                       <div className={`dpro-susc-plan ${!suscActiva ? 'expired' : ''}`}>
-                        {suscActiva ? `✦ ${suscripcion.plan?.charAt(0).toUpperCase() + suscripcion.plan?.slice(1) || 'Plan Activo'}` : '⚠ Suscripción vencida'}
+                        {suscActiva ? `${suscripcion.plan?.charAt(0).toUpperCase() + suscripcion.plan?.slice(1) || 'Plan Activo'}` : 'Suscripción vencida'}
                       </div>
                       <div className="dpro-susc-detail">
                         {suscActiva
@@ -381,32 +379,32 @@ const EmpresaDashboard = () => {
                 {loading ? (
                   <div className="dpro-loading">
                     <div className="dpro-spinner" />
-                    <span>Cargando analítica…</span>
+                    <span>Cargando analítica...</span>
                   </div>
                 ) : (
                   <>
                     {/* KPIs row 1 */}
-                    <div className="dpro-section-title">📈 Métricas principales</div>
+                    <div className="dpro-section-title">Métricas principales</div>
                     <div className="dpro-kpi-grid">
-                      <StatCard icon="🎟️" label="Tickets Generados"  value={stats.ticketsGenerados}  color="blue"   sub="Total histórico" />
-                      <StatCard icon="✅" label="Tickets Canjeados"  value={stats.ticketsCanjeados}  color="green"  sub={`${stats.tasaCanje}% tasa de canje`} trend={stats.tasaCanje} />
-                      <StatCard icon="👥" label="Clientes Atraídos"  value={stats.clientesUnicos}    color="cyan"   sub="Personas únicas" />
-                      <StatCard icon="💰" label="Impacto Estimado"   value={`$${stats.ingresosEstimados.toFixed(0)}`} color="gold" sub={`A $${userDetails?.valorVentaPromedio||25} prom. por visita`} />
+                      <StatCard label="Tickets Generados"  value={stats.ticketsGenerados}  color="blue"   sub="Total histórico" />
+                      <StatCard label="Tickets Canjeados"  value={stats.ticketsCanjeados}  color="green"  sub={`${stats.tasaCanje}% tasa de canje`} trend={stats.tasaCanje} />
+                      <StatCard label="Clientes Atraídos"  value={stats.clientesUnicos}    color="cyan"   sub="Personas únicas" />
+                      <StatCard label="Impacto Estimado"   value={`$${stats.ingresosEstimados.toFixed(0)}`} color="gold" sub={`Visitas estimadas`} />
                     </div>
 
                     {/* KPIs row 2 */}
                     <div className="dpro-kpi-grid">
-                      <StatCard icon="👁️" label="Visualizaciones"     value={stats.totalVisualizaciones} color="purple" sub="Vistas en promos" />
-                      <StatCard icon="📢" label="Promos Activas"       value={stats.promocionesActivas}   color="orange" sub="En curso ahora" />
-                      <StatCard icon="🏷️" label="Descuento Promedio"   value={`${stats.descuentoPromedio}%`}  color="teal"   sub="Ofrecido en promos" />
-                      <StatCard icon="📊" label="Tasa de Conversión"   value={`${stats.tasaCanje}%`}           color="red"    sub="Generados → Canjeados" trend={stats.tasaCanje} />
+                      <StatCard label="Visualizaciones"     value={stats.totalVisualizaciones} color="purple" sub="Vistas totales" />
+                      <StatCard label="Promos Activas"       value={stats.promocionesActivas}   color="orange" sub="En curso" />
+                      <StatCard label="Descuento Promedio"   value={`${stats.descuentoPromedio}%`}  color="teal"   sub="Promedio de ofertas" />
+                      <StatCard label="Tasa de Conversión"   value={`${stats.tasaCanje}%`}           color="red"    sub="Efectividad" trend={stats.tasaCanje} />
                     </div>
 
                     {/* Charts row */}
                     <div className="dpro-row-2">
                       {/* Bar: tickets por promo */}
                       <div className="dpro-panel">
-                        <div className="dpro-panel-title">🎟️ Tickets por Promoción</div>
+                        <div className="dpro-panel-title">Tickets por Promoción</div>
                         <BarChart
                           items={promociones.slice(0, 7).map(p => ({ label: p.titulo || 'Sin título', value: p.totalTickets }))}
                           maxVal={Math.max(1, ...promociones.map(p => p.totalTickets))}
@@ -414,7 +412,7 @@ const EmpresaDashboard = () => {
                       </div>
                       {/* Bar: canjeados por promo */}
                       <div className="dpro-panel">
-                        <div className="dpro-panel-title">✅ Canjeados por Promoción</div>
+                        <div className="dpro-panel-title">Canjeados por Promoción</div>
                         <BarChart
                           items={promociones.slice(0, 7).map(p => ({ label: p.titulo || 'Sin título', value: p.ticketsCanjeados }))}
                           maxVal={Math.max(1, ...promociones.map(p => p.ticketsCanjeados))}
@@ -427,10 +425,9 @@ const EmpresaDashboard = () => {
                     <div className="dpro-row-2">
                       {/* Recent activity feed */}
                       <div className="dpro-panel">
-                        <div className="dpro-panel-title">⚡ Actividad Reciente</div>
+                        <div className="dpro-panel-title">Actividad Reciente</div>
                         {recentActivity.length === 0 ? (
                           <div className="dpro-empty">
-                            <div className="dpro-empty-icon">📭</div>
                             <div className="dpro-empty-text">Sin actividad todavía</div>
                           </div>
                         ) : (
@@ -456,10 +453,9 @@ const EmpresaDashboard = () => {
 
                       {/* Top promos table */}
                       <div className="dpro-panel">
-                        <div className="dpro-panel-title">🏆 Ranking de Promociones</div>
+                        <div className="dpro-panel-title">Ranking de Promociones</div>
                         {promociones.length === 0 ? (
                           <div className="dpro-empty">
-                            <div className="dpro-empty-icon">📢</div>
                             <div className="dpro-empty-text">Crea tu primera promoción</div>
                           </div>
                         ) : (
@@ -471,7 +467,7 @@ const EmpresaDashboard = () => {
                                 <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 12, borderBottom: i < 5 ? '1px solid #1a2540' : 'none', marginBottom: 12 }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span style={{ fontSize: '.84rem', color: '#e2e8f0', fontWeight: 600 }}>
-                                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`} {p.titulo}
+                                      {i+1}. {p.titulo}
                                     </span>
                                     <span style={{ fontSize: '.78rem', color: '#64748b' }}>
                                       {p.ticketsCanjeados}/{p.totalTickets} · {pct}%
@@ -493,7 +489,7 @@ const EmpresaDashboard = () => {
 
                     {/* Descuento promedio chart */}
                     <div className="dpro-panel" style={{ marginBottom: 24 }}>
-                      <div className="dpro-panel-title">🏷️ Descuento ofrecido por Promoción</div>
+                      <div className="dpro-panel-title">Descuento ofrecido por Promoción</div>
                       <BarChart
                         items={promociones.slice(0, 8).map(p => ({
                           label: p.titulo || 'Sin título',
@@ -511,7 +507,7 @@ const EmpresaDashboard = () => {
             {/* ── TICKETS ── */}
             {activeTab === 'tickets' && (
               <>
-                <div className="dpro-section-title">🎟️ Gestión de Tickets</div>
+                <div className="dpro-section-title">Gestión de Tickets</div>
                 <div className="dpro-filters">
                   {['todos', 'generado', 'canjeado'].map(f => (
                     <button
@@ -526,7 +522,7 @@ const EmpresaDashboard = () => {
                   ))}
                   <input
                     className="dpro-search-input"
-                    placeholder="Buscar por código o promoción…"
+                    placeholder="Buscar por código o promoción..."
                     value={ticketSearch}
                     onChange={e => setTicketSearch(e.target.value)}
                   />
@@ -594,11 +590,11 @@ const EmpresaDashboard = () => {
             {/* ── MI NEGOCIO ── */}
             {activeTab === 'negocio' && (
               <>
-                <div className="dpro-section-title">🏪 Perfil del Negocio</div>
+                <div className="dpro-section-title">Perfil del Negocio</div>
                 <div className="dpro-profile-card">
                   <div className="dpro-profile-banner" />
                   <div className="dpro-profile-avatar-wrap">
-                    <div className="dpro-profile-avatar">🏪</div>
+                    <div className="dpro-profile-avatar">N</div>
                   </div>
                   <div className="dpro-profile-body">
                     <div className="dpro-form-grid">
@@ -666,7 +662,7 @@ const EmpresaDashboard = () => {
                       </div>
                       {/* Mapa */}
                       <div className="dpro-form-group full">
-                        <label>Ubicación en el mapa {editMode && <span style={{color:'#06b6d4',fontSize:'.75rem',marginLeft:6}}>— Haz clic para marcar</span>}</label>
+                        <label>Ubicación en el mapa {editMode && <span style={{color:'#06b6d4',fontSize:'.75rem',marginLeft:6}}>(Haz clic para marcar)</span>}</label>
                         <div className="dpro-map-container">
                           <MapContainer
                             center={formData.lat && formData.lng ? [formData.lat, formData.lng] : [-0.18, -78.47]}
@@ -693,12 +689,12 @@ const EmpresaDashboard = () => {
                         <>
                           <button className="dpro-btn ghost" onClick={() => setEditMode(false)} disabled={saving}>Cancelar</button>
                           <button className="dpro-btn primary" onClick={handleSaveProfile} disabled={saving}>
-                            {saving ? '⏳ Guardando…' : '💾 Guardar cambios'}
+                            {saving ? 'Guardando...' : 'Guardar cambios'}
                           </button>
                         </>
                       ) : (
                         <button className="dpro-btn primary" onClick={() => setEditMode(true)}>
-                          ✏️ Editar información
+                          Editar información
                         </button>
                       )}
                     </div>

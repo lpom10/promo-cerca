@@ -8,6 +8,7 @@ import { categorias } from '../data/categorias';
 import { verificarDisponibilidadTickets } from '../services/ticketService';
 import { logError } from '../utils/errorHandler';
 import fondo from '../assets/fondo.png';
+import logo from '../assets/logo.png';
 import Footer from './Footer';
 import '../styles/homepage.css';
 import '../styles/mapa.css';
@@ -91,7 +92,7 @@ const VisibleMarkers = ({ promociones, navigate, getEmoji }) => {
           <div style={{ color: '#06b6d4', fontSize: '13px', fontWeight: 'bold', lineHeight: '1.2' }}>
             {promo.titulo}
           </div>
-          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '6px' }}>Clic para explorar mapa</div>
+          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '6px' }}>Click para explorar mapa</div>
         </div>
       </Tooltip>
     </Marker>
@@ -125,11 +126,13 @@ const HomePage = () => {
   useEffect(() => {
     const cargarPromociones = async () => {
       try {
+        // Simplificación de la consulta para evitar procesamiento excesivo en el cliente
         const qp = query(
           collection(db, 'promociones'), 
           where('estado', '==', 'aprobado'),
           where('activa', '==', true), 
-          limit(30));
+          limit(20)
+        );
         const promoSnap = await getDocs(qp);
 
         const promosEnriquecidas = promoSnap.docs.map(doc => {
@@ -251,7 +254,7 @@ const HomePage = () => {
               </MapContainer>
             </div>
             <Link to="/mapa" className="hp-map-btn">
-              🗺️ Acceder al mapa completo
+              Acceder al mapa completo
             </Link>
           </div>
         </div>

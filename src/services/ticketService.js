@@ -90,6 +90,8 @@ export const crearTicket = async (usuarioId, promocionId, empresaId, promocionDa
       promocionTitulo: promocionData.titulo,
       empresaNombre: promocionData.empresaNombre,
       descuento: promocionData.descuento,
+      precioOriginal: promocionData.precioOriginal || null,
+      precioDescuento: promocionData.precioDescuento || null,
     };
 
     const docRef = await addDoc(collection(db, 'tickets'), ticket);
