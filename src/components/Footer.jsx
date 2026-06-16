@@ -16,12 +16,14 @@ const Footer = () => {
             
             <div className="footer-section">
                 <h3>Contáctanos</h3>
-                <p>Parque Científico UTPL, Loja, Ecuador</p>
-                <p>+593 95 865 7984</p>
-                <p>info@isbensolutions.com</p>
+                <a href="https://www.google.com/maps/place/Parque+Cientifico+UTPL/data=!4m2!3m1!1s0x0:0xf57adb9efbda3dfb?sa=X&ved=1t:2428&ictx=111">Parque Científico UTPL, Loja, Ecuador</a>
+                <br>
+                </br>
+                <a href="tel:+593 95 865 7984">+593 95 865 7984</a>
+                <br></br><a href="mailto:info@isbensolutions.com">info@isbensolutions.com</a>
 
             </div>
-            <div className="footer-section">
+            <div className="footer-section-redes">
                 <h3>Síguenos en nuestras redes sociales</h3>
                 <ul>
                     <li>Facebook</li>
