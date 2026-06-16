@@ -57,7 +57,7 @@ const CanjeTickets = ({ empresaId }) => {
 
   return (
     <div className="canje-tickets-container">
-      <h2>🎟️ Canjear Tickets</h2>
+      <h2>Canjear Tickets</h2>
 
       {/* Mensajes */}
       {error && <div className="alert alert-error">{error}</div>}
@@ -65,7 +65,7 @@ const CanjeTickets = ({ empresaId }) => {
       {exitoCanjeado && (
         <div className="exito-canjeado-container">
           <div className="alert alert-success">
-            ✓ Ticket canjeado correctamente
+            Ticket canjeado correctamente
           </div>
           <button 
             className="btn-otro-ticket"
@@ -77,7 +77,7 @@ const CanjeTickets = ({ empresaId }) => {
               setTimeout(() => inputRef.current?.focus(), 100);
             }}
           >
-            🔄 Canjear otro ticket
+            Canjear otro ticket
           </button>
         </div>
       )}
@@ -88,7 +88,7 @@ const CanjeTickets = ({ empresaId }) => {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Escanear o ingresar código..."
+            placeholder="Ingresar código de ticket..."
             value={codigo}
             onChange={(e) => setCodigo(e.target.value.toUpperCase())}
             autoFocus
@@ -100,7 +100,7 @@ const CanjeTickets = ({ empresaId }) => {
             disabled={cargando}
             className="btn-buscar"
           >
-            {cargando ? '⏳ Buscando...' : '🔍 Buscar'}
+            {cargando ? 'Buscando...' : 'Buscar'}
           </button>
         </form>
       )}
@@ -111,7 +111,7 @@ const CanjeTickets = ({ empresaId }) => {
           <div className="ticket-header">
             <span className="codigo-grande">{ticket.codigo}</span>
             <span className={`estado ${ticket.estado}`}>
-              {ticket.estado === 'generado' ? '✓ Activo' : '✓ Canjeado'}
+              {ticket.estado === 'generado' ? 'Activo' : 'Canjeado'}
             </span>
           </div>
 
@@ -151,7 +151,7 @@ const CanjeTickets = ({ empresaId }) => {
                 onClick={handleCanjeTicket}
                 disabled={cargando}
               >
-                {cargando ? '⏳ Canjeando...' : '✓ Canjear Ticket'}
+                {cargando ? 'Canjeando...' : 'Canjear Ticket'}
               </button>
               <button
                 className="btn-cancelar"
@@ -166,7 +166,7 @@ const CanjeTickets = ({ empresaId }) => {
             </div>
           ) : (
             <div className="ticket-canjeado-msg">
-              ✓ Este ticket ya fue canjeado el {new Date(ticket.fechaCanjeado.toDate?.() || ticket.fechaCanjeado).toLocaleString()}
+              Este ticket ya fue canjeado el {new Date(ticket.fechaCanjeado.toDate?.() || ticket.fechaCanjeado).toLocaleString()}
               <button 
                 className="btn-cancelar" 
                 style={{marginTop: '1rem', width: '100%'}}
@@ -186,8 +186,8 @@ const CanjeTickets = ({ empresaId }) => {
       {/* Estado inicial */}
       {!ticket && !error && !exitoCanjeado && (
         <div className="instrucciones">
-          <p>📱 Escanea el código QR del cliente o ingresa el código manualmente</p>
-          <p>Se mostrará la información del ticket para confirmar el canje</p>
+          <p>Ingrese el código de ticket proporcionado por el cliente.</p>
+          <p>Se mostrará la información de la promoción para validar la transacción.</p>
         </div>
       )}
     </div>

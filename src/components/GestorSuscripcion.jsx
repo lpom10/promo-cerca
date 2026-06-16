@@ -122,8 +122,7 @@ const GestorSuscripcion = () => {
           alignItems: 'center',
           gap: '0.5rem'
         }}>
-          <span>⏳</span>
-          <p style={{ margin: 0 }}><strong>Pago en revisión:</strong> Hemos recibido tu comprobante. Un administrador lo validará pronto para activar tu suscripción.</p>
+          <p style={{ margin: 0 }}><strong>Pago en revisión:</strong> Hemos recibido tu comprobante. Lo validaremos pronto.</p>
         </div>
       )}
 
@@ -192,7 +191,7 @@ const GestorSuscripcion = () => {
                   <td>{new Date(sub.fechaVencimiento.toDate?.()).toLocaleDateString()}</td>
                   <td>
                     <span className={`badge-${sub.estado}`}>
-                      {sub.estado === 'activa' ? '✅ Activa' : sub.estado === 'vencida' ? '⏰ Vencida' : '❌ Cancelada'}
+                      {sub.estado}
                     </span>
                   </td>
                 </tr>

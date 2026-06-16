@@ -68,12 +68,21 @@ a {
 .titulo {
   border: none;
   background: transparent;
-  font-size: 1.2rem;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  color: white;
   cursor: pointer;
   text-decoration: none;
+  display: flex;
+  align-items: center;
+  transition: transform 0.3s ease;
+}
+
+.titulo:hover {
+  transform: scale(1.02);
+}
+
+.titulo img {
+  height: 48px; /* Ajustado para mayor impacto visual */
+  width: auto;
+  display: block;
 }
 
 .hamburger {

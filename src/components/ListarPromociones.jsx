@@ -57,6 +57,7 @@ const ListarPromociones = () => {
       
       const pageSize = 12;
       const constraints = [
+        where('estado', '==', 'aprobado'),
         where('activa', '==', true),
         orderBy('createdAt', 'desc'),
         limit(pageSize)
@@ -167,7 +168,7 @@ const ListarPromociones = () => {
   };
 
   const categoriasFormato = useMemo(() => [
-    { valor: '', etiqueta: '🗂️ Todas' },
+    { valor: '', etiqueta: 'Todas' },
     ...categorias.slice(1).map(cat => ({
       valor: cat.id,
       etiqueta: `${cat.emoji} ${cat.label}`
@@ -198,14 +199,14 @@ const ListarPromociones = () => {
     
       {/* Panel de Control */}
       <div className="filtro-container">
-        <h2>🎯 Promociones Disponibles</h2>
+        <h2>Promociones Disponibles</h2>
 
         {/* Búsqueda y Filtros */}
         <div className="controles">
           <div className="search-box">
             <input
               type="text"
-              placeholder="🔍 Buscar por nombre, descripción o empresa..."
+              placeholder="Buscar por nombre, descripción o empresa..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               // onKeyUp ya no es necesario aquí, el debounce lo maneja
@@ -221,9 +222,9 @@ const ListarPromociones = () => {
               onChange={(e) => setOrdenamiento(e.target.value)}
               className="sort-select"
             >
-              <option value="vencimiento">📅 Próximo a vencer</option>
-              <option value="trending">🔥 Más popular</option>
-              <option value="descuento">💰 Mayor descuento</option>
+              <option value="vencimiento">Próximo a vencer</option>
+              <option value="trending">Más popular</option>
+              <option value="descuento">Mayor descuento</option>
             </select>
           </div>
 
@@ -232,7 +233,7 @@ const ListarPromociones = () => {
             className={`btn-trending ${mostrarTrending ? 'active' : ''}`}
             onClick={() => setMostrarTrending(!mostrarTrending)}
           >
-            🔥 Trending
+            Trending
           </button>
         </div>
 
@@ -253,7 +254,7 @@ const ListarPromociones = () => {
       {/* Panel de Trending */}
       {mostrarTrending && trending.length > 0 && (
         <div className="trending-panel">
-          <h3>🔥 Top 5 Más Visto</h3> {/* Se añade un estado de carga para trending */}
+          <h3>Top 5 Más Vistos</h3> {/* Se añade un estado de carga para trending */}
           <div className="trending-grid">
             {trending.map((promo, idx) => (
               <div key={promo.id} className="trending-card">
@@ -261,7 +262,7 @@ const ListarPromociones = () => {
                 <h4>{promo.titulo}</h4>
                 <p className="empresa-small">{promo.empresaNombre}</p>
                 <div className="stats">
-                  <span className="views">👁️ {promo.visualizaciones || 0} vistas</span>
+                  <span className="views">Vistas: {promo.visualizaciones || 0}</span>
                   <span className="descuento-small">-{promo.descuento}%</span>
                 </div>
               </div>
@@ -275,7 +276,7 @@ const ListarPromociones = () => {
         <LoadingSpinner message="Cargando promociones..." /> // Se añade un estado de carga para trending
       ) : promociones.length === 0 ? (
         <div className="sin-promociones">
-          <p>📭 No hay promociones disponibles en esta categoría</p>
+          <p>No hay promociones disponibles en esta categoría</p>
         </div>
       ) : (
         <div className="promociones-grid">
@@ -314,27 +315,27 @@ const ListarPromociones = () => {
 
                   {/* Estadísticas */}
                   <div className="promo-stats">
-                    <span className="visualizaciones">👁️ {promo.visualizaciones || 0}</span>
+                    <span className="visualizaciones">Vistas: {promo.visualizaciones || 0}</span>
                     {promo.ticketsMaximos && (
-                      <span className="tickets-info">🎟️ {promo.ticketsGenerados || 0}/{promo.ticketsMaximos}</span>
+                      <span className="tickets-info">Tickets: {promo.ticketsGenerados || 0}/{promo.ticketsMaximos}</span>
                     )}
                   </div>
 
                   {/* Información de disponibilidad de tickets */}
                   <div className="disponibilidad-tickets">
                     <p className={`mensaje-disponibilidad ${disponibilidad.disponible ? 'disponible' : 'no-disponible'}`}>
-                      {disponibilidad.disponible ? '✅' : '⛔'} {mensajeDisponibilidad}
+                      {mensajeDisponibilidad}
                     </p>
 
                     {promo.ticketsMaximos && disponibilidad.ticketsRestantes !== null && (
                       <p className="tickets-restantes">
-                        🎟️ Quedan: <strong>{disponibilidad.ticketsRestantes}</strong> de {promo.ticketsMaximos}
+                        Quedan: <strong>{disponibilidad.ticketsRestantes}</strong> de {promo.ticketsMaximos}
                       </p>
                     )}
 
                     {fechaExpCampo && (
                       <p className="fecha-expiracion">
-                        ⏰ Vence: {textoTiempoRestante ? `${textoTiempoRestante} (${new Date(fechaExpCampo.toDate?.() || fechaExpCampo).toLocaleString()})` : new Date(fechaExpCampo.toDate?.() || fechaExpCampo).toLocaleString()}
+                        Vence: {textoTiempoRestante ? `${textoTiempoRestante} (${new Date(fechaExpCampo.toDate?.() || fechaExpCampo).toLocaleString()})` : new Date(fechaExpCampo.toDate?.() || fechaExpCampo).toLocaleString()}
                       </p>
                     )}
                   </div>
@@ -342,13 +343,13 @@ const ListarPromociones = () => {
                   <div className="promo-footer">
                     <div className="tiempo-restante">
                       {vencida ? (
-                        <span className="vencida-text">⏰ Vencida</span>
+                        <span className="vencida-text">Vencida</span>
                       ) : dias === 0 ? (
                         <span className="vence-hoy">🔴 Vence hoy</span>
                       ) : dias === 1 ? (
                         <span className="vence-pronto">🟡 Vence mañana</span>
                       ) : (
-                        <span className="tiempo-normal">📅 Vence en {dias} días</span>
+                        <span className="tiempo-normal">Vence en {dias} días</span>
                       )}
                     </div>
                     <button
@@ -365,7 +366,7 @@ const ListarPromociones = () => {
                           : 'Generar ticket'
                       }
                     >
-                      🎟️ Ticket
+                      Generar Ticket
                     </button>
                   </div>
                 </div>

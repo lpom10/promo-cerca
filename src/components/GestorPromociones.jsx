@@ -17,6 +17,8 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
     titulo: '',
     descripcion: '',
     descuento: '',
+    precioOriginal: '',
+    precioDescuento: '',
     fechaInicio: '',
     fechaFin: '',
     categoria: '',
@@ -66,7 +68,22 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    setForm(prev => {
+      const updatedForm = { ...prev, [name]: value };
+      
+      // Calcular precio con descuento automáticamente
+      if (name === 'precioOriginal' || name === 'descuento') {
+        const pOriginal = parseFloat(name === 'precioOriginal' ? value : prev.precioOriginal);
+        const desc = parseFloat(name === 'descuento' ? value : prev.descuento);
+        
+        if (!isNaN(pOriginal) && !isNaN(desc)) {
+          updatedForm.precioDescuento = (pOriginal - (pOriginal * (desc / 100))).toFixed(2);
+        } else {
+          updatedForm.precioDescuento = '';
+        }
+      }
+      return updatedForm;
+    });
   };
 
   const validar = () => {
@@ -75,6 +92,9 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
     if (!form.descripcion.trim()) e.descripcion = 'La descripción es requerida';
     if (!form.descuento || isNaN(form.descuento) || form.descuento < 0 || form.descuento > 100) {
       e.descuento = 'Ingresa un descuento válido (0-100)';
+    }
+    if (!form.precioOriginal || isNaN(form.precioOriginal) || parseFloat(form.precioOriginal) <= 0) {
+      e.precioOriginal = 'El precio original debe ser mayor a 0';
     }
     if (!form.fechaInicio) e.fechaInicio = 'La fecha de inicio es requerida';
     if (!form.fechaFin) e.fechaFin = 'La fecha de fin es requerida';
@@ -122,6 +142,8 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
         titulo: form.titulo,
         descripcion: form.descripcion,
         descuento: parseInt(form.descuento),
+        precioOriginal: parseFloat(form.precioOriginal),
+        precioDescuento: parseFloat(form.precioDescuento),
         fechaInicio: new Date(form.fechaInicio),
         fechaFin: new Date(form.fechaFin),
         categoria: form.categoria,
@@ -142,6 +164,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
         await addDoc(collection(db, 'promociones'), {
           ...datos,
           createdAt: new Date(),
+          estado: 'pendiente',
           activa: true,
           visualizaciones: 0,
           ticketsGenerados: 0, // Contador inicial
@@ -174,6 +197,8 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
       titulo: promo.titulo,
       descripcion: promo.descripcion,
       descuento: promo.descuento,
+      precioOriginal: promo.precioOriginal?.toString() || '',
+      precioDescuento: promo.precioDescuento?.toString() || '',
       fechaInicio: promo.fechaInicio.toDate?.().toISOString().split('T')[0] || promo.fechaInicio,
       fechaFin: promo.fechaFin.toDate?.().toISOString().split('T')[0] || promo.fechaFin,
       categoria: promo.categoria,
@@ -270,6 +295,32 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
                   </div>
 
                   <div className="form-group">
+                    <label>Precio Original ($)</label>
+                    <input
+                      type="number"
+                      name="precioOriginal"
+                      value={form.precioOriginal}
+                      onChange={handleChange}
+                      placeholder="Ej: 50.00"
+                      step="0.01"
+                      className={errores.precioOriginal ? 'input-error' : ''}
+                    />
+                    {errores.precioOriginal && <span className="error">{errores.precioOriginal}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label>Precio Final (Calculado)</label>
+                    <input
+                      type="text"
+                      name="precioDescuento"
+                      value={form.precioDescuento}
+                      readOnly
+                      placeholder="Se calcula solo"
+                      style={{ backgroundColor: '#f0f9ff', fontWeight: 'bold', color: '#0369a1' }}
+                    />
+                  </div>
+
+                  <div className="form-group">
                     <label>Categoría</label>
                     <select
                       name="categoria"
@@ -324,7 +375,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
                 </div>
 
                 <div className="form-separator" style={{ marginTop: '30px', marginBottom: '20px', borderTop: '2px solid #ddd', paddingTop: '20px' }}>
-                  <h4 style={{ margin: '0 0 20px 0', color: '#333' }}>⚙️ Límites de Tickets (Opcional)</h4>
+                  <h4 style={{ margin: '0 0 20px 0', color: '#333' }}>Límites de Tickets (Opcional)</h4>
                 </div>
 
                 <div className="form-row">
@@ -365,7 +416,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
 
                 <div className="form-buttons">
                   <button type="submit" disabled={loading} className="btn-guardar">
-                    {loading ? '⏳ Guardando...' : '💾 Guardar Promoción'}
+                    {loading ? 'Guardando...' : 'Guardar Promoción'}
                   </button>
                   <button 
                     type="button" 
@@ -386,7 +437,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
                     }}
                     className="btn-cancelar"
                   >
-                    ❌ Cancelar
+                    Cancelar
                   </button>
                 </div>
               </form>
@@ -408,6 +459,9 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
                       <div className="promo-info">
                         <span className="descuento-badge">-{promo.descuento}%</span>
                         <span className="categoria">{promo.categoria}</span>
+                        <span className={`estado-badge-mini ${promo.estado || 'pendiente'}`} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', marginLeft: '5px' }}>
+                          {promo.estado || 'pendiente'}
+                        </span>
                       </div>
                       <div className="promo-fechas">
                         <small>
@@ -415,24 +469,24 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
                         </small>
                       </div>
                       <div className="promo-stats">
-                        <span>👁️ {promo.visualizaciones || 0} visualizaciones</span>
+                        <span>Vistas: {promo.visualizaciones || 0}</span>
                         {promo.ticketsMaximos && (
-                          <span>🎟️ {promo.ticketsGenerados || 0}/{promo.ticketsMaximos} tickets</span>
+                          <span>Tickets: {promo.ticketsGenerados || 0}/{promo.ticketsMaximos}</span>
                         )}
                       </div>
                       {(promo.ticketsMaximos || promo.fechaHoraExpiracion) && (
                         <div className="promo-limites" style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px', fontSize: '12px' }}>
                           {promo.ticketsMaximos && (
-                            <p style={{ margin: '5px 0' }}>📊 Límite: {promo.ticketsMaximos} tickets</p>
+                            <p style={{ margin: '5px 0' }}>Límite: {promo.ticketsMaximos} tickets</p>
                           )}
                           {promo.fechaHoraExpiracion && (
-                            <p style={{ margin: '5px 0' }}>⏰ Expira: {new Date(promo.fechaHoraExpiracion.toDate?.()).toLocaleString()}</p>
+                            <p style={{ margin: '5px 0' }}>Expira: {new Date(promo.fechaHoraExpiracion.toDate?.()).toLocaleString()}</p>
                           )}
                         </div>
                       )}
                       <div className="promo-actions">
-                        <button onClick={() => handleEdit(promo)} className="btn-edit">✏️ Editar</button>
-                        <button onClick={() => handleDelete(promo.id)} className="btn-delete">🗑️ Eliminar</button>
+                        <button onClick={() => handleEdit(promo)} className="btn-edit">Editar</button>
+                        <button onClick={() => handleDelete(promo.id)} className="btn-delete">Eliminar</button>
                       </div>
                     </div>
                   </div>
@@ -446,7 +500,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
           <h3>Necesitas una suscripción activa</h3>
           <p>Para crear y gestionar promociones, necesitas tener una suscripción activa.</p>
           <button className="btn-suscribirse" onClick={onNavigateToSuscripcion}>
-            💳 Contratar Suscripción
+            Contratar Suscripción
           </button>
         </div>
       )}

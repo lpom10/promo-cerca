@@ -258,7 +258,7 @@ const ClienteDashboard = () => {
       {/* Top bar */}
       <div className="dpro-topbar">
         <div className="dpro-topbar-left">
-          <div className="dpro-avatar">👤</div>
+          <div className="dpro-avatar">C</div>
           <div>
             <div className="dpro-topbar-name">{userDetails?.nombre || 'Cliente'}</div>
             <div className="dpro-topbar-role">Mi cuenta</div>
@@ -278,7 +278,6 @@ const ClienteDashboard = () => {
               className={`dpro-nav-item ${activeTab === item.id ? 'active' : ''}`}
               onClick={() => setActiveTab(item.id)}
             >
-              <span className="dpro-nav-icon">{item.icon}</span>
               {item.label}
             </button>
           ))}
@@ -410,7 +409,7 @@ const ClienteDashboard = () => {
           {/* ── MIS TICKETS ── */}
           {activeTab === 'tickets' && (
             <>
-              <div className="dpro-section-title">🎟️ Mis Tickets</div>
+              <div className="dpro-section-title">Mis Tickets</div>
               <div className="dpro-filters">
                 {[
                   { key: 'todos',    label: `Todos (${tickets.length})` },
@@ -448,7 +447,6 @@ const ClienteDashboard = () => {
                         <tr>
                           <td colSpan={7}>
                             <div className="dpro-empty">
-                              <div className="dpro-empty-icon">🎟️</div>
                               <div className="dpro-empty-text">
                                 {ticketFilter === 'generado'
                                   ? 'No tienes tickets activos. ¡Explora promociones!'
@@ -484,19 +482,18 @@ const ClienteDashboard = () => {
           {/* ── FAVORITOS ── */}
           {activeTab === 'favoritos' && (
             <>
-              <div className="dpro-section-title">❤️ Mis Favoritos</div>
+              <div className="dpro-section-title">Favoritos</div>
               {loading ? (
                 <div className="dpro-loading"><div className="dpro-spinner" /></div>
               ) : favoritos.length === 0 ? (
                 <div className="dpro-empty" style={{ minHeight: 300 }}>
-                  <div className="dpro-empty-icon">💔</div>
-                  <div className="dpro-empty-text">Aún no tienes favoritos guardados</div>
+                  <div className="dpro-empty-text">No tienes favoritos guardados</div>
                   <button
                     className="dpro-btn primary"
                     style={{ marginTop: 16 }}
                     onClick={() => navigate('/locales')}
                   >
-                    🗺️ Ir a Locales
+                    Ir a Locales
                   </button>
                 </div>
               ) : (
@@ -511,7 +508,6 @@ const ClienteDashboard = () => {
                         {favoritos.filter(f => f.tipo === 'empresa').map((f, i) => (
                           <div key={i} className="dpro-fav-card">
                             <div className="dpro-fav-card-header">
-                              <div className="dpro-fav-icon">🏢</div>
                               <div>
                                 <div className="dpro-fav-name">{f._empresa?.negocio || 'Empresa'}</div>
                                 <div className="dpro-fav-meta">{f._empresa?.categoria || ''}</div>
@@ -541,7 +537,6 @@ const ClienteDashboard = () => {
                         {favoritos.filter(f => f.tipo === 'promocion').map((f, i) => (
                           <div key={i} className="dpro-fav-card">
                             <div className="dpro-fav-card-header">
-                              <div className="dpro-fav-icon">📢</div>
                               <div>
                                 <div className="dpro-fav-name">{f._promo?.titulo || 'Promoción'}</div>
                                 <div className="dpro-fav-meta">{f._empresa?.negocio || ''}</div>
@@ -571,11 +566,11 @@ const ClienteDashboard = () => {
           {/* ── MI PERFIL ── */}
           {activeTab === 'perfil' && (
             <>
-              <div className="dpro-section-title">👤 Mi Perfil</div>
+              <div className="dpro-section-title">Mi Perfil</div>
               <div className="dpro-profile-card">
                 <div className="dpro-profile-banner" />
                 <div className="dpro-profile-avatar-wrap">
-                  <div className="dpro-profile-avatar">👤</div>
+                  <div className="dpro-profile-avatar">P</div>
                 </div>
                 <div className="dpro-profile-body">
                   <div className="dpro-form-grid">
@@ -619,12 +614,12 @@ const ClienteDashboard = () => {
                       <>
                         <button className="dpro-btn ghost" onClick={() => setEditMode(false)} disabled={saving}>Cancelar</button>
                         <button className="dpro-btn primary" onClick={handleSaveProfile} disabled={saving}>
-                          {saving ? '⏳ Guardando…' : '💾 Guardar cambios'}
+                          {saving ? 'Guardando...' : 'Guardar cambios'}
                         </button>
                       </>
                     ) : (
                       <button className="dpro-btn primary" onClick={() => setEditMode(true)}>
-                        ✏️ Editar perfil
+                        Editar perfil
                       </button>
                     )}
                   </div>

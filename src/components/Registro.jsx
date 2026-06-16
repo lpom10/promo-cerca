@@ -14,6 +14,7 @@ import {
   sanitizar,
   sanitizarNumero,
 } from '../utils/validators';
+import logo from '../assets/logo.png';
 import { categorias } from '../data/categorias';
 import { rateLimiter } from '../utils/rateLimiter';
 import { handleError, logError } from '../utils/errorHandler';
@@ -208,8 +209,8 @@ const Registro = () => {
       if (user) {
         try {
           await user.delete();
-        } catch (_) {
-          logError(_, { accion: 'cleanup_user_delete' });
+        } catch (cleanupError) {
+          logError(cleanupError, { accion: 'cleanup_user_delete', email: form.email });
         }
       }
 
@@ -261,8 +262,7 @@ const Registro = () => {
         <div className="auth-panel-brand">
           <div className="brand-content">
             <div className="brand-logo-wrap">
-              <span className="brand-logo-icon">📍</span>
-              <span className="brand-logo-text">Promo Cerca</span>
+              <img src={logo} alt="Promo Cerca Logo" className="brand-logo-img" style={{ maxWidth: '180px', marginBottom: '20px' }} />
             </div>
             <p className="brand-tagline">¡Registro exitoso!</p>
             <p className="brand-desc">
@@ -278,7 +278,7 @@ const Registro = () => {
             <div className="auth-card">
               <div className="auth-success">
                 <div className="auth-success-icon">
-                  {tipo === 'empresa' ? '🏢' : '🎉'}
+                  {tipo === 'empresa' ? 'Check' : 'Exito'}
                 </div>
                 <h2>¡Cuenta creada con éxito!</h2>
                 {tipo === 'empresa' ? (
@@ -287,16 +287,16 @@ const Registro = () => {
                       Tu negocio <strong>"{form.negocio}"</strong> ha sido registrado correctamente.
                     </p>
                     <div className="info-box">
-                      📋 <strong>Próximo paso:</strong> Un administrador revisará tu solicitud en breve. Recibirás acceso una vez sea aprobada.
+                      <strong>Próximo paso:</strong> Un administrador revisará tu solicitud en breve. Recibirás acceso una vez sea aprobada.
                     </div>
-                    <a href="/" className="auth-success-btn">Ir al inicio →</a>
+                    <a href="/" className="auth-success-btn">Ir al inicio</a>
                   </>
                 ) : (
                   <>
                     <p>
                       Bienvenido, <strong>{form.nombre}</strong>. Tu cuenta está lista para explorar promociones cerca de ti.
                     </p>
-                    <a href="/cliente/dashboard" className="auth-success-btn">Explorar promociones →</a>
+                    <a href="/cliente/dashboard" className="auth-success-btn">Explorar promociones</a>
                   </>
                 )}
               </div>
@@ -315,8 +315,7 @@ const Registro = () => {
       <div className="auth-panel-brand">
         <div className="brand-content">
           <div className="brand-logo-wrap">
-            <span className="brand-logo-icon">📍</span>
-            <span className="brand-logo-text">Promo Cerca</span>
+            <img src={logo} alt="Promo Cerca Logo" className="brand-logo-img" style={{ maxWidth: '180px', marginBottom: '20px' }} />
           </div>
           <p className="brand-tagline">
             {tipo === 'empresa' ? 'Haz crecer tu negocio' : 'Ahorra con promociones locales'}
@@ -329,15 +328,15 @@ const Registro = () => {
           <div className="brand-features">
             {tipo === 'empresa' ? (
               <>
-                <div className="brand-feature"><span className="brand-feature-icon">📍</span><span>Aparece en el mapa para clientes cercanos</span></div>
-                <div className="brand-feature"><span className="brand-feature-icon">📈</span><span>Obten tu membresia y accede a diferentes tipos de publicidad</span></div>
-                <div className="brand-feature"><span className="brand-feature-icon">✅</span><span>Aprobación rápida en 24-48 h</span></div>
+                <div className="brand-feature"><span>Aparece en el mapa para clientes cercanos</span></div>
+                <div className="brand-feature"><span>Obtén tu membresía y accede a diferentes tipos de publicidad</span></div>
+                <div className="brand-feature"><span>Aprobación rápida en 24-48 h</span></div>
               </>
             ) : (
               <>
-                <div className="brand-feature"><span className="brand-feature-icon">🗺️</span><span>Descubre descuentos en tu barrio</span></div>
-                <div className="brand-feature"><span className="brand-feature-icon">🔖</span><span>Guarda y comparte tus favoritos</span></div>
-                <div className="brand-feature"><span className="brand-feature-icon">🆓</span><span>100% gratis para clientes</span></div>
+                <div className="brand-feature"><span>Descubre descuentos en tu barrio</span></div>
+                <div className="brand-feature"><span>Guarda y comparte tus favoritos</span></div>
+                <div className="brand-feature"><span>100% gratis para clientes</span></div>
               </>
             )}
           </div>
@@ -361,7 +360,6 @@ const Registro = () => {
                 className={`auth-tipo-btn${tipo === 'cliente' ? ' active' : ''}`}
                 onClick={() => setTipo('cliente')}
               >
-                <span className="tipo-icon">👤</span>
                 Cliente
               </button>
               <button
@@ -369,7 +367,6 @@ const Registro = () => {
                 className={`auth-tipo-btn${tipo === 'empresa' ? ' active' : ''}`}
                 onClick={() => setTipo('empresa')}
               >
-                <span className="tipo-icon">🏢</span>
                 Empresa
               </button>
             </div>

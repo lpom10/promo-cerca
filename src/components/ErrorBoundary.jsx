@@ -54,7 +54,7 @@ class ErrorBoundary extends Component {
         return (
           <div className="error-boundary-container error-boundary-critical">
             <div className="error-content">
-              <h1>❌ Error Crítico</h1>
+              <h1>Error Crítico</h1>
               <p>Hemos detectado múltiples errores. Por favor recarga la página.</p>
               <button
                 className="error-button error-button-reload"
@@ -70,7 +70,7 @@ class ErrorBoundary extends Component {
       return (
         <div className="error-boundary-container">
           <div className="error-content">
-            <h2>⚠️ Algo salió mal</h2>
+            <h2>Algo salió mal</h2>
             <p>Disculpa, ocurrió un problema. Nuestro equipo ha sido notificado.</p>
 
             {isDev && error && (

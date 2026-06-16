@@ -27,7 +27,6 @@ const TicketModal = ({ ticket, local, onClose }) => {
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>✕</button>
         <div className="ticket-header">
-          <span className="ticket-emoji">{catEmoji}</span>
           <h2>{local.empresaNombre || 'Negocio'}</h2>
         </div>
         <div className="ticket-promo">{local.titulo}</div>
@@ -41,11 +40,11 @@ const TicketModal = ({ ticket, local, onClose }) => {
             : "Hubo un problema al generar tu ticket. Por favor, intenta de nuevo."}
         </p>
         <div className="ticket-meta">
-          <span>🗓️ Válido hasta: {fechaFinStr}</span>
+          <span>Válido hasta: {fechaFinStr}</span>
         </div>
         {ticket && (
           <button className="ticket-copiar" onClick={() => navigator.clipboard?.writeText(codigo)}>
-            📋 Copiar código
+            Copiar código
           </button>
         )}
       </div>
@@ -157,12 +156,18 @@ const LocalCard = ({ local, onTicket }) => {
       <div className="promo-content">
         <div className="promo-header">
           <h3>{local.titulo || local.empresaNombre}</h3>
-          {local.descuento && <div className="descuento-grande">-{local.descuento}%</div>}
+          <div style={{ textAlign: 'right' }}>
+            {local.descuento && <div className="descuento-grande" style={{ marginBottom: '2px' }}>-{local.descuento}%</div>}
+            {local.precioOriginal && (
+              <div style={{ fontSize: '0.85rem', color: '#64748b', textDecoration: 'line-through' }}>${local.precioOriginal}</div>
+            )}
+            {local.precioDescuento && <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#2e7d32' }}>${local.precioDescuento}</div>}
+          </div>
         </div>
 
         {/* El nombre del negocio ahora también es un link al perfil */}
         <Link to={`/empresa/${local.empresaId}`} style={{ textDecoration: 'none' }}>
-            <div className="negocio-nombre">🏢 {local.empresaNombre}</div>
+            <div className="negocio-nombre">{local.empresaNombre}</div>
         </Link>
 
         <p className="promo-descripcion">{local.descripcion}</p>
@@ -176,28 +181,28 @@ const LocalCard = ({ local, onTicket }) => {
         <div className="promo-fechas">Vence: {fechaExpiracionStr}</div>
 
         <div className="promo-stats">
-          <span className="visualizaciones">👁️ {local.visualizaciones || 0}</span>
-          <span className="tickets-info">🎟️ {local.ticketsGenerados || 0}{local.ticketsMaximos ? ` / ${local.ticketsMaximos}` : ''}</span>
+          <span className="visualizaciones">Vistas: {local.visualizaciones || 0}</span>
+          <span className="tickets-info">Tickets: {local.ticketsGenerados || 0}{local.ticketsMaximos ? ` / ${local.ticketsMaximos}` : ''}</span>
         </div>
 
         <div className="promo-actions" style={{ marginTop: '15px' }}>
           {(isOwner || isAdmin) ? (
             <>
               <Link to={`/empresa/${local.empresaId}`} className="btn-edit" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2196F3' }}>
-                🔎 Perfil
+                Perfil
               </Link>
-              {isOwner && <button className="btn-edit" onClick={handleEdit}>✏️ Editar</button>}
-              <button className="btn-delete" onClick={handleDelete}>🗑️ Eliminar</button>
+              {isOwner && <button className="btn-edit" onClick={handleEdit}>Editar</button>}
+              <button className="btn-delete" onClick={handleDelete}>Eliminar</button>
             </>
           ) : (
             <>
               {/* BOTÓN NUEVO: Visible para todos los usuarios antes de sacar ticket */}
               <Link to={`/empresa/${local.empresaId}`} className="btn-edit" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                🔎 Perfil
+                Perfil
               </Link>
               
               <button className="btn-ticket" onClick={() => onTicket(local)}>
-                🎫 Ticket
+                Ticket
               </button>
             </>
           )}
@@ -259,7 +264,11 @@ const Locales = () => {
     const cargarPromocionesInicial = async () => {
       try {
         setLoading(true);
-        const q = query(collection(db, 'promociones'), orderBy('createdAt', 'desc'), limit(100));
+        const q = query(
+          collection(db, 'promociones'), 
+          where('estado', '==', 'aprobado'),
+          orderBy('createdAt', 'desc'), 
+          limit(100));
         const snapshot = await getDocs(q);
         const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setAllLocalesCache(docs);
@@ -293,7 +302,7 @@ const Locales = () => {
             <input
             type="text"
             className="search-input"
-            placeholder=" Buscar negocios o promociones..."
+            placeholder="Buscar negocios o promociones..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             />

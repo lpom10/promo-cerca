@@ -11,6 +11,7 @@ const AdminDashboard = () => {
   const [solicitudes, setSolicitudes] = useState([]);
   const [empresasAprobadas, setEmpresasAprobadas] = useState([]);
   const [pagosPendientes, setPagosPendientes] = useState([]);
+  const [promosRevision, setPromosRevision] = useState([]);
   const [todasPromociones, setTodasPromociones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('solicitudes');
@@ -21,6 +22,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     cargarSolicitudes();
     cargarEmpresasAprobadas();
+    cargarPromosRevision();
     const pagosRef = query(collection(db, 'pagos'), where('status', '==', 'espera'));
     const unsubscribe = onSnapshot(pagosRef, async (snapshot) => {
       const pagosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -97,6 +99,19 @@ const AdminDashboard = () => {
     setLoading(false);
   };
 
+  const cargarPromosRevision = async () => {
+    try {
+      const q = query(
+        collection(db, 'promociones'),
+        where('estado', '==', 'pendiente')
+      );
+      const snap = await getDocs(q);
+      setPromosRevision(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (error) {
+      logError(error, { accion: 'cargarPromosRevision', componente: 'AdminDashboard' });
+    }
+  };
+
   const cargarEmpresasAprobadas = async () => {
     try {
       const q = query(
@@ -131,6 +146,15 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       logError(error, { accion: 'aprobarSolicitud', empresaId, componente: 'AdminDashboard' });
+    }
+  };
+
+  const gestionarPromocion = async (promoId, nuevoEstado) => {
+    try {
+      await updateDoc(doc(db, 'promociones', promoId), { estado: nuevoEstado });
+      setPromosRevision(promosRevision.filter(p => p.id !== promoId));
+    } catch (error) {
+      logError(error, { accion: 'gestionarPromocion', promoId, componente: 'AdminDashboard' });
     }
   };
 
@@ -211,31 +235,37 @@ const AdminDashboard = () => {
           className={`tab ${activeTab === 'solicitudes' ? 'active' : ''}`}
           onClick={() => setActiveTab('solicitudes')}
         >
-          📋 Solicitudes Pendientes ({solicitudes.length})
+          Solicitudes Pendientes ({solicitudes.length})
         </button>
           <button 
             className={`tab ${activeTab === 'empresas' ? 'active' : ''}`}
             onClick={() => setActiveTab('empresas')}
           >
-            🏢 Empresas Aprobadas
+            Empresas Aprobadas
+          </button>
+          <button 
+            className={`tab ${activeTab === 'revisiones' ? 'active' : ''}`}
+            onClick={() => setActiveTab('revisiones')}
+          >
+            Revisiones ({promosRevision.length})
           </button>
           <button 
             className={`tab ${activeTab === 'suscripciones' ? 'active' : ''}`}
             onClick={() => setActiveTab('suscripciones')}
           >
-            💳 Suscripciones ({pagosPendientes.length})
+            Suscripciones ({pagosPendientes.length})
           </button>
           <button 
             className={`tab ${activeTab === 'promociones' ? 'active' : ''}`}
             onClick={() => setActiveTab('promociones')}
           >
-            📢 Promociones
+            Promociones
           </button>
           <button 
             className={`tab ${activeTab === 'estadisticas' ? 'active' : ''}`}
             onClick={() => setActiveTab('estadisticas')}
           >
-            📊 Estadísticas
+            Estadísticas
           </button>
       </div>
 
@@ -267,7 +297,7 @@ const AdminDashboard = () => {
                         onClick={() => aprobarSolicitud(solicitud.id)}
                         className="btn-approve"
                       >
-                        ✅ Aprobar
+                        Aprobar
                       </button>
                       <button 
                         onClick={() => {
@@ -276,8 +306,40 @@ const AdminDashboard = () => {
                         }}
                         className="btn-reject"
                       >
-                        ❌ Rechazar
+                        Rechazar
                       </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'revisiones' && (
+          <div className="promociones-revision-section">
+            <h2>Promociones Pendientes de Revisión</h2>
+            {promosRevision.length === 0 ? (
+              <p className="info-texto">No hay promociones para revisar</p>
+            ) : (
+              <div className="solicitudes-list">
+                {promosRevision.map(promo => (
+                  <div key={promo.id} className="solicitud-card">
+                    <div className="solicitud-info">
+                      <h3>{promo.titulo}</h3>
+                      <p><strong>Empresa:</strong> {promo.empresaNombre}</p>
+                      <p><strong>Descripción:</strong> {promo.descripcion}</p>
+                      <p><strong>Descuento:</strong> {promo.descuento}%</p>
+                    </div>
+                    <div className="solicitud-actions">
+                      <button 
+                        onClick={() => gestionarPromocion(promo.id, 'aprobado')}
+                        className="btn-approve"
+                      >Aprobar</button>
+                      <button 
+                        onClick={() => gestionarPromocion(promo.id, 'rechazado')}
+                        className="btn-reject"
+                      >Rechazar</button>
                     </div>
                   </div>
                 ))}
@@ -311,13 +373,13 @@ const AdminDashboard = () => {
                         className="btn-approve"
                         style={{ textDecoration: 'none', textAlign: 'center', backgroundColor: '#2196F3' }}
                       >
-                        🔎 Perfil
+                        Perfil
                       </Link>
                       <button 
                         onClick={() => eliminarEmpresa(empresa.id)}
                         className="btn-reject"
                       >
-                        🗑️ Eliminar
+                        Eliminar
                       </button>
                     </div>
                   </div>
@@ -348,13 +410,13 @@ const AdminDashboard = () => {
                         className="btn-approve"
                         style={{ textDecoration: 'none', textAlign: 'center', backgroundColor: '#2196F3' }}
                       >
-                        🏢 Empresa
+                        Empresa
                       </Link>
                       <button 
                         onClick={() => eliminarPromocionAdmin(promo.id)}
                         className="btn-reject"
                       >
-                        🗑️ Borrar Promoción
+                        Borrar Promoción
                       </button>
                     </div>
                   </div>
@@ -429,7 +491,7 @@ const AdminDashboard = () => {
                         className="btn-approve"
                         style={{ flex: '1', padding: '10px', backgroundColor: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}
                       >
-                        ✅ Aprobar y Activar Suscripción
+                        Aprobar y Activar Suscripción
                       </button>
                       <button 
                         onClick={async () => {
@@ -441,7 +503,7 @@ const AdminDashboard = () => {
                         className="btn-reject"
                         style={{ padding: '10px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}
                       >
-                        ❌ Rechazar
+                        Rechazar
                       </button>
                     </div>
                   </div>
@@ -457,15 +519,15 @@ const AdminDashboard = () => {
             <h2>Estadísticas del Sistema</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginTop: '20px' }}>
               <div className="stat-card" style={{ padding: '20px', background: '#e3f2fd', borderRadius: '12px', textAlign: 'center' }}>
-                <h3>🎟️ Tickets Generados</h3>
+                <h3>Tickets Generados</h3>
                 <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1976d2' }}>{stats.totalTickets}</p>
               </div>
               <div className="stat-card" style={{ padding: '20px', background: '#e8f5e9', borderRadius: '12px', textAlign: 'center' }}>
-                <h3>🏢 Empresas Totales</h3>
+                <h3>Empresas Totales</h3>
                 <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#388e3c' }}>{stats.totalEmpresas}</p>
               </div>
               <div className="stat-card" style={{ padding: '20px', background: '#fff3e0', borderRadius: '12px', textAlign: 'center' }}>
-                <h3>📢 Promos Activas</h3>
+                <h3>Promociones Activas</h3>
                 <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f57c00' }}>{stats.totalPromos}</p>
               </div>
             </div>
