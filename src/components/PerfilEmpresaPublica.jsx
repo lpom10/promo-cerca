@@ -183,6 +183,13 @@ const PerfilEmpresaPublica = () => {
                     <h4>{promo.titulo}</h4>
                     <p className="promo-descripcion">{promo.descripcion}</p>
                     
+                    {(promo.precioOriginal || promo.precioDescuento) && (
+                      <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                        {promo.precioOriginal && <span style={{ fontSize: '0.9rem', color: '#94a3b8', textDecoration: 'line-through' }}>${promo.precioOriginal}</span>}
+                        {promo.precioDescuento && <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fb4c23' }}>${promo.precioDescuento}</span>}
+                      </div>
+                    )}
+                    
                     <div className="promo-footer">
                       <span className="valido-hasta">
                         Válido hasta: {promo.fechaFin?.toDate 

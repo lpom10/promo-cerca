@@ -21,10 +21,27 @@ const VisualizarTicket = ({ ticket, onClose, promocion }) => {
 
           {/* Información de la promoción */}
           <div className="ticket-info">
+            {/* 🛡️ MEJORA: Generación automática de QR para escaneo rápido */}
+            <div className="qr-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '25px', padding: '15px', background: '#fff', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${ticket.codigo}`} 
+                alt="Código QR del Ticket"
+                style={{ width: '180px', height: '180px', marginBottom: '10px' }}
+              />
+              <p style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Presenta este QR en el local</p>
+            </div>
+
             <div className="promo-details">
               <h3>{ticket.promocionTitulo}</h3>
               <p className="empresa">{ticket.empresaNombre}</p>
               <div className="descuento-badge">-{ticket.descuento}%</div>
+              
+              {(ticket.precioOriginal || ticket.precioDescuento) && (
+                <div style={{ marginTop: '10px', fontSize: '1.1rem' }}>
+                  {ticket.precioOriginal && <span style={{ textDecoration: 'line-through', color: '#94a3b8', marginRight: '10px' }}>${ticket.precioOriginal}</span>}
+                  {ticket.precioDescuento && <span style={{ fontWeight: 'bold', color: '#06b6d4' }}>${ticket.precioDescuento}</span>}
+                </div>
+              )}
             </div>
 
             {/* Estado del ticket */}
@@ -88,15 +105,27 @@ const VisualizarTicket = ({ ticket, onClose, promocion }) => {
           )}
 
           {/* Ver perfil de la empresa */}
-          {ticket.empresaId && (
-            <Link
-              to={`/empresa/perfil/${ticket.empresaId}`}
-              className="btn-ver-empresa"
-              onClick={onClose}
-            >
-              Ver perfil de la empresa
-            </Link>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
+            {promocion && promocion.lat && promocion.lng && (
+              <button 
+                className="btn-secundario"
+                onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${promocion.lat},${promocion.lng}`, '_blank')}
+                style={{ padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: '600', color: '#1e293b' }}
+              >
+                📍 Cómo llegar (Mapa)
+              </button>
+            )}
+            
+            {ticket.empresaId && (
+              <Link
+                to={`/empresa/${ticket.empresaId}`}
+                className="btn-ver-empresa"
+                onClick={onClose}
+              >
+                Ver perfil de la empresa
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </div>

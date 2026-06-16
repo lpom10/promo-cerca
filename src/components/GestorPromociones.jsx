@@ -72,7 +72,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
       const updatedForm = { ...prev, [name]: value };
       
       // Calcular precio con descuento automáticamente
-      if (name === 'precioOriginal' || name === 'descuento') {
+      if (name === 'precioOriginal' || name === 'descuento' || (name === 'precioDescuento' && !value)) {
         const pOriginal = parseFloat(name === 'precioOriginal' ? value : prev.precioOriginal);
         const desc = parseFloat(name === 'descuento' ? value : prev.descuento);
         
@@ -175,6 +175,8 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
         titulo: '',
         descripcion: '',
         descuento: '',
+    precioOriginal: '',
+    precioDescuento: '',
         fechaInicio: '',
         fechaFin: '',
         categoria: '',
@@ -197,8 +199,8 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
       titulo: promo.titulo,
       descripcion: promo.descripcion,
       descuento: promo.descuento,
-      precioOriginal: promo.precioOriginal?.toString() || '',
-      precioDescuento: promo.precioDescuento?.toString() || '',
+      precioOriginal: promo.precioOriginal?.toString() || '', // Asegúrate de que sea string para el input
+      precioDescuento: promo.precioDescuento?.toString() || '', // Asegúrate de que sea string para el input
       fechaInicio: promo.fechaInicio.toDate?.().toISOString().split('T')[0] || promo.fechaInicio,
       fechaFin: promo.fechaFin.toDate?.().toISOString().split('T')[0] || promo.fechaFin,
       categoria: promo.categoria,
@@ -300,6 +302,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
                       type="number"
                       name="precioOriginal"
                       value={form.precioOriginal}
+                      min="0.01"
                       onChange={handleChange}
                       placeholder="Ej: 50.00"
                       step="0.01"
@@ -315,7 +318,7 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
                       name="precioDescuento"
                       value={form.precioDescuento}
                       readOnly
-                      placeholder="Se calcula solo"
+                      placeholder="Calculado"
                       style={{ backgroundColor: '#f0f9ff', fontWeight: 'bold', color: '#0369a1' }}
                     />
                   </div>
@@ -427,6 +430,8 @@ const GestorPromociones = ({ onNavigateToSuscripcion }) => {
                         titulo: '',
                         descripcion: '',
                         descuento: '',
+        precioOriginal: '',
+        precioDescuento: '',
                         fechaInicio: '',
                         fechaFin: '',
                         categoria: '',

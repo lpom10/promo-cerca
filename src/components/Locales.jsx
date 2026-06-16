@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { categorias } from '../data/categorias';
-import { collection, onSnapshot, query, limit, orderBy, startAfter, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, limit, orderBy, startAfter, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { logError } from '../utils/errorHandler';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -186,6 +186,16 @@ const LocalCard = ({ local, onTicket }) => {
         </div>
 
         <div className="promo-actions" style={{ marginTop: '15px' }}>
+          {local.lat && local.lng && (
+            <button 
+              className="btn-mapa" 
+              onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${local.lat},${local.lng}`, '_blank')}
+              style={{ marginBottom: '8px', width: '100%', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+            >
+              📍 Cómo llegar
+            </button>
+          )}
+
           {(isOwner || isAdmin) ? (
             <>
               <Link to={`/empresa/${local.empresaId}`} className="btn-edit" style={{ textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2196F3' }}>

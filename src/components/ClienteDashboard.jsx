@@ -5,6 +5,7 @@ import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/fire
 import { db } from '../firebase';
 import { logError } from '../utils/errorHandler';
 import { verificarNotificacionesExpiracion } from '../services/ticketService';
+import VisualizarTicket from './VisualizarTicket';
 import '../styles/dashboard-pro.css';
 
 // ── Helpers ────────────────────────────────────────────────
@@ -67,6 +68,7 @@ const ClienteDashboard = () => {
   });
   const [topEmpresa, setTopEmpresa] = useState(null);
   const [ticketFilter, setTicketFilter] = useState('todos');
+  const [selectedTicketToView, setSelectedTicketToView] = useState(null);
 
   // Profile edit
   const [editMode, setEditMode] = useState(false);
@@ -254,6 +256,7 @@ const ClienteDashboard = () => {
 
   // ── Render ─────────────────────────────────────────────
   return (
+    <>
     <div className="dpro-shell">
       {/* Top bar */}
       <div className="dpro-topbar">
@@ -439,7 +442,8 @@ const ClienteDashboard = () => {
                         <th>Descuento</th>
                         <th>Estado</th>
                         <th>Generado</th>
-                        <th>Canjeado</th>
+                        <th>Canjeado</th>                        
+                        <th>Acciones</th>{/* New column for QR button */}
                       </tr>
                     </thead>
                     <tbody>
@@ -631,6 +635,16 @@ const ClienteDashboard = () => {
         </div>{/* /content */}
       </div>
     </div>
+
+    {selectedTicketToView && (
+      <VisualizarTicket
+        ticket={selectedTicketToView}
+        promocion={selectedTicketToView._promo} // Pass the promotion data
+        onClose={() => setSelectedTicketToView(null)}
+      />
+    )}
+
+    </>
   );
 };
 

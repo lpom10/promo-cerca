@@ -11,7 +11,7 @@ import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 import { categorias } from '../data/categorias';
-import { collection, onSnapshot, getDocs, limit, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs, where, limit, query, orderBy } from 'firebase/firestore';
 import { verificarDisponibilidadTickets, obtenerMensajeDisponibilidad, calcularTiempoRestante, formatearTiempoRestante, crearTicket, registrarVisualizacion } from '../services/ticketService';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -282,7 +282,11 @@ const Mapa = () => {
                       {promo.imagen ? <img src={promo.imagen} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6 }} loading="lazy"/> : <div style={{ width: 40, height: 40, background: '#e2e8f0', borderRadius: 6 }} />}
                       <div style={{ overflow: 'hidden' }}>
                         <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{promo.titulo}</div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>-{promo.descuento}%</div>
+                        <div style={{ fontSize: 12, color: '#64748b', display: 'flex', gap: '5px', alignItems: 'center' }}>
+                          <span>-{promo.descuento}%</span>
+                          {promo.precioOriginal && <span style={{ textDecoration: 'line-through', fontSize: '10px' }}>${promo.precioOriginal}</span>}
+                          {promo.precioDescuento && <span style={{ fontWeight: 'bold', color: '#2B87FF' }}>${promo.precioDescuento}</span>}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -292,7 +296,10 @@ const Mapa = () => {
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 {primaryPromo?.imagen ? <img src={primaryPromo.imagen} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8 }} loading="lazy"/> : <div style={{ width: 56, height: 56, background: '#eef2ff', borderRadius: 8, display:'flex', alignItems:'center', justifyContent:'center' }}>{getEmoji(firstEmpresa?.categoria)}</div>}
                 <div style={{ overflow: 'hidden' }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{firstEmpresa.empresaNombre}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {firstEmpresa.empresaNombre}
+                    {primaryPromo?.precioDescuento && <span style={{ fontSize: '12px', color: '#2B87FF', marginLeft: '8px' }}>${primaryPromo.precioDescuento}</span>}
+                  </div>
                   <div style={{ fontSize: 13, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{primaryPromo?.titulo || 'Promoción'}</div>
                 </div>
               </div>
@@ -466,6 +473,15 @@ const Mapa = () => {
                   <span className="badge categoria">{categorias.find(c => c.id === selected.empresa.categoria)?.label || 'Comercio'}</span>
                   <span className="badge promos-count">{selected.empresa.promociones?.length || 0} promociones</span>
                 </div>
+
+                {(selected.promo?.precioOriginal || selected.promo?.precioDescuento) && (
+                  <div style={{ margin: '10px 0', display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+                    {selected.promo?.precioOriginal && <span style={{ fontSize: '1rem', color: '#64748b', textDecoration: 'line-through' }}>${selected.promo.precioOriginal}</span>}
+                    {selected.promo?.precioDescuento && <span style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#2B87FF' }}>${selected.promo.precioDescuento}</span>}
+                    <span className="badge-activo" style={{ background: '#ecfdf5', color: '#059669', fontSize: '12px', padding: '2px 8px', borderRadius: '4px' }}>Ahorras {selected.promo.descuento}%</span>
+                  </div>
+                )}
+
                 <p className="promo-overlay-desc">{selected.promo?.descripcion || selected.promo?.titulo}</p>
 
                 {/* Expanded promo detail (shows when user clicks Ver perfil) */}

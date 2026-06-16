@@ -304,7 +304,13 @@ const ListarPromociones = () => {
                 <div className="promo-body">
                   <div className="promo-header">
                     <h3>{promo.titulo}</h3>
-                    <span className="descuento-grande">-{promo.descuento}%</span>
+                    <div style={{ textAlign: 'right' }}>
+                      <span className="descuento-grande">-{promo.descuento}%</span>
+                      {promo.precioOriginal && (
+                        <div style={{ fontSize: '0.8rem', color: '#64748b', textDecoration: 'line-through', marginTop: '2px' }}>${promo.precioOriginal}</div>
+                      )}
+                      {promo.precioDescuento && <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#06b6d4' }}>${promo.precioDescuento}</div>}
+                    </div>
                   </div>
 
                   <p className="negocio-nombre">

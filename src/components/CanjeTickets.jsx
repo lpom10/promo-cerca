@@ -8,6 +8,7 @@ const CanjeTickets = ({ empresaId }) => {
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
   const [exitoCanjeado, setExitoCanjeado] = useState(false);
+  const [mostrandoEscanner, setMostrandoEscanner] = useState(false);
   const inputRef = useRef();
 
   const buscarTicket = async (e) => {
@@ -84,25 +85,44 @@ const CanjeTickets = ({ empresaId }) => {
 
       {/* Búsqueda de código */}
       {!ticket && !exitoCanjeado && (
-        <form onSubmit={buscarTicket} className="buscar-form">
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Ingresar código de ticket..."
-            value={codigo}
-            onChange={(e) => setCodigo(e.target.value.toUpperCase())}
-            autoFocus
-            maxLength="8"
-            className="codigo-input"
-          />
-          <button
-            type="submit"
-            disabled={cargando}
-            className="btn-buscar"
+        <div className="canje-controles">
+          <form onSubmit={buscarTicket} className="buscar-form">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Ingresar código de ticket..."
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+              autoFocus
+              maxLength="8"
+              className="codigo-input"
+            />
+            <button
+              type="submit"
+              disabled={cargando}
+              className="btn-buscar"
+            >
+              {cargando ? 'Buscando...' : 'Buscar'}
+            </button>
+          </form>
+          
+          <div className="divider" style={{ margin: '20px 0', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>— o —</div>
+          
+          <button 
+            className="btn-qr-scan"
+            onClick={() => setMostrandoEscanner(!mostrandoEscanner)}
+            style={{ width: '100%', padding: '15px', borderRadius: '12px', background: '#fb4c23', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 12px rgba(251, 76, 35, 0.2)' }}
           >
-            {cargando ? 'Buscando...' : 'Buscar'}
+            {mostrandoEscanner ? 'Cerrar Cámara' : '📷 Escanear Código QR'}
           </button>
-        </form>
+
+          {mostrandoEscanner && (
+            <div className="scanner-placeholder" style={{ marginTop: '20px', padding: '40px', border: '2px dashed #fb4c23', borderRadius: '12px', textAlign: 'center', background: '#fff5f2' }}>
+              <p style={{ color: '#fb4c23', fontWeight: '600' }}>Iniciando cámara...</p>
+              <small style={{ color: '#94a3b8' }}>Para habilitar el escaneo en vivo, instala la librería 'html5-qrcode'</small>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Detalles del ticket encontrado */}
