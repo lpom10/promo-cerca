@@ -44,3 +44,27 @@
   border-top: 1px solid rgb(255, 255, 255);
   padding-top: 20px;
 }
+
+.social-icons {
+  display: flex;
+  gap: 15px;
+}
+
+.social-icons a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  border: 2px solid white; /* borde blanco */
+  background-color: transparent; /* fondo oscuro */
+  color: white;           /* color del icono */
+  font-size: 22px;
+  transition: 0.3s;
+}
+
+.social-icons a:hover {
+  background-color: #ff0000; /* cambia color al pasar el mouse */
+  transform: scale(1.1);
+}

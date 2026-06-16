@@ -5,7 +5,7 @@ const Footer = () => {
         <footer className="footer">
             <div className="footer-container">
             <div className="footer-section">
-                <h2>ISBEN SOLUTIONS</h2>
+                <img src="https://isbensolution.com/images/logo-isben/logo.png" alt="ISBEN SOLUTIONS" height="40"/>
                 <p>
                     En ISBEN SOLUTION, nos dedicamos a ofrecer soluciones tecnológicas
                     innovadoras y personalizadas que impulsan el crecimiento de tu negocio.
@@ -24,13 +24,13 @@ const Footer = () => {
 
             </div>
             <div className="footer-section-redes">
-                <h3>Síguenos en nuestras redes sociales</h3>
-                <ul>
-                    <li>Facebook</li>
-                    <li>Instagram</li>
-                    <li>Twitter</li>
-                    <li>LinkedIn</li>
-                </ul>
+                <h3>Redes Sociales</h3>
+                <div class="social-icons">
+                    <a href="https://www.facebook.com/profile.php?id=61572436337788" target="_blank"><i class="fab fa-facebook"></i></a>
+                    <a href="https://www.instagram.com/isben_solution" target="_blank"><i class="fab fa-instagram"></i></a>
+                    <a href="https://wa.link/yaa9h4" target="_blank"><i class="fab fa-whatsapp"></i></a>
+                    <a href="https://www.youtube.com/@ISBENSolution" target="_blank"><i class="fab fa-youtube"></i></a>
+                </div>
             </div>
             </div>
 
