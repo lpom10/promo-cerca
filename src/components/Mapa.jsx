@@ -131,13 +131,12 @@ const Mapa = () => {
       try {
         setLoading(true);
         
-        // 🚀 OPTIMIZACIÓN: Disparamos ambas peticiones a Firebase AL MISMO TIEMPO con LIMIT
+        // Traemos empresas y promociones sin filtros de ordenamiento que oculten datos
         const [empresasSnap, promosSnap] = await Promise.all([
           getDocs(query(collection(db, 'empresa'), limit(100))),
           getDocs(query(
             collection(db, 'promociones'), 
-            where('estado', '==', 'aprobado'),
-            orderBy('createdAt', 'desc'), 
+            where('activa', '==', true), 
             limit(100)))
         ]);
 
@@ -146,8 +145,15 @@ const Mapa = () => {
           empresasMap[d.id] = { id: d.id, ...d.data() }; 
         });
 
-        const promos = promosSnap.docs.map(doc => {
-          const data = { id: doc.id, ...doc.data() };
+        // Convertimos Timestamps y ordenamos en memoria para evitar problemas de índices
+        const sortedPromosDocs = promosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        sortedPromosDocs.sort((a, b) => {
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : (a.createdAt ? new Date(a.createdAt) : new Date(0));
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : (b.createdAt ? new Date(b.createdAt) : new Date(0));
+          return dateB - dateA;
+        });
+
+        const promos = sortedPromosDocs.map(data => {
           const e = data.empresaId ? empresasMap[data.empresaId] : null;
           
           const rawLat = data.lat !== undefined && data.lat !== null ? data.lat : e?.lat;
@@ -164,7 +170,27 @@ const Mapa = () => {
           };
         });
 
-        setLocales(promos);
+        // --- MEJORA: Incluir empresas que no tienen promociones para que siempre haya pines ---
+        const empresasSinPromos = [];
+        Object.values(empresasMap).forEach(emp => {
+          const tienePromo = promos.some(p => p.empresaId === emp.id);
+          if (!tienePromo && emp.lat && emp.lng) {
+            empresasSinPromos.push({
+              id: `empty-${emp.id}`,
+              empresaId: emp.id,
+              empresaNombre: emp.negocio || emp.nombre || 'Negocio',
+              lat: Number(emp.lat),
+              lng: Number(emp.lng),
+              categoria: emp.categoria,
+              activa: true,
+              titulo: 'Sin promociones actuales',
+              descripcion: 'Visita este local para conocer sus ofertas.',
+              isEmpty: true
+            });
+          }
+        });
+
+        setLocales([...promos, ...empresasSinPromos]);
       } catch (error) {
         logError(error, { accion: 'cargarLocales', componente: 'Mapa' });
       } finally {

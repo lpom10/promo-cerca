@@ -57,7 +57,6 @@ const ListarPromociones = () => {
       
       const pageSize = 12;
       const constraints = [
-        where('estado', '==', 'aprobado'),
         where('activa', '==', true),
         orderBy('createdAt', 'desc'),
         limit(pageSize)
@@ -78,6 +77,8 @@ const ListarPromociones = () => {
         id: doc.id,
         ...doc.data()
       }));
+
+      console.log("Promociones ListarPromociones:", nuevosDatos.length, nuevosDatos);
 
       setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
       setHasMore(snapshot.docs.length === pageSize);

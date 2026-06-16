@@ -1,6 +1,6 @@
 // src/components/Login.jsx
 import { useState, useEffect } from 'react';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { auth, googleProvider, db } from '../firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useNavigate, Link } from 'react-router-dom';
@@ -70,6 +70,40 @@ const Login = () => {
       redirectByUserType(authUserType);
     }
   }, [user, authUserType]);
+
+  // Manejar el resultado del redireccionamiento de Google
+  useEffect(() => {
+    const handleRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          const fbUser = result.user;
+          
+          // Verificar si el usuario ya existe en Firestore
+          const userDocRef = doc(db, 'usuarios', fbUser.uid);
+          const userDoc = await getDoc(userDocRef);
+          
+          if (!userDoc.exists()) {
+            // Crear nuevo cliente con Google si no existe
+            await setDoc(userDocRef, {
+              nombre: fbUser.displayName || 'Usuario Google',
+              email: fbUser.email,
+              tipo: 'cliente',
+              telefono: '',
+              estado: 'aprobado',
+              foto: fbUser.photoURL || null,
+              createdAt: new Date(),
+            });
+          }
+          setDetectedUserType('cliente');
+        }
+      } catch (error) {
+        logError(error, { accion: 'handleRedirectResult' });
+        setErrores({ general: 'Error al completar el inicio de sesión con Google.' });
+      }
+    }
+    handleRedirect();
+  }, []);
 
   const redirectByUserType = (tipo) => {
     switch (tipo) {
@@ -190,43 +224,12 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const fbUser = result.user;
-      
-      // Verificar si el usuario ya existe
-      let userDoc = await getDoc(doc(db, 'usuarios', fbUser.uid));
-      
-      if (!userDoc.exists()) {
-        // Crear nuevo cliente con Google
-        await setDoc(doc(db, 'usuarios', fbUser.uid), {
-          nombre: fbUser.displayName || 'Usuario Google',
-          email: fbUser.email,
-          tipo: 'cliente',
-          telefono: '',
-          estado: 'aprobado',
-          foto: fbUser.photoURL || null,
-          createdAt: new Date(),
-        });
-        setDetectedUserType('cliente');
-      } else {
-        const userData = userDoc.data();
-        if (userData.tipo !== 'cliente') {
-          setErrores({ general: 'Esta cuenta no es de cliente. Use el login tradicional.' });
-          setLoading(false);
-          return;
-        }
-        setDetectedUserType('cliente');
-      }
-      
-      redirectByUserType('cliente');
+      // Cambiamos Popup por Redirect para evitar bloqueos de políticas COOP
+      await signInWithRedirect(auth, googleProvider);
+      // El código después de esto no se ejecutará debido a la redirección de la página
     } catch (error) {
-      if (error.code === 'auth/popup-closed-by-user') {
-        setErrores({ general: 'Inicio de sesión cancelado' });
-      } else {
-        const errorInfo = handleError(error, { accion: 'login_google' });
-        setErrores({ general: errorInfo.mensaje });
-      }
-    } finally {
+      const errorInfo = handleError(error, { accion: 'login_google_redirect' });
+      setErrores({ general: errorInfo.mensaje });
       setLoading(false);
     }
   };

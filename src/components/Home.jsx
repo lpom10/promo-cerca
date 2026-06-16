@@ -56,7 +56,7 @@ const Home = () => {
         const snapshot = await getDocs(q);
         const lista = snapshot.docs
           .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .filter((emp) => emp.ubicacion?.lat && emp.ubicacion?.lng);
+          .filter((emp) => (emp.lat || emp.ubicacion?.lat) && (emp.lng || emp.ubicacion?.lng));
         setLocales(lista);
       } catch (error) {
         console.error("Error al cargar locales para el mapa:", error);
@@ -107,7 +107,10 @@ const Home = () => {
               {locales.map((local) => (
                 <Marker
                   key={local.id}
-                  position={[local.ubicacion.lat, local.ubicacion.lng]}
+                  position={[
+                    Number(local.lat || local.ubicacion?.lat),
+                    Number(local.lng || local.ubicacion?.lng)
+                  ]}
                 >
                   <Popup>
                     <div style={{ textAlign: "center" }}>

@@ -3,14 +3,14 @@
 ═══════════════════════════════════════════ */
 :root {
   /* Paleta de Colores */
-  --color-primary: #fb4b23;         /* Pomegranate - Naranja rojo */
+  --color-primary: #fb4c23;         /* Naranja principal */
   --color-primary-light: #ff8052;   /* Coral - Naranja coral */
   --color-primary-dark: #e63800;    /* Naranja oscuro */
   
   --color-secondary: #ffb84d;       /* Texas Rose - Naranja dorado */
   --color-accent: #f2cf50;          /* Cream Can - Amarillo dorado */
   --color-highlight: #ffcc00;       /* Supernova - Amarillo brillante */
-  
+
   /* Tonos neutros */
   --color-dark: #1a1a1a;            /* Negro casi puro */
   --color-light: #f8f8f8;           /* Blanco casi puro */
@@ -35,7 +35,7 @@ body {
   margin: 0;
   padding: 0;
   background-color: var(--bg-primary);
-  color: #fb4c23;
+  color: #1e293b;
 }
 
 a {
@@ -55,14 +55,12 @@ a {
   justify-content: space-between;
   align-items: center;
   padding: 0 5%;
-  height: 60px; /* Altura fija para consistencia */
-  background: rgba(251, 75, 35, 0.85); 
-  backdrop-filter: blur(12px); 
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 24px rgba(251, 75, 35, 0.2);
+  height: 60px; 
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
   position: sticky;
   top: 0;
   z-index: 1000;
+  box-shadow: 0 8px 24px rgba(251, 75, 35, 0.2);
 }
 
 .titulo {
@@ -153,6 +151,53 @@ a {
   align-items: center;
   justify-content: center;
   text-align: center;
+  position: relative;
+}
+
+/* Efecto de línea inferior estilo Landing */
+.barra ul li a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--color-highlight); /* Línea de color resaltado */
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.barra ul li a:hover {
+  color: white; /* Mantiene el color blanco */
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.barra ul li a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--color-primary);
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.barra ul li a:hover {
+  color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.barra ul li a:hover::after {
+  width: 100%;
+}
+
+.barra ul li a.active {
+  color: var(--color-primary);
+  font-weight: 700;
 }
 
 /* Nuevo grupo para alinear elementos a la derecha */
@@ -162,16 +207,29 @@ a {
   gap: 1.2rem; /* Espaciado entre los elementos del grupo */
 }
 
-/* Efectos Hover y Active */
-.barra ul li a:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+/* Estilo para el botón de "Entrar" o "Empezar" en la derecha */
+.navbar-right-group a {
+  background: var(--color-primary) !important;
+  color: white !important;
+  padding: 10px 24px !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 12px rgba(251, 76, 35, 0.2);
+  border: none !important;
 }
 
-.barra ul li a.active {
-  background-color: rgba(255, 255, 255, 0.25);
-  border-color: white;
+.navbar-right-group a::after {
+  display: none; /* Sin línea inferior para el botón principal */
+}
+
+.navbar-right-group a:hover {
+  background: var(--color-primary-dark) !important;
+  box-shadow: 0 6px 20px rgba(251, 76, 35, 0.3);
+  transform: translateY(-2px);
+}
+
+.bell-btn {
+  color: #64748b !important;
 }
 
 /* Ajuste específico para el componente de notificaciones en la nav */
@@ -188,7 +246,7 @@ a {
     right: -100%;
     width: 250px;
     height: calc(100vh - 70px);
-    background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    background: #ffffff;
     flex-direction: column;
     transition: 0.3s ease-in-out;
     box-shadow: -5px 0 15px rgba(0,0,0,0.05);
@@ -215,6 +273,8 @@ a {
     font-size: 15px; /* Un poco más grande en móvil para mejorar UX táctil */
     padding: 12px;
     justify-content: flex-start;
+    color: #475569;
+    border-bottom: 1px solid #f1f5f9;
   }
 }
 
@@ -427,187 +487,180 @@ a {
   }
 }
 
+/* ═══════════════════════════════════════════
+   LOCALES & PROMOCIONES (Estilos Unificados)
+═══════════════════════════════════════════ */
 .locales-page {
-  padding: 0 0 60px;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  padding-bottom: 60px;
 }
 
 .locales-header {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  padding: 50px 5% 35px;
-  color: #ffffff;
-  box-shadow: 0 8px 24px rgba(251, 75, 35, 0.15);
+  background: #ffffff;
+  padding: 40px 5%;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: center;
 }
 
 .locales-titulo {
-  font-size: 40px;
-  margin: 0 0 8px;
-  color: #ffffff;
-  text-align: left;
-  font-weight: 900;
-  letter-spacing: -1px;
+  font-size: 32px;
+  margin: 0 0 20px;
+  color: #0f172a;
+  font-weight: 800;
 }
 
-.locales-count {
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.85);
-  margin: 0 0 24px;
-  font-weight: 500;
-}
-
-.locales-search {
-  width: 100%;
-  padding: 16px 22px;
-  font-size: 16px;
-  border: 2px solid transparent;
-  border-radius: 14px;
-  margin-bottom: 16px;
-  outline: none;
+.search-box {
   max-width: 600px;
-  display: block;
-  background-color: rgba(255, 255, 255, 0.95);
-  color: var(--color-dark);
-  font-weight: 500;
+  margin: 0 auto 20px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  outline: none;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.locales-search:focus {
-  border-color: var(--color-highlight);
-  box-shadow: 0 8px 20px rgba(251, 75, 35, 0.15);
-  transform: translateY(-2px);
+.search-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(251, 76, 35, 0.1);
 }
 
-.locales-search::placeholder {
-  color: #999;
-}
-
-.categorias-bar {
+.filtros {
   display: flex;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 12px;
 }
 
-.cat-btn {
-  padding: 10px 18px;
-  border: 1.5px solid rgba(255, 200, 77, 0.4);
-  background: rgba(255, 200, 77, 0.05);
-  color: #f1f5f9;
+.filtro-btn {
+  padding: 8px 16px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
   font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 12px;
   font-weight: 600;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.cat-btn:hover {
-  background: rgba(255, 200, 77, 0.15);
-  border-color: var(--color-secondary);
-  transform: translateY(-2px);
+.filtro-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
-.cat-btn.active {
-  background: linear-gradient(135deg, var(--color-highlight) 0%, var(--color-secondary) 100%);
-  color: var(--color-dark);
-  border-color: var(--color-highlight);
-  font-weight: 700;
-  box-shadow: 0 4px 15px rgba(255, 200, 77, 0.25);
+.filtro-btn.active {
+  background: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-primary);
 }
 
-.locales-grid {
+/* Grid de Tarjetas */
+.promociones-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
-  padding: 20px 5%;
+  gap: 25px;
+  padding: 40px 5%;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.local-card {
-  background: var(--bg-card);
-  border-radius: 18px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+/* Estilo de la Tarjeta */
+.promo-card {
+  background: #ffffff;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(251, 75, 35, 0.1);
-  position: relative;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.local-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+.promo-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-.local-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 16px 40px rgba(251, 75, 35, 0.2);
-  border-color: rgba(251, 75, 35, 0.3);
+.promo-imagen {
+  height: 200px;
+  width: 100%;
+  overflow: hidden;
+  background-color: #f1f5f9;
 }
 
-.local-card-top {
-  height: 130px;
+.promo-imagen img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.promo-content {
+  padding: 20px;
+  flex-grow: 1;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+}
+
+.promo-header {
+  display: flex;
   justify-content: space-between;
-  padding: 16px 24px;
-  background: linear-gradient(135deg, rgba(251, 75, 35, 0.08) 0%, rgba(255, 200, 77, 0.04) 100%);
+  align-items: flex-start;
+  margin-bottom: 12px;
 }
 
-.local-emoji-big {
-  font-size: 64px;
-}
-
-.descuento-badge {
-  background: linear-gradient(135deg, var(--color-highlight) 0%, var(--color-secondary) 100%);
-  color: var(--color-dark);
-  font-size: 14px;
+.descuento-grande {
+  background: #fef2f2;
+  color: var(--color-primary);
   font-weight: 800;
-  padding: 8px 14px;
-  border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(255, 200, 77, 0.25);
-}
-
-.descuento-badge.small {
-  font-size: 12px;
   padding: 4px 10px;
+  border-radius: 8px;
 }
 
-.local-card-body {
-  padding: 18px 20px 15px;
-  flex: 1;
-}
-
-.local-nombre {
-  font-size: 20px;
-  font-weight: 800;
-  color: #ffffff;
-  margin: 0 0 8px;
-  letter-spacing: -0.3px;
-}
-
-.local-cat-tag {
-  display: inline-block;
-  color: var(--color-secondary);
-  background: rgba(255, 184, 77, 0.1);
-  font-size: 12px;
-  padding: 4px 12px;
-  border-radius: 20px;
-  margin-bottom: 10px;
-  font-weight: 600;
-}
-
-.local-desc {
+.negocio-nombre {
   font-size: 14px;
-  color: #cbd5e1;
-  margin: 0 0 12px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.promo-descripcion {
+  font-size: 14px;
+  color: #475569;
   line-height: 1.5;
+  margin: 0 0 15px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.promo-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.btn-ticket {
+  background: var(--color-primary);
+  color: white;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-ticket:hover {
+  background: var(--color-primary-dark);
 }
 
 .local-promo-box {
@@ -633,7 +686,7 @@ a {
 .local-card-footer {
   display: flex;
   gap: 12px;
-  padding: 14px 20px 16px;
+  padding: 14px 24px 20px;
 }
 
 .btn-mapa,

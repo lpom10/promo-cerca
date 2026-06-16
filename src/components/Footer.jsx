@@ -13,16 +13,7 @@ const Footer = () => {
 
 
             </div>
-            <div className="footer-section">
-                <h3>Navegación</h3>
-
-                <ul>
-                    <li>Inicio</li>
-                    <li>Promociones</li>
-                    <li>Mapa</li>
-                    <li>Contacto</li>
-                </ul>
-            </div>
+            
             <div className="footer-section">
                 <h3>Contáctanos</h3>
                 <p>Parque Científico UTPL, Loja, Ecuador</p>

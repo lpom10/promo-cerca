@@ -96,13 +96,9 @@ function AppContent() {
           <NavLink to="/">Inicio</NavLink>
           <NavLink to="/locales">Locales</NavLink>
           <NavLink to="/mapa">Mapa</NavLink>
+          <NavLink to="/contacto">Contacto</NavLink>
 
-          <button
-            className="nav-link-button"
-            onClick={() => handleHashNavigation("contacto")}
-          >
-            Contacto
-          </button>
+          
         </nav>
 
         <div className="navbar-auth">

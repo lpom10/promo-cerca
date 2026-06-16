@@ -6,7 +6,7 @@
   min-height: 100vh;
   background: #ffffff; /* FONDO BLANCO PARA TODA LA PÁGINA */
   color: #1e293b;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: inherit;
 }
 
 .perfil-publico-header {
@@ -22,7 +22,7 @@
 }
 
 .btn-volver-header {
-  background: #f8fafc;
+  background: var(--color-light);
   border: 1px solid #e2e8f0;
   color: #64748b;
   font-size: 0.9rem;
@@ -33,16 +33,16 @@
 }
 
 .btn-volver-header:hover {
-  background: #fb4c23;
+  background: var(--color-primary);
   color: white;
-  border-color: #fb4c23;
+  border-color: var(--color-primary);
 }
 
 .perfil-publico-header h1 {
   margin: 0;
   font-size: 1.4rem;
   font-weight: 800;
-  color: #fb4c23; /* TÍTULO EN NARANJA */
+  color: var(--color-primary);
 }
 
 .perfil-publico-content {
@@ -73,7 +73,7 @@
   overflow: hidden;
   /* El borde naranja gradiente característico */
   padding: 4px;
-  background: linear-gradient(135deg, #fb4c23, #ffc22f);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
   margin-bottom: 1.5rem;
   box-shadow: 0 10px 20px rgba(251, 76, 35, 0.2);
 }

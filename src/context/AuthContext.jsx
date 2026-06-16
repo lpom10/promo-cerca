@@ -1,8 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import { logError } from '../utils/errorHandler';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -10,76 +9,77 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [userType, setUserType] = useState(null); // 'admin' | 'cliente' | 'empresa'
-  const [userStatus, setUserStatus] = useState(null); // 'pendiente' | 'aprobado' | 'rechazado'
+  const [userType, setUserType] = useState(null);
   const [userDetails, setUserDetails] = useState(null);
+  const [userStatus, setUserStatus] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      
-      if (currentUser) {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        
+        // Intentar detectar el tipo de usuario y obtener sus datos
         try {
-          // Obtener datos adicionales de Firestore según el tipo
-          let userDocSnap = null;
-          let userType = null;
-          
-          // Intentar buscar en colección usuarios (clientes)
-          userDocSnap = await getDoc(doc(db, 'usuarios', currentUser.uid));
-          if (userDocSnap.exists()) {
-            userType = 'cliente';
+          // 1. Buscar en 'usuarios' (Clientes)
+          const clientDoc = await getDoc(doc(db, 'usuarios', firebaseUser.uid));
+          if (clientDoc.exists()) {
+            setUserType('cliente');
+            setUserDetails(clientDoc.data());
+            setUserStatus(clientDoc.data().estado || 'aprobado');
           } else {
-            // Intentar buscar en colección empresa
-            userDocSnap = await getDoc(doc(db, 'empresa', currentUser.uid));
-            if (userDocSnap.exists()) {
-              userType = 'empresa';
+            // 2. Buscar en 'empresa' (Empresas)
+            const enterpriseDoc = await getDoc(doc(db, 'empresa', firebaseUser.uid));
+            if (enterpriseDoc.exists()) {
+              setUserType('empresa');
+              setUserDetails(enterpriseDoc.data());
+              setUserStatus(enterpriseDoc.data().estado);
             } else {
-              // Intentar buscar en colección admin
-              userDocSnap = await getDoc(doc(db, 'admin', currentUser.uid));
-              if (userDocSnap.exists()) {
-                userType = 'admin';
+              // 3. Buscar en 'admin' (Administradores)
+              const adminDoc = await getDoc(doc(db, 'admin', firebaseUser.uid));
+              if (adminDoc.exists()) {
+                setUserType('admin');
+                setUserDetails(adminDoc.data());
+                setUserStatus('aprobado');
+              } else {
+                setUserType(null);
+                setUserDetails(null);
+                setUserStatus(null);
               }
             }
           }
-          
-          if (userDocSnap && userDocSnap.exists()) {
-            const data = userDocSnap.data();
-            setUserType(userType);
-            setUserStatus(data.estado || 'aprobado');
-            setUserDetails(data);
-          }
         } catch (error) {
-          logError(error, { accion: 'obtenerDetallesUsuario', componente: 'AuthContext' });
+          console.error("Error al obtener detalles del usuario:", error);
+        } finally {
+          setLoading(false);
         }
       } else {
+        setUser(null);
         setUserType(null);
-        setUserStatus(null);
         setUserDetails(null);
+        setUserStatus(null);
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
-    return unsubscribe;
+
+    return () => unsubscribe();
   }, []);
 
-  const logout = async () => {
-    await signOut(auth);
-    setUserType(null);
-    setUserStatus(null);
-    setUserDetails(null);
+  const logout = () => signOut(auth);
+
+  const value = {
+    user,
+    userType,
+    userDetails,
+    userStatus,
+    loading,
+    logout
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      userType, 
-      userStatus, 
-      userDetails,
-      logout, 
-      loading 
-    }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
