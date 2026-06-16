@@ -285,10 +285,109 @@
     font-size: 14px;
   }
 }
+/* ===========================
+   SECCIÓN Como funciona
+=========================== */
 
+.steps-section {
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.steps-section h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 2rem;
+}
+
+.how-it-works {
+  max-width: 1000px;
+  margin: auto;
+
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.step {
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.5rem;
+
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+
+  transition: 0.3s;
+}
+
+.step:hover {
+  transform: translateY(-4px);
+}
+
+.step-number {
+  width: 50px;
+  height: 50px;
+
+  margin: 0 auto 0.8rem;
+
+  border-radius: 50%;
+
+  background: linear-gradient(
+    135deg,
+    #fb4c23,
+    #ffc22f
+  );
+
+  color: white;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.step h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: #111827;
+}
+
+.step p {
+  font-size: 0.95rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  .how-it-works {
+    grid-template-columns: 1fr;
+  }
+
+  .steps-section h2 {
+    font-size: 1.7rem;
+  }
+}
 /* ═══════════════════════════════════════════
    Sección CTA Final
 ═══════════════════════════════════════════ */
+.section {
+  max-width: 1200px;
+  margin: auto;
+  padding: 6rem 2rem;
+}
+.card {
+  border-radius: 24px;
+  backdrop-filter: blur(12px);
+  transition: 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-6px);
+}
 
 .cta-section {
   background: linear-gradient(135deg, #fb4c23 0%, #ffc22f 100%);
@@ -362,6 +461,83 @@
     font-size: 16px;
   }
 }
+/* ===========================
+   CTA SECTION
+=========================== */
+
+.cta-section {
+  max-width: 1000px;
+  margin: 3rem auto;
+  padding: 3rem 2rem;
+
+  text-align: center;
+
+  background: linear-gradient(
+    135deg,
+    #fb4c23,
+    #ffc22f
+  );
+
+  border-radius: 20px;
+
+  color: white;
+
+  box-shadow: 0 20px 50px rgba(37, 99, 235, 0.25);
+}
+
+.cta-section h2 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.cta-section p {
+  margin-bottom: 1.5rem;
+
+  opacity: 0.9;
+}
+
+.cta-section button {
+  border: none;
+  padding: 0.9rem 1.8rem;
+
+  border-radius: 50px;
+
+  background: white;
+  color: #2563eb;
+
+  font-weight: 600;
+  cursor: pointer;
+
+  transition: 0.3s;
+}
+
+.cta-section button:hover {
+  transform: translateY(-2px);
+}
+
+/* ===========================
+   RESPONSIVE
+=========================== */
+
+@media (max-width: 768px) {
+  .cta-section {
+    margin: 4rem 1rem;
+    padding: 4rem 1.5rem;
+  }
+
+  .cta-section h2 {
+    font-size: 2rem;
+  }
+
+  .cta-section p {
+    font-size: 1rem;
+  }
+
+  .cta-section button {
+    width: 100%;
+    max-width: 300px;
+  }
+}
 /* ═══════════════════════════════════════════
    NUEVO LAYOUT: Hero Split - Ventana Estática
 ═══════════════════════════════════════════ */
@@ -396,7 +572,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 6% 48px 8%;
+  padding: 40px 6% 40px 8%;
 }
 
 .hp-text-box {
@@ -405,7 +581,7 @@
 }
 
 .hp-title {
-  font-size: 46px;
+  font-size: 38px;
   font-weight: 900;
   color: #f1f5f9;
   margin: 0 0 20px;
@@ -448,6 +624,11 @@
   box-shadow: 0 0 0 3px rgba(255, 194, 47, 0.4);
 }
 
+.buttons-container {
+  display: flex;
+  gap: 15px; /* espacio entre botones */
+}
+
 .hp-search-btn {
   padding: 14px 28px;
   background: linear-gradient(135deg, #ffc22f 0%, #fb4c23 100%);
@@ -472,7 +653,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 8% 32px 4%;
+  padding: 28px 8% 28px 4%;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 columnas iguales */
+  gap: 20px;                             /* espacio entre columnas */
+  text-align: center;
+  color: #cbd5e1;
 }
 
 .hp-map-wrapper {

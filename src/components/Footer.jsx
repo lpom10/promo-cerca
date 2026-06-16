@@ -5,7 +5,7 @@ const Footer = () => {
         <footer className="footer">
             <div className="footer-container">
             <div className="footer-section">
-                <h2>ISBEN SOLUTIONS - 2024</h2>
+                <h2>ISBEN SOLUTIONS</h2>
                 <p>
                     En ISBEN SOLUTION, nos dedicamos a ofrecer soluciones tecnológicas
                     innovadoras y personalizadas que impulsan el crecimiento de tu negocio.
@@ -14,13 +14,13 @@ const Footer = () => {
 
             </div>
             <div className="footer-section">
-                <h3>Enlaces Rápidos</h3>
+                <h3>Navegación</h3>
 
                 <ul>
                     <li>Inicio</li>
-                    <li>Nosotros</li>
-                    <li>Proyectos</li>
-                    <li>Contactos</li>
+                    <li>Promociones</li>
+                    <li>Mapa</li>
+                    <li>Contacto</li>
                 </ul>
             </div>
             <div className="footer-section">
