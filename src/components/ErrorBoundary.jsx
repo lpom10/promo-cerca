@@ -88,7 +88,7 @@ class ErrorBoundary extends Component {
                 Intentar de Nuevo
               </button>
               <button
-                className="error-button error-button-secondary"
+                className="ergror-button error-button-secondary"
                 onClick={() => {
                   window.location.href = '/';
                 }}
