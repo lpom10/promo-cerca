@@ -1,0 +1,221 @@
+/* Canje Tickets Page Styles */
+.canje-tickets {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.canje-tickets .header {
+  margin-bottom: 32px;
+}
+
+.canje-tickets .header h2 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 8px 0;
+}
+
+.canje-tickets .header p {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+.canje-tickets .error-banner,
+.canje-tickets .success-banner {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.canje-tickets .error-banner {
+  background-color: #fee;
+  color: #c33;
+  border-left: 4px solid #c33;
+}
+
+.canje-tickets .success-banner {
+  background-color: #efe;
+  color: #3c3;
+  border-left: 4px solid #3c3;
+}
+
+.canje-tickets .codigo-canje-form {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.canje-tickets .codigo-canje-form label {
+  display: block;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.canje-tickets .codigo-canje-row {
+  display: flex;
+  gap: 10px;
+}
+
+.canje-tickets .codigo-canje-row input {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.canje-tickets .codigo-canje-row button {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #f59e0b;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.canje-tickets .codigo-canje-row button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.canje-tickets .tickets-container {
+  width: 100%;
+}
+
+.canje-tickets .sin-tickets {
+  text-align: center;
+  padding: 60px 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.canje-tickets .sin-tickets p {
+  color: #999;
+  font-size: 16px;
+}
+
+.canje-tickets .tickets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.canje-tickets .ticket-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.canje-tickets .ticket-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border-color: #d0d0d0;
+}
+
+.canje-tickets .ticket-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.canje-tickets .ticket-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+  flex: 1;
+}
+
+.canje-tickets .ticket-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.canje-tickets .ticket-status.pendiente {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.canje-tickets .ticket-status.canjeado {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.canje-tickets .ticket-info {
+  margin-bottom: 16px;
+}
+
+.canje-tickets .ticket-info p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.canje-tickets .ticket-info strong {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.canje-tickets .ticket-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.canje-tickets .btn-canjear {
+  flex: 1;
+  padding: 10px 16px;
+  background-color: #ffa500;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.canje-tickets .btn-canjear:hover {
+  background-color: #ff8c00;
+  transform: translateY(-2px);
+}
+
+.canje-tickets .btn-canjear:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .canje-tickets {
+    padding: 16px;
+  }
+
+  .canje-tickets .tickets-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .canje-tickets .ticket-header {
+    flex-direction: column;
+  }
+
+  .canje-tickets .codigo-canje-row {
+    flex-direction: column;
+  }
+
+  .canje-tickets .ticket-status {
+    margin-top: 8px;
+  }
+}

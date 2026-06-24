@@ -46,7 +46,7 @@
   }
 
   .btn-crear-promo {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #f97316 0%, #fdba74 100%);
     color: white;
     padding: 12px 24px;
     border: none;
@@ -60,7 +60,7 @@
 
   .btn-crear-promo:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 5px 20px rgba(249, 115, 22, 0.25);
   }
 
   .form-container {
@@ -161,13 +161,13 @@
   }
 
   .btn-guardar {
-    background: #28a745;
+    background: linear-gradient(135deg, #f97316 0%, #fdba74 100%);
     color: white;
     flex: 1;
   }
 
   .btn-guardar:hover:not(:disabled) {
-    background: #218838;
+    background: linear-gradient(135deg, #ea580c 0%, #fb923c 100%);
     transform: translateY(-2px);
   }
 
@@ -177,13 +177,14 @@
   }
 
   .btn-cancelar {
-    background: #6c757d;
-    color: white;
+    background: #ffffff;
+    color: #f97316;
+    border: 1px solid rgba(249, 115, 22, 0.25);
     flex: 1;
   }
 
   .btn-cancelar:hover {
-    background: #5a6268;
+    background: #fff7ed;
   }
 
   .promociones-list {

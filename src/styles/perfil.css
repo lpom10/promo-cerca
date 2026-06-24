@@ -5,9 +5,11 @@
 .perfil-container {
   min-height: calc(100vh - 74px);
   background: #0f172a;
-  padding: 40px 5%;
+  padding: 24px 16px 40px;
   max-width: 1000px;
   margin: 0 auto;
+  width: min(100%, 1000px);
+  box-sizing: border-box;
 }
 
 .perfil-loading,
@@ -94,22 +96,24 @@
 
 .perfil-tabs {
   display: flex;
-  gap: 10px;
-  border-bottom: 2px solid #334155;
-  margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid #334155;
+  margin-bottom: 20px;
+  padding-bottom: 6px;
 }
 
 .tab-btn {
-  padding: 12px 20px;
-  background: none;
-  border: none;
+  padding: 10px 14px;
+  background: #1e293b;
+  border: 1px solid #334155;
   color: #94a3b8;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
+  border-radius: 999px;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .tab-btn:hover {
@@ -117,8 +121,9 @@
 }
 
 .tab-btn.active {
-  color: #ffc22f;
-  border-bottom-color: #ffc22f;
+  color: #0f172a;
+  background: #ffc22f;
+  border-color: #ffc22f;
 }
 
 /* ─────────────────────────────────────── */
@@ -368,7 +373,7 @@
 
 @media (max-width: 768px) {
   .perfil-container {
-    padding: 20px 5%;
+    padding: 16px 12px 24px;
   }
 
   .perfil-header {
@@ -382,7 +387,7 @@
   }
 
   .perfil-tabs {
-    flex-wrap: wrap;
+    gap: 6px;
   }
 
   .perfil-content {
@@ -418,7 +423,7 @@
   }
 
   .tab-btn {
-    padding: 10px 12px;
+    padding: 9px 12px;
     font-size: 12px;
   }
 }

@@ -5,11 +5,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
-import { setupSecurityHeaders, setupClickjackingProtection } from './utils/securityHeaders';
-import { validateEnvVars } from './utils/environment';
+import { setupSecurityHeaders, setupClickjackingProtection } from './shared/utils/securityHeaders';
+import { validateEnvVars } from './shared/utils/environment';
 // Importar componentes específicos después de base
 
-import './styles/dashboard.css';
 
 
 // Inicializar seguridad
