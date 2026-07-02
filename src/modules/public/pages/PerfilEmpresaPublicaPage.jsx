@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
-import { useAuth } from '../../../shared/context/AuthContext';
+import { useAuth } from '../../../shared/hooks/useAuth';
+import toast from 'react-hot-toast';
 import { toggleEmpresaFavorita, obtenerFavoritos } from '../../cliente/services/favoritosService';
+import { obtenerEmpresaPorId, obtenerPromocionesPorEmpresa } from '../services/promocionesService';
 import '../styles/PerfilEmpresaPublica.css';
 
 const formatearPrecio = (valor) => {
   if (valor === undefined || valor === null || valor === '') return null;
-  return new Intl.NumberFormat('es-AR', {
+  return new Intl.NumberFormat('es-EC', {
     style: 'currency',
-    currency: 'ARS',
+    currency: 'USD',
     maximumFractionDigits: 0,
   }).format(Number(valor));
 };
@@ -24,9 +24,12 @@ const PerfilEmpresaPublica = () => {
   const [empresa, setEmpresa] = useState(null);
   const [promociones, setPromociones] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingEmpresa, setLoadingEmpresa] = useState(true);
+  const [loadingPromos, setLoadingPromos] = useState(true);
   const [error, setError] = useState(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [loadingFav, setLoadingFav] = useState(false);
+  const mountedRef = useRef(true);
 
   // Cargar estado de favorito
   useEffect(() => {
@@ -43,9 +46,11 @@ const PerfilEmpresaPublica = () => {
     cargarFavEmpresa();
   }, [user, empresaId]);
 
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
   const handleToggleFav = async () => {
     if (!user) {
-      alert('Debes iniciar sesión para agregar favoritos.');
+      toast.error('Debes iniciar sesión para agregar favoritos.');
       return;
     }
     setLoadingFav(true);
@@ -59,7 +64,7 @@ const PerfilEmpresaPublica = () => {
       setIsFavorite(prev => !prev);
     } catch (err) {
       logError(err, { accion: 'toggleFavEmpresa', empresaId, componente: 'PerfilEmpresaPublica' });
-      alert('Error al guardar favorito.');
+      toast.error('Error al guardar favorito.');
     } finally {
       setLoadingFav(false);
     }
@@ -68,51 +73,55 @@ const PerfilEmpresaPublica = () => {
   // 1. Cargar datos de la empresa
   useEffect(() => {
     if (!empresaId) return;
-
     const cargarEmpresa = async () => {
       try {
-        // CORRECCIÓN: 'empresas' en plural como en tu Firebase
-        const empresaRef = doc(db, 'empresa', empresaId);
-        const snap = await getDoc(empresaRef);
+        setLoadingEmpresa(true);
+        const empresaData = await obtenerEmpresaPorId(empresaId);
 
-        if (snap.exists()) {
-          setEmpresa({ id: snap.id, ...snap.data() });
+        if (!mountedRef.current) return;
+
+        if (empresaData) {
+          setEmpresa(empresaData);
         } else {
           setError("Empresa no encontrada");
         }
       } catch (err) {
         logError(err, { accion: 'cargarEmpresa', empresaId, componente: 'PerfilEmpresaPublica' });
         setError("Error al cargar la empresa");
+      } finally {
+        if (mountedRef.current) setLoadingEmpresa(false);
       }
     };
 
     cargarEmpresa();
   }, [empresaId]);
 
-  // 2. Cargar promociones en tiempo real
+  // 2. Cargar promociones (no realtime) — visitantes no necesitan websocket
   useEffect(() => {
     if (!empresaId) return;
 
-    const q = query(
-      collection(db, 'promociones'),
-      where('empresaId', '==', empresaId),
-      where('activa', '==', true)
-    );
+    const cargarPromos = async () => {
+      try {
+        setLoadingPromos(true);
+        const promosData = await obtenerPromocionesPorEmpresa(empresaId);
+        if (!mountedRef.current) return;
+        setPromociones(promosData);
+      } catch (err) {
+        logError(err, { accion: 'cargarPromociones', empresaId, componente: 'PerfilEmpresaPublica' });
+        if (mountedRef.current) setError('Error al cargar promociones');
+      } finally {
+        if (mountedRef.current) setLoadingPromos(false);
+      }
+    };
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const promosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setPromociones(promosData);
-      setLoading(false);
-    }, (err) => {
-      logError(err, { accion: 'cargarPromocionesTiempoReal', empresaId, componente: 'PerfilEmpresaPublica' });
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    cargarPromos();
   }, [empresaId]);
+
+  // Mantener `loading` combinado para evitar setLoading false prematuro
+  useEffect(() => {
+    if (!mountedRef.current) return;
+    setLoading(loadingEmpresa || loadingPromos);
+  }, [loadingEmpresa, loadingPromos]);
 
   if (loading) return <div className="perfil-publico-loading"><div className="loader"></div></div>;
   if (error) return <div className="error-container">{error}</div>;
@@ -131,9 +140,11 @@ const PerfilEmpresaPublica = () => {
             className={`btn-fav-empresa ${isFavorite ? 'active' : ''}`}
             onClick={handleToggleFav}
             disabled={loadingFav}
+            aria-pressed={isFavorite}
+            aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
             title={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
           >
-            {isFavorite ? '❤️' : '🤍'}
+            <span aria-hidden>{isFavorite ? '❤️' : '🤍'}</span>
           </button>
         )}
       </header>

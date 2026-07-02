@@ -4,6 +4,7 @@ import {
   signInWithPopup,
   createUserWithEmailAndPassword,
   getRedirectResult,
+  updateProfile,
 } from 'firebase/auth';
 import {
   doc,
@@ -44,6 +45,33 @@ export const loginConGoogle = async () => {
     await signInWithRedirect(auth, googleProvider);
   } catch (error) {
     throw handleError(error, { accion: 'login_google_redirect' });
+  }
+};
+
+export const loginConGooglePopup = async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const fbUser = result.user;
+    const userDocRef = doc(db, 'usuarios', fbUser.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists()) {
+      await setDoc(userDocRef, {
+        nombre: fbUser.displayName || 'Usuario Google',
+        email: fbUser.email,
+        tipo: 'cliente',
+        telefono: '',
+        estado: 'aprobado',
+        foto: fbUser.photoURL || null,
+        createdAt: new Date(),
+      });
+      return { fbUser, esNuevo: true };
+    }
+
+    return { fbUser, esNuevo: false };
+  } catch (error) {
+    logError(error, { accion: 'login_google_popup' });
+    throw handleError(error, { accion: 'login_google_popup' });
   }
 };
 
@@ -256,5 +284,17 @@ export const registrarConGoogle = async (tipo, form) => {
   } catch (error) {
     if (error.mensaje) throw error;
     throw handleError(error, { accion: 'registro_google' });
+  }
+};
+
+export const actualizarPerfilAuth = async (perfil) => {
+  try {
+    const usuario = auth.currentUser;
+    if (!usuario) throw new Error('Usuario no autenticado');
+    await updateProfile(usuario, perfil);
+    return { exito: true };
+  } catch (error) {
+    logError(error, { accion: 'actualizarPerfilAuth' });
+    throw handleError(error, { accion: 'actualizar_perfil_auth' });
   }
 };

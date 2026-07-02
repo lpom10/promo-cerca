@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../../shared/hooks/useAuth';
-import { db } from '../../../../firebase';
-import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { logError } from '../../../../shared/utils/errorHandler';
+import { obtenerHistorialSuscripcionesEmpresa } from '../../services/empresaService';
 import './GestorSuscripcion.css';
 import PaymentModal from './PaymentModal/PaymentModal';
+import { PLANES } from '../../../../data/planes';
 
 const GestorSuscripcion = () => {
   const { user } = useAuth();
@@ -21,17 +21,7 @@ const GestorSuscripcion = () => {
 
   const cargarSuscripciones = async () => {
     try {
-      const q = query(collection(db, 'suscripciones'), where('empresaId', '==', user.uid));
-      const snapshot = await getDocs(q);
-      const suscripciones = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      // Ordenar por fecha más reciente primero
-      suscripciones.sort((a, b) => b.createdAt.toDate?.() - a.createdAt.toDate?.());
-
-      // La primera activa es la actual
+      const suscripciones = await obtenerHistorialSuscripcionesEmpresa(user.uid);
       const activa = suscripciones.find(s => s.estado === 'activa');
       setSuscripcionActiva(activa || null);
       setHistorialSuscripciones(suscripciones);
@@ -40,65 +30,17 @@ const GestorSuscripcion = () => {
     }
   };
 
-  const planes = [
-    {
-      id: 'basico',
-      nombre: 'Plan Básico',
-      precio: 9.99,
-      duracion: 30,
-      caracteristicas: [
-        '✅ Hasta 5 promociones activas',
-        '✅ Análisis básico',
-        '✅ Soporte por email',
-        '✅ Dashboard simple'
-      ]
-    },
-    {
-      id: 'profesional',
-      nombre: 'Plan Profesional',
-      precio: 24.99,
-      duracion: 30,
-      caracteristicas: [
-        '✅ Hasta 20 promociones activas',
-        '✅ Análisis avanzado',
-        '✅ Soporte prioritario',
-        '✅ API access',
-        '✅ Reportes mensuales'
-      ]
-    },
-    {
-      id: 'empresarial',
-      nombre: 'Plan Empresarial',
-      precio: 99.99,
-      duracion: 30,
-      caracteristicas: [
-        '✅ Promociones ilimitadas',
-        '✅ Análisis en tiempo real',
-        '✅ Soporte 24/7',
-        '✅ API access completo',
-        '✅ Gestor de cuentas dedicado',
-        '✅ Integración personalizada'
-      ]
-    }
-  ];
+  const planes = PLANES;
 
   const handleSelectPlan = (plan) => {
     setSelectedPlan(plan);
     setShowModal(true);
   };
 
-  const handlePaymentSuccess = async () => {
+  const handlePaymentSuccess = async (paymentId = null) => {
+    // No activar directamente la suscripción — el registro ya se crea en el modal
     setLoading(true);
     try {
-      await addDoc(collection(db, 'suscripciones'), {
-        empresaId: user.uid,
-        planId: selectedPlan.id,
-        planNombre: selectedPlan.nombre,
-        precio: selectedPlan.precio,
-        estado: 'activa',
-        createdAt: new Date(),
-        proximoRenovacion: new Date(Date.now() + selectedPlan.duracion * 24 * 60 * 60 * 1000)
-      });
       await cargarSuscripciones();
       setShowModal(false);
       setSelectedPlan(null);
@@ -151,7 +93,7 @@ const GestorSuscripcion = () => {
         <PaymentModal
           plan={selectedPlan}
           onClose={() => setShowModal(false)}
-          onSuccess={handlePaymentSuccess}
+          onSuccess={(paymentId) => handlePaymentSuccess(paymentId)}
         />
       )}
     </div>

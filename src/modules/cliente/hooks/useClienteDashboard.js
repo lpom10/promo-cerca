@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { cargarDatosCliente, actualizarPerfilCliente } from '../services/clienteService';
@@ -13,7 +14,7 @@ const STATS_INICIAL = {
 };
 
 export const useClienteDashboard = () => {
-  const { user, userDetails, logout } = useAuth();
+  const { user, userDetails, logout, refreshUserDetails } = useAuth();
   const navigate = useNavigate();
 
   // UI
@@ -48,10 +49,31 @@ export const useClienteDashboard = () => {
   // Carga inicial
   useEffect(() => {
     if (!user) return;
+    let activo = true;
     verificarNotificacionesExpiracion(user.uid);
-    fetchData();
+
+    const cargar = async () => {
+      setLoading(true);
+      try {
+        const data = await cargarDatosCliente(user.uid);
+        if (!activo) return;
+        setTickets(data.tickets);
+        setFavoritos(data.favoritos);
+        setEmpresasData(data.empresasData);
+        setPromosData(data.promosData);
+        setTopEmpresa(data.topEmpresa);
+        setStats(data.stats);
+      } finally {
+        if (activo) setLoading(false);
+      }
+    };
+
+    cargar();
+    return () => { activo = false; };
   }, [user]);
 
+  // Nota: fetchData queda disponible para reusar si es necesario,
+  // pero las actualizaciones de estado son seguras gracias al flag en el useEffect.
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -78,16 +100,18 @@ export const useClienteDashboard = () => {
     try {
       await actualizarPerfilCliente(user.uid, formData);
       setEditMode(false);
-      window.location.reload();
-    } catch {
-      alert('Error al guardar los datos.');
+      // Refrescar datos del contexto sin recargar la página
+      try { await refreshUserDetails(); } catch (e) { /* no bloquear si falla */ }
+    } catch (err) {
+      toast.error(err?.message || 'Error al guardar los datos.');
     } finally {
       setSaving(false);
     }
   };
 
-  const filteredTickets = tickets.filter(t =>
-    ticketFilter === 'todos' || t.estado === ticketFilter
+  const filteredTickets = useMemo(
+    () => tickets.filter(t => ticketFilter === 'todos' || t.estado === ticketFilter),
+    [tickets, ticketFilter]
   );
 
   return {

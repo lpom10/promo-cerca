@@ -1,6 +1,6 @@
 import {
   collection, query, where, orderBy,
-  getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc,
+  getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
@@ -52,6 +52,15 @@ export const enriquecerPagosConNombre = async (pagosData) => {
       return { ...pago, empresaNombre: 'Error al cargar nombre' };
     }
   }));
+};
+
+export const suscribirseAPagosPendientes = (onCambio) => {
+  const pagosQuery = query(collection(db, 'pagos'), where('status', '==', 'espera'));
+  return onSnapshot(pagosQuery, async (snap) => {
+    const pagos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const enriquecidos = await enriquecerPagosConNombre(pagos);
+    onCambio(enriquecidos);
+  });
 };
 
 // ─────────────────────────────────────────────

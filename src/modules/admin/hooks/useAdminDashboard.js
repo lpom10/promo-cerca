@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../../shared/context/AuthContext';
+import { useAuth } from '../../../shared/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { logError } from '../../../shared/utils/errorHandler';
 import {
   obtenerSolicitudesPendientes,
   obtenerEmpresasAprobadas,
   obtenerPromosEnRevision,
   obtenerTodasPromociones,
   obtenerEstadisticasGlobales,
-  enriquecerPagosConNombre,
+  suscribirseAPagosPendientes,
   aprobarEmpresa,
   rechazarEmpresa,
   eliminarEmpresa,
@@ -51,14 +50,7 @@ export const useAdminDashboard = () => {
     cargarInicial();
 
     // Listener en tiempo real para pagos pendientes
-    const unsubPagos = onSnapshot(
-      query(collection(db, 'pagos'), where('status', '==', 'espera')),
-      async (snap) => {
-        const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const enriquecidos = await enriquecerPagosConNombre(data);
-        setPagosPendientes(enriquecidos);
-      }
-    );
+    const unsubPagos = suscribirseAPagosPendientes(setPagosPendientes);
     return () => unsubPagos();
   }, []);
 
@@ -88,12 +80,13 @@ export const useAdminDashboard = () => {
   };
 
   const handleEliminarEmpresa = async (empresaId) => {
-    if (!window.confirm('¿Eliminar esta empresa permanentemente?')) return;
     try {
       await eliminarEmpresa(empresaId);
       setEmpresasAprobadas(prev => prev.filter(e => e.id !== empresaId));
-    } catch {
-      alert('Error al eliminar la empresa');
+      return true;
+    } catch (err) {
+      logError(err, { accion: 'eliminarEmpresa', empresaId });
+      return false;
     }
   };
 
@@ -103,31 +96,34 @@ export const useAdminDashboard = () => {
   };
 
   const handleEliminarPromocion = async (promoId) => {
-    if (!window.confirm('¿Eliminar esta promoción permanentemente?')) return;
     try {
       await eliminarPromocion(promoId);
       setTodasPromociones(prev => prev.filter(p => p.id !== promoId));
-    } catch {
-      alert('Error al eliminar la promoción');
+      return true;
+    } catch (err) {
+      logError(err, { accion: 'eliminarPromocion', promoId });
+      return false;
     }
   };
 
   const handleAprobarPago = async (pago) => {
     try {
       await aprobarPago(pago);
-      alert('Pago aprobado y suscripción activada');
-    } catch {
-      alert('Error al aprobar el pago');
+      return { ok: true };
+    } catch (err) {
+      logError(err, { accion: 'aprobarPago', pagoId: pago.id });
+      return { ok: false, error: err };
     }
   };
 
-  const handleRechazarPago = async (pagoId) => {
-    const motivo = prompt('Motivo del rechazo:');
-    if (!motivo) return;
+  const handleRechazarPago = async (pagoId, motivo) => {
+    if (!motivo) return { ok: false, error: 'sin-motivo' };
     try {
       await rechazarPago(pagoId, motivo);
-    } catch {
-      alert('Error al rechazar el pago');
+      return { ok: true };
+    } catch (err) {
+      logError(err, { accion: 'rechazarPago', pagoId, motivo });
+      return { ok: false, error: err };
     }
   };
 

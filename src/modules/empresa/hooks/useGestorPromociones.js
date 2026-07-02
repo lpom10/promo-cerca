@@ -6,7 +6,7 @@ import {
   actualizarPromocion, 
   eliminarPromocion 
 } from '../services/promocionesServices';
-import { useAuth } from '../../../shared/context/AuthContext';
+import { useAuth } from '../../../shared/hooks/useAuth';
 import { logError } from '../../../shared/utils/errorHandler';
 
 export const useGestorPromociones = () => {

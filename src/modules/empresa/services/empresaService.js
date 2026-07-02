@@ -1,6 +1,7 @@
 // src/modules/empresa/services/empresaService.js
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, orderBy, Timestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
 
 // ── GET: Obtener perfil de empresa ──
@@ -47,6 +48,90 @@ export const obtenerSuscripcionEmpresa = async (empresaId) => {
     return { id: doc.id, ...doc.data() };
   } catch (err) {
     logError('obtenerSuscripcionEmpresa', err);
+    throw err;
+  }
+};
+
+export const obtenerHistorialSuscripcionesEmpresa = async (empresaId) => {
+  try {
+    if (!empresaId) throw new Error('Empresa ID es requerido');
+    const q = query(
+      collection(db, 'suscripciones'),
+      where('empresaId', '==', empresaId),
+      orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (err) {
+    logError('obtenerHistorialSuscripcionesEmpresa', err);
+    throw err;
+  }
+};
+
+const sanitizarNombreArchivo = (nombre) => nombre.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+
+const subirArchivoAStorage = async (file, destino) => {
+  if (!file) throw new Error('Archivo inválido');
+  const storageRef = ref(storage, destino);
+  await uploadBytes(storageRef, file);
+  return await getDownloadURL(storageRef);
+};
+
+export const subirImagenPromocion = async (file, empresaId) => {
+  if (!file) return '';
+  if (!empresaId) throw new Error('Empresa ID es requerido');
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Solo se permiten archivos de imagen');
+  }
+
+  const extension = file.name.split('.').pop() || 'jpg';
+  const nombreArchivo = `promociones/${empresaId}/${Date.now()}_${sanitizarNombreArchivo(file.name)}.${extension}`;
+  return subirArchivoAStorage(file, nombreArchivo);
+};
+
+export const subirComprobantePago = async (file, empresaId) => {
+  if (!file) return '';
+  if (!empresaId) throw new Error('Empresa ID es requerido');
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Solo se permiten archivos de imagen');
+  }
+
+  const extension = file.name.split('.').pop() || 'jpg';
+  const nombreArchivo = `comprobantes/${empresaId}/${Date.now()}_${sanitizarNombreArchivo(file.name)}.${extension}`;
+  return subirArchivoAStorage(file, nombreArchivo);
+};
+
+export const obtenerInfoAdminPago = async () => {
+  try {
+    const infoDoc = await getDoc(doc(db, 'admin', 'info'));
+    return infoDoc.exists() ? { id: infoDoc.id, ...infoDoc.data() } : null;
+  } catch (err) {
+    logError('obtenerInfoAdminPago', err);
+    throw err;
+  }
+};
+
+export const crearSuscripcionPendiente = async (empresaId, plan, paymentId = null, receiptUrl = null) => {
+  try {
+    if (!empresaId) throw new Error('Empresa ID es requerido');
+    if (!plan || !plan.id) throw new Error('Plan inválido');
+
+    const suscripcion = {
+      empresaId,
+      planId: plan.id,
+      planNombre: plan.nombre,
+      precio: plan.precio,
+      estado: 'espera',
+      paymentId,
+      receiptUrl,
+      createdAt: new Date(),
+      proximoRenovacion: null,
+    };
+
+    const suscripcionRef = await addDoc(collection(db, 'suscripciones'), suscripcion);
+    return { id: suscripcionRef.id, ...suscripcion };
+  } catch (err) {
+    logError('crearSuscripcionPendiente', err);
     throw err;
   }
 };

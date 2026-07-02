@@ -2,9 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
-import { auth, db } from '../../../firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { signOut, updateProfile } from 'firebase/auth';
+import { actualizarPerfilCliente, actualizarPerfilClienteAuth, obtenerPerfilCliente } from '../services/clienteService';
 import { logError } from '../../../shared/utils/errorHandler';
 import { obtenerFavoritos, eliminarPromocionFavorita, eliminarEmpresaFavorita } from '../services/favoritosService';
 import '../../../styles/perfil.css';
@@ -29,13 +27,13 @@ const PerfilCliente = () => {
     const cargarDatos = async () => {
       if (user) {
         try {
-          const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
-          if (userDoc.exists()) {
-            setDatosUsuario(userDoc.data());
+          const perfil = await obtenerPerfilCliente(user.uid);
+          if (perfil) {
+            setDatosUsuario(perfil);
             setForm({
-              nombre: userDoc.data().nombre || user.displayName || '',
-              telefono: userDoc.data().telefono || '',
-              foto: userDoc.data().foto || user.photoURL || ''
+              nombre: perfil.nombre || user.displayName || '',
+              telefono: perfil.telefono || '',
+              foto: perfil.foto || user.photoURL || ''
             });
           }
         } catch (error) {
@@ -93,15 +91,12 @@ const PerfilCliente = () => {
   const guardarCambios = async () => {
     setLoading(true);
     try {
-      // Actualizar Firestore
-      await updateDoc(doc(db, 'usuarios', user.uid), {
+      await actualizarPerfilCliente(user.uid, {
         nombre: form.nombre,
         telefono: form.telefono,
         foto: form.foto
       });
-
-      // Actualizar Auth Profile
-      await updateProfile(user, {
+      await actualizarPerfilClienteAuth({
         displayName: form.nombre,
         photoURL: form.foto || null
       });
@@ -121,8 +116,7 @@ const PerfilCliente = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
-      logout();
+      await logout();
       navigate('/');
     } catch (error) {
       logError(error, { accion: 'logout', userId: user.uid, componente: 'PerfilCliente' });
@@ -302,7 +296,9 @@ const PerfilCliente = () => {
                               className="fav-remove-btn"
                               onClick={() => handleRemoveFav(fav)}
                               title="Quitar de favoritos"
-                            >❤️</button>
+                              aria-label="Quitar de favoritos"
+                              aria-pressed="true"
+                            ><span aria-hidden>❤️</span></button>
                           </div>
                           {fav.descuento && (
                             <span className="fav-badge">-{fav.descuento}%</span>

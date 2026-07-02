@@ -1,24 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../../shared/context/AuthContext';
+import { useAuth } from '../../../shared/hooks/useAuth';
 import { validarEmail } from '../../../shared/utils/validators';
 import { rateLimiter } from '../../../shared/utils/rateLimiter';
-import { handleError, logError } from '../../../shared/utils/errorHandler';
-
-// ✅ IMPORTS DE FIREBASE (ESTO FALTABA)
-import { 
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  GoogleAuthProvider 
-} from 'firebase/auth';
-import { auth } from '../../../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { handleError } from '../../../shared/utils/errorHandler';
+import { loginConEmail, loginConGooglePopup, detectarTipoUsuario } from '../services/authService';
 
 import logo from '../../../assets/logo.png';
 import '../styles/auth.css';
-
-const googleProvider = new GoogleAuthProvider();
 
   /* SVG logo de Google inline */
   const GoogleIcon = () => (
@@ -96,54 +85,7 @@ const googleProvider = new GoogleAuthProvider();
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
     // Detectar tipo de usuario en la BD
-    const detectUserType = async (firebaseUser) => {
-      try {
-        // Intentar buscar en usuarios (cliente)
-        let userDocSnap = await getDoc(doc(db, 'usuarios', firebaseUser.uid));
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          if (userData.tipo !== 'cliente') {
-            setErrores({ general: 'Datos inconsistentes en la base de datos' });
-            return null;
-          }
-          return { type: 'cliente', data: userData };
-        }
-
-        // Intentar buscar en empresa
-        userDocSnap = await getDoc(doc(db, 'empresa', firebaseUser.uid));
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          if (userData.estado === 'pendiente') {
-            setErrores({ general: 'Tu solicitud aún está pendiente de aprobación' });
-            return null;
-          } else if (userData.estado === 'rechazado') {
-            setErrores({
-              general: 'Tu solicitud de empresa fue rechazada. Contacta con soporte.',
-            });
-            return null;
-          }
-          return { type: 'empresa', data: userData };
-        }
-
-        // Intentar buscar en admin
-        userDocSnap = await getDoc(doc(db, 'admin', firebaseUser.uid));
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          if (!userData.puedeAprobar) {
-            setErrores({ general: 'No tienes permisos de administrador' });
-            return null;
-          }
-          return { type: 'admin', data: userData };
-        }
-
-        setErrores({ general: 'Usuario no encontrado en el sistema' });
-        return null;
-      } catch (error) {
-        logError(error, { accion: 'detectUserType' });
-        setErrores({ general: 'Error al verificar usuario. Intenta de nuevo.' });
-        return null;
-      }
-    };
+    // Use centralized service to detect user type
 
     const handleEmailLogin = async (e) => {
       e.preventDefault();
@@ -178,14 +120,15 @@ const googleProvider = new GoogleAuthProvider();
       setLoading(true);
 
       try {
-        const cred = await signInWithEmailAndPassword(auth, form.email, form.password);
-        
-        const result = await detectUserType(cred.user);
-        
-        if (result) {
-          setDetectedUserType(result.type);
-          rateLimiter.reset(`login_${form.email}`);
-        }
+          const user = await loginConEmail(form.email, form.password);
+          const result = await detectarTipoUsuario(user);
+
+          if (result && !result.error) {
+            setDetectedUserType(result.type);
+            rateLimiter.reset(`login_${form.email}`);
+          } else if (result && result.error) {
+            setErrores({ general: result.error });
+          }
       } catch (error) {
         const errorInfo = handleError(error, { accion: 'login_email' });
         setErrores({ general: errorInfo.mensaje });
@@ -198,22 +141,14 @@ const googleProvider = new GoogleAuthProvider();
       setErrores({});
       setLoading(true);
       try {
-        const result = await signInWithPopup(auth, googleProvider);
-        const fbUser = result.user;
-        const userDocRef = doc(db, 'usuarios', fbUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists()) {
-          await setDoc(userDocRef, {
-            nombre: fbUser.displayName || 'Usuario Google',
-            email: fbUser.email,
-            tipo: 'cliente',
-            telefono: '',
-            estado: 'aprobado',
-            foto: fbUser.photoURL || null,
-            createdAt: new Date(),
-          });
+        const { fbUser } = await loginConGooglePopup();
+        const detect = await detectarTipoUsuario(fbUser);
+
+        if (detect && !detect.error) {
+          setDetectedUserType(detect.type);
+        } else if (detect && detect.error) {
+          setErrores({ general: detect.error });
         }
-        setDetectedUserType('cliente');
       } catch (error) {
         const errorInfo = handleError(error, { accion: 'login_google_popup' });
         setErrores({ general: errorInfo.mensaje });

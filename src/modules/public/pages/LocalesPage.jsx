@@ -1,12 +1,11 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { categorias } from '../../../data/categorias';
-import { collection, query, where, limit, orderBy, getDocs, doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
 import { LoadingSpinner } from '../../../shared/ui/Spinner/LoadingSpinner';
 import { togglePromocionFavorita, obtenerFavoritos } from "../../cliente/services/favoritosService";
-import { registrarVisualizacion } from "../services/promocionesService";
+import { registrarVisualizacion, obtenerPromocionesPublicas, obtenerPromocionesPublicasSiguientePagina, eliminarPromocionPublica } from "../services/promocionesService";
 import { crearTicket } from "../../cliente/services/ticketService";
 
 
@@ -118,7 +117,7 @@ const LocalCard = ({ local, onTicket, onDelete }) => {
 
   const handleDeleteConfirmed = async () => {
     try {
-      await deleteDoc(doc(db, 'promociones', local.id));
+      await eliminarPromocionPublica(local.id);
       // FIX: reemplaza window.location.reload() — notifica al padre para actualizar el estado React
       onDelete(local.id);
     } catch (err) {
@@ -135,20 +134,22 @@ const LocalCard = ({ local, onTicket, onDelete }) => {
 
         {!isOwner && user && userType === 'cliente' && (
           <button
-            onClick={handleToggleFavorite}
-            disabled={loadingFav}
-            style={{
-              position: 'absolute', top: '10px', right: '10px',
-              background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%',
-              width: '40px', height: '40px', cursor: loadingFav ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '22px', transition: 'all 0.3s ease',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            }}
-            title={isFavorite ? 'Remover de favoritos' : 'Agregar a favoritos'}
-          >
-            {isFavorite ? '❤️' : '🤍'}
-          </button>
+              onClick={handleToggleFavorite}
+              disabled={loadingFav}
+              aria-pressed={isFavorite}
+              aria-label={isFavorite ? 'Remover de favoritos' : 'Agregar a favoritos'}
+              style={{
+                position: 'absolute', top: '10px', right: '10px',
+                background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%',
+                width: '40px', height: '40px', cursor: loadingFav ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '22px', transition: 'all 0.3s ease',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              }}
+              title={isFavorite ? 'Remover de favoritos' : 'Agregar a favoritos'}
+            >
+              <span aria-hidden>{isFavorite ? '❤️' : '🤍'}</span>
+            </button>
         )}
       </div>
 
@@ -265,6 +266,10 @@ const Locales = () => {
   const [activeTicket, setActiveTicket] = useState(null);
   const [locales,   setLocales] = useState([]);
   const [loading,   setLoading] = useState(true);
+  const [lastDoc, setLastDoc] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const pageSize = 12;
+  const [loadingMore, setLoadingMore] = useState(false);
   const { user, userType, userDetails } = useAuth();
 
   const handleTicketClick = async (local) => {
@@ -280,14 +285,12 @@ const Locales = () => {
         setActiveTicket(newTicket);
         setTicketLocal(local);
       } catch (error) {
-        // Usa mensaje inline en vez de alert — por ahora conservamos alert solo aquí
-        // ya que requeriría un estado de toast global. TODO: migrar a sistema de notificaciones.
-        alert(error.message || 'Error al generar ticket.');
+        toast.error(error.message || 'Error al generar ticket.');
       }
     } else if (user) {
-      alert('Solo los clientes pueden generar tickets.');
+      toast.error('Solo los clientes pueden generar tickets.');
     } else {
-      alert('Debes iniciar sesión para obtener un ticket.');
+      toast.error('Debes iniciar sesión para obtener un ticket.');
     }
   };
 
@@ -297,32 +300,27 @@ const Locales = () => {
     const cargarPromocionesInicial = async () => {
       try {
         setLoading(true);
-        const snapshot = await getDocs(collection(db, 'promociones'));
-        if (snapshot.empty) {
+        const response = await obtenerPromocionesPublicas(pageSize);
+
+        if (response.promociones.length === 0) {
           console.warn("⚠️ La consulta no devolvió ninguna promoción. Revisa que tus documentos tengan datos válidos en Firestore.");
         }
 
-        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         const ahora = new Date();
+        const dataActivas = response.promociones.filter((promo) => {
+          if (promo.activa === false) return false;
+          if (['inactiva', 'cancelada', 'pendiente'].includes(promo.estado)) return false;
 
-        const dataActivas = data
-          .filter((promo) => {
-            if (promo.activa === false) return false;
-            if (['inactiva', 'cancelada', 'pendiente'].includes(promo.estado)) return false;
+          const fechaFin = promo.fechaFin?.toDate?.()
+            ? promo.fechaFin.toDate()
+            : (promo.fechaFin ? new Date(promo.fechaFin) : null);
 
-            const fechaFin = promo.fechaFin?.toDate?.()
-              ? promo.fechaFin.toDate()
-              : (promo.fechaFin ? new Date(promo.fechaFin) : null);
-
-            return !fechaFin || fechaFin >= ahora;
-          })
-          .sort((a, b) => {
-            const dateA = a.createdAt?.toDate?.() || a.creadoEn?.toDate?.() || a.actualizadoEn?.toDate?.() || new Date(0);
-            const dateB = b.createdAt?.toDate?.() || b.creadoEn?.toDate?.() || b.actualizadoEn?.toDate?.() || new Date(0);
-            return dateB - dateA;
-          });
+          return !fechaFin || fechaFin >= ahora;
+        });
 
         setLocales(dataActivas);
+        setLastDoc(response.lastDoc);
+        setHasMore(response.hasMore);
       } catch (error) {
         console.error("Error detallado al cargar promociones:", error);
         logError(error, { accion: 'cargarPromocionesInicial', componente: 'Locales' });
@@ -330,13 +328,41 @@ const Locales = () => {
         setLoading(false);
       }
     };
+    // reset state when filters change
+    setLocales([]);
+    setLastDoc(null);
+    setHasMore(false);
     cargarPromocionesInicial();
-  }, []);
+  }, [catActiva, search]);
 
   // FIX: Callback que reciben las tarjetas para eliminar del estado sin recargar la página.
   // Antes se usaba window.location.reload() en LocalCard.handleDelete.
   const handleDeleteLocal = (id) => {
     setLocales(prev => prev.filter(l => l.id !== id));
+  };
+
+  // Pagination: cargar más promociones
+  const loadMore = async () => {
+    if (!hasMore) return;
+    setLoadingMore(true);
+    try {
+      const response = await obtenerPromocionesPublicasSiguientePagina(lastDoc, pageSize);
+      const ahora = new Date();
+      const dataActivas = response.promociones.filter((promo) => {
+        if (promo.activa === false) return false;
+        if (['inactiva', 'cancelada', 'pendiente'].includes(promo.estado)) return false;
+        const fechaFin = promo.fechaFin?.toDate?.() ? promo.fechaFin.toDate() : (promo.fechaFin ? new Date(promo.fechaFin) : null);
+        return !fechaFin || fechaFin >= ahora;
+      });
+
+      setLocales(prev => [...prev, ...dataActivas]);
+      setLastDoc(response.lastDoc || lastDoc);
+      setHasMore(response.hasMore);
+    } catch (error) {
+      logError(error, { accion: 'loadMorePromotions', componente: 'Locales' });
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   const localesFiltrados = useMemo(() => {
@@ -385,13 +411,21 @@ const Locales = () => {
       ) : (
         <div className="promociones-grid" style={{ marginTop: '25px' }}>
           {localesFiltrados.map((local) => (
-            <LocalCard
+            <MemoLocalCard
               key={local.id}
               local={local}
               onTicket={handleTicketClick}
               onDelete={handleDeleteLocal}
             />
           ))}
+        </div>
+      )}
+
+      {hasMore && (
+        <div style={{ textAlign: 'center', marginTop: '16px' }}>
+          <button onClick={loadMore} disabled={loadingMore} className="btn-loadmore">
+            {loadingMore ? 'Cargando...' : 'Cargar más'}
+          </button>
         </div>
       )}
 
@@ -405,5 +439,12 @@ const Locales = () => {
     </div>
   );
 };
+
+
+// Memoizar tarjeta para evitar re-renders innecesarios
+const MemoLocalCard = React.memo(LocalCard, (prev, next) => {
+  // Comparar por id y referencias de callbacks
+  return prev.local.id === next.local.id && prev.onTicket === next.onTicket && prev.onDelete === next.onDelete;
+});
 
 export default Locales;

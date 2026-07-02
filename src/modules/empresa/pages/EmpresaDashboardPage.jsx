@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../shared/context/AuthContext';
+import { useAuth } from '../../../shared/hooks/useAuth';
 import { useEmpresaDashboard } from '../hooks';
 import PerfilEmpresa from "../components/PerfilEmpresa/PerfilEmpresa";
 import GestorSuscripcion from "../components/GestorSuscripcion/GestorSuscripcion";
@@ -8,9 +8,9 @@ import { Spinner, ErrorBoundary } from "../../../shared/ui";
 import '../../../shared/ui/dashboard-pro.css';
 
 const formatCurrency = (value) =>
-  new Intl.NumberFormat('es-AR', {
+  new Intl.NumberFormat('es-EC', {
     style: 'currency',
-    currency: 'ARS',
+    currency: 'USD',
     maximumFractionDigits: 0,
   }).format(Number(value || 0));
 

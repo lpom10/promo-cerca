@@ -1,6 +1,6 @@
 import React from 'react';
 import { useCanjeTickets } from '../hooks/useCanjeTickets';
-import { useAuth } from '../../../shared/context/AuthContext';
+import { useAuth } from '../../../shared/hooks/useAuth';
 import { Spinner, ErrorBoundary } from '../../../shared/ui';
 import { obtenerTicketPorCodigo } from '../services/ticketService';
 import '../styles/canje-tickets.css';

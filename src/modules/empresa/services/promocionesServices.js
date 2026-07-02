@@ -11,8 +11,31 @@ import {
   Timestamp,
   increment,
 } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
+
+const sanitizarNombreArchivo = (nombre) => nombre.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
+
+export const subirImagenPromocion = async (file, empresaId) => {
+  try {
+    if (!file) return '';
+    if (!empresaId) throw new Error('Empresa ID es requerido');
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Solo se permiten archivos de imagen');
+    }
+
+    const extension = file.name.split('.').pop() || 'jpg';
+    const nombreArchivo = `promociones/${empresaId}/${Date.now()}_${sanitizarNombreArchivo(file.name)}.${extension}`;
+    const storageRef = ref(storage, nombreArchivo);
+
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
+  } catch (err) {
+    logError(err, { accion: 'subirImagenPromocion', empresaId });
+    throw err;
+  }
+};
 
 // ── GET: Listar promociones de una empresa ──
 export const obtenerPromocionesPorEmpresa = async (empresaId) => {

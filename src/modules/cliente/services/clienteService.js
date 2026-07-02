@@ -1,12 +1,9 @@
 import {
-  collection, query, where, getDocs, doc, updateDoc,
+  collection, query, where, getDocs, doc, updateDoc, getDoc,
 } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { auth, db } from '../../../firebase';
+import { updateProfile } from 'firebase/auth';
 import { logError } from '../../../shared/utils/errorHandler';
-
-// ─────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────
 
 const toDate = (ts) => {
   if (!ts) return null;
@@ -15,7 +12,6 @@ const toDate = (ts) => {
   return isNaN(d.getTime()) ? null : d;
 };
 
-/** Carga en lotes de 30 (límite Firestore 'in') */
 const fetchByIds = async (coleccion, ids) => {
   const map = {};
   if (!ids.length) return map;
@@ -40,7 +36,6 @@ const fetchByIds = async (coleccion, ids) => {
  */
 export const cargarDatosCliente = async (userId) => {
   try {
-    // 1. Tickets y favoritos en paralelo
     const [ticketSnap, favSnap] = await Promise.all([
       getDocs(query(collection(db, 'tickets'), where('usuarioId', '==', userId))),
       getDocs(query(collection(db, 'favoritos'), where('usuarioId', '==', userId))),
@@ -50,20 +45,54 @@ export const cargarDatosCliente = async (userId) => {
     const myFavoritos = favSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     // 2. IDs únicos a enriquecer
-    const promoIds = [...new Set(myTickets.map(t => t.promocionId).filter(Boolean))];
-    const favPromoIds = [...new Set(
-      myFavoritos.filter(f => f.tipo === 'promocion' && f.promocionId).map(f => f.promocionId)
-    )];
-    const allPromoIds = [...new Set([...promoIds, ...favPromoIds])];
+    // Aprovechamos campos desnormalizados (promocionTitulo, empresaNombre, etc.)
+    // para evitar lecturas adicionales. Solo haremos lecturas si faltan datos.
+    const promoMap = {};
+    const empMap = {};
 
-    const promoMap = await fetchByIds('promociones', allPromoIds);
+    myTickets.forEach(t => {
+      if (t.promocionId && !promoMap[t.promocionId]) {
+        promoMap[t.promocionId] = {
+          id: t.promocionId,
+          titulo: t.promocionTitulo || null,
+          descuento: t.descuento ?? null,
+          precioOriginal: t.precioOriginal ?? null,
+          precioDescuento: t.precioDescuento ?? null,
+          empresaId: t.empresaId || null,
+          empresaNombre: t.empresaNombre || null,
+        };
+      }
+    });
 
-    const empresaIds = [...new Set([
-      ...Object.values(promoMap).map(p => p.empresaId).filter(Boolean),
-      ...myFavoritos.filter(f => f.tipo === 'empresa' && f.empresaId).map(f => f.empresaId),
-    ])];
+    myFavoritos.forEach(f => {
+      if (f.tipo === 'promocion' && f.promocionId && !promoMap[f.promocionId]) {
+        promoMap[f.promocionId] = {
+          id: f.promocionId,
+          titulo: f.titulo || null,
+          descuento: f.descuento ?? null,
+          empresaId: f.empresaId || null,
+          empresaNombre: f.empresaNombre || null,
+        };
+      }
+      if (f.tipo === 'empresa' && f.empresaId && !empMap[f.empresaId]) {
+        empMap[f.empresaId] = { id: f.empresaId, nombre: f.nombre || f.empresaNombre || null };
+      }
+    });
 
-    const empMap = await fetchByIds('empresa', empresaIds);
+    // Si aún faltan datos críticos (ej: empresaNombre o titulo), podemos evitar
+    // múltiples lecturas agrupando solo los IDs faltantes. Este paso mantiene
+    // compatibilidad con DB antiguas pero minimiza lecturas.
+    const missingPromoIds = Object.values(promoMap).filter(p => !p.titulo && p.id).map(p => p.id);
+    const missingEmpresaIds = Object.values(empMap).filter(e => !e.nombre && e.id).map(e => e.id);
+
+    if (missingPromoIds.length || missingEmpresaIds.length) {
+      // Hacemos lecturas agrupadas por chunk para rellenar solo lo necesario
+      const fillMap = await fetchByIds('promociones', missingPromoIds);
+      Object.keys(fillMap).forEach(k => { promoMap[k] = { id: k, ...fillMap[k] }; });
+
+      const fillEmp = await fetchByIds('empresa', missingEmpresaIds);
+      Object.keys(fillEmp).forEach(k => { empMap[k] = { id: k, ...fillEmp[k] }; });
+    }
 
     // 3. Stats
     const activos      = myTickets.filter(t => t.estado === 'generado').length;
@@ -135,6 +164,28 @@ export const actualizarPerfilCliente = async (userId, { nombre, telefono }) => {
     await updateDoc(doc(db, 'usuarios', userId), { nombre, telefono });
   } catch (error) {
     logError(error, { accion: 'actualizarPerfilCliente', userId });
+    throw error;
+  }
+};
+
+export const obtenerPerfilCliente = async (userId) => {
+  try {
+    const perfilSnap = await getDoc(doc(db, 'usuarios', userId));
+    return perfilSnap.exists() ? { id: perfilSnap.id, ...perfilSnap.data() } : null;
+  } catch (error) {
+    logError(error, { accion: 'obtenerPerfilCliente', userId });
+    throw error;
+  }
+};
+
+export const actualizarPerfilClienteAuth = async (perfil) => {
+  try {
+    const usuario = auth.currentUser;
+    if (!usuario) throw new Error('Usuario no autenticado');
+    await updateProfile(usuario, perfil);
+    return { exito: true };
+  } catch (error) {
+    logError(error, { accion: 'actualizarPerfilClienteAuth' });
     throw error;
   }
 };

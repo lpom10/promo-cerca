@@ -1,8 +1,4 @@
-/**
- * Manejador de errores seguro
- * Convierte errores del servidor en mensajes seguros para el usuario
- * Registra errores reales en un sistema de logging seguro
- */
+
 
 // Niveles de severidad
 export const ERROR_LEVELS = {
@@ -46,14 +42,12 @@ export const logError = (error, contexto = {}, level = ERROR_LEVELS.ERROR) => {
   };
 
   // En producción, enviar a un servicio de logging seguro
-  // Por ahora, solo loguear en console en desarrollo
   if (isDev) {
     console[level === ERROR_LEVELS.CRITICAL ? 'error' : 'warn'](
       `[${level}] ${contexto.accion || 'Error'}:`,
       errorInfo
     );
   } else {
-    // TODO: Enviar a servicio de logging (Sentry, LogRocket, etc.)
     console.warn('[ERROR PRODUCCION]', { ...errorInfo, stack: undefined });
   }
 

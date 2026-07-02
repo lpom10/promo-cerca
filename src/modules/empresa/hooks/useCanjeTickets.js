@@ -1,7 +1,7 @@
 // src/modules/empresa/hooks/useCanjeTickets.js
 import React from 'react';
 import { obtenerTicketsEmpresa, canjearTicket } from '../services/ticketService';
-import { useAuth } from '../../../shared/context/AuthContext';
+import { useAuth } from '../../../shared/hooks/useAuth';
 import { logError } from '../../../shared/utils/errorHandler';
 
 export const useCanjeTickets = () => {
@@ -10,7 +10,7 @@ export const useCanjeTickets = () => {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
 
-  const cargarTickets = async () => {
+  const cargarTickets = React.useCallback(async () => {
     if (!user?.uid) return;
     try {
       setLoading(true);
@@ -23,11 +23,11 @@ export const useCanjeTickets = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.uid]);
 
   React.useEffect(() => {
     cargarTickets();
-  }, [user?.uid]);
+  }, [cargarTickets]);
 
   const canjear = async (ticketId) => {
     try {

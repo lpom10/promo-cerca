@@ -11,10 +11,8 @@ import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 import { categorias } from '../../../data/categorias';
-import { collection, onSnapshot, getDocs, where, limit, query, orderBy } from 'firebase/firestore';
-import { verificarDisponibilidadTickets, obtenerMensajeDisponibilidad, calcularTiempoRestante, formatearTiempoRestante, registrarVisualizacion } from '../services/promocionesService';
+import { verificarDisponibilidadTickets, obtenerMensajeDisponibilidad, calcularTiempoRestante, formatearTiempoRestante, registrarVisualizacion, obtenerEmpresasLimitadas, obtenerPromocionesActivasLimitadas } from '../services/promocionesService';
 import { crearTicket } from '../../cliente/services/ticketService';
-import { db } from '../../../firebase';
 import { useAuth } from '../../../shared/hooks/useAuth';
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -131,23 +129,34 @@ const Mapa = () => {
     const cargarLocales = async () => {
       try {
         setLoading(true);
-        
+        // Intentar servir desde cache de sesión si es reciente
+        const cacheKey = 'mapa_locales_v1';
+        const cacheRaw = sessionStorage.getItem(cacheKey);
+        if (cacheRaw) {
+          try {
+            const parsed = JSON.parse(cacheRaw);
+            const age = Date.now() - (parsed._ts || 0);
+            if (age < 1000 * 60 * 5 && parsed.locales) { // cache 5 minutos
+              setLocales(parsed.locales);
+              setLoading(false);
+              return;
+            }
+          } catch (_) { /* ignore parse errors */ }
+        }
+
         // Traemos empresas y promociones sin filtros de ordenamiento que oculten datos
-        const [empresasSnap, promosSnap] = await Promise.all([
-          getDocs(query(collection(db, 'empresa'), limit(100))),
-          getDocs(query(
-            collection(db, 'promociones'), 
-            where('activa', '==', true), 
-            limit(100)))
+        const [empresasDocs, promosDocs] = await Promise.all([
+          obtenerEmpresasLimitadas(100),
+          obtenerPromocionesActivasLimitadas(100),
         ]);
 
         const empresasMap = {};
-        empresasSnap.docs.forEach(d => { 
-          empresasMap[d.id] = { id: d.id, ...d.data() }; 
+        empresasDocs.forEach((empresa) => { 
+          empresasMap[empresa.id] = empresa; 
         });
 
         // Convertimos Timestamps y ordenamos en memoria para evitar problemas de índices
-        const sortedPromosDocs = promosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const sortedPromosDocs = promosDocs.map(data => ({ id: data.id, ...data }));
         sortedPromosDocs.sort((a, b) => {
           const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : (a.createdAt ? new Date(a.createdAt) : new Date(0));
           const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : (b.createdAt ? new Date(b.createdAt) : new Date(0));
@@ -191,7 +200,9 @@ const Mapa = () => {
           }
         });
 
-        setLocales([...promos, ...empresasSinPromos]);
+        const result = [...promos, ...empresasSinPromos];
+        setLocales(result);
+        try { sessionStorage.setItem(cacheKey, JSON.stringify({ _ts: Date.now(), locales: result })); } catch (_) { /* ignore storage errors */ }
       } catch (error) {
         logError(error, { accion: 'cargarLocales', componente: 'Mapa' });
       } finally {

@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../../shared/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../../../../firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { signOut, updateProfile } from 'firebase/auth';
+import { actualizarPerfilEmpresa, obtenerPerfilEmpresa } from '../../services/empresaService';
+import { actualizarPerfilAuth } from '../../../auth/services/authService';
 import { logError } from '../../../../shared/utils/errorHandler';
 import './PerfilEmpresa.css';
 
@@ -28,10 +27,9 @@ const PerfilEmpresa = () => {
     const cargarDatos = async () => {
       if (user) {
         try {
-          const perfil = await getDoc(doc(db, 'empresa', user.uid));
-          const datos = perfil.data() || {};
-          setDatosEmpresa(datos);
-          setForm(datos);
+          const perfil = await obtenerPerfilEmpresa(user.uid);
+          setDatosEmpresa(perfil);
+          setForm(perfil);
         } catch (error) {
           logError(error, { accion: 'cargarDatos', userId: user.uid, componente: 'PerfilEmpresa' });
         }
@@ -49,7 +47,8 @@ const PerfilEmpresa = () => {
   const guardarCambios = async () => {
     setLoading(true);
     try {
-      await updateDoc(doc(db, 'empresa', user.uid), form);
+      await actualizarPerfilEmpresa(user.uid, form);
+      await actualizarPerfilAuth({ displayName: form.negocio, photoURL: form.logo || null });
       setDatosEmpresa({ ...datosEmpresa, ...form });
       setEditando(false);
     } catch (error) {
@@ -60,8 +59,7 @@ const PerfilEmpresa = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
-      logout();
+      await logout();
       navigate('/');
     } catch (error) {
       logError(error, { accion: 'logout', userId: user.uid, componente: 'PerfilEmpresa' });

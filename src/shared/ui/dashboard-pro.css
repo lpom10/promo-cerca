@@ -143,6 +143,14 @@
   background-color: #f5f7fa;
 }
 
+/* Responsive: collapse/hide sidebar on small screens so content uses full width */
+@media (max-width: 768px) {
+  .dpro-sidebar { display: none; }
+  .dpro-content { padding: 16px; max-width: 100%; }
+  .dpro-topbar { padding: 0 12px; }
+  .dpro-topbar-name { display: none; }
+}
+
 /* ── Status banners ──────────────────────────────────────── */
 .dpro-banner {
   padding: 16px 20px;

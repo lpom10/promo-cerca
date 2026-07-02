@@ -1,10 +1,9 @@
 import { useState, useRef } from 'react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useGestorPromociones } from '../hooks/useGestorPromociones';
-import { useAuth } from '../../../shared/context/AuthContext';
+import { useAuth } from '../../../shared/hooks/useAuth';
 import { categorias } from '../../../data/categorias';
 import { Spinner, ErrorBoundary } from '../../../shared/ui';
-import { storage } from '../../../firebase';
+import { subirImagenPromocion } from '../services/promocionesServices';
 import '../styles/gestor-promociones.css';
 
 const FORM_VACIO = {
@@ -99,29 +98,17 @@ const GestorPromocionesPage = () => {
       throw new Error('Debes iniciar sesión para subir una imagen');
     }
 
-    const extension = file.name.split('.').pop() || 'jpg';
-    const nombreArchivo = `promociones/${user.uid}/${Date.now()}.${extension}`;
-    const storageRef = ref(storage, nombreArchivo);
-
     setUploadingImage(true);
     try {
-      const uploadPromise = uploadBytes(storageRef, file);
-      const timeoutPromise = new Promise((_, reject) => {
-        window.setTimeout(() => reject(new Error('La subida tardó demasiado. Revisa tu conexión o los permisos de Firebase Storage.')), 20000);
-      });
-
-      await Promise.race([uploadPromise, timeoutPromise]);
-      return await getDownloadURL(storageRef);
+      return await subirImagenPromocion(file, user.uid);
     } catch (err) {
       console.warn('Firebase Storage no aceptó la subida; se usará una imagen en memoria.', err);
-
       try {
         return await convertirADataUrl(file);
       } catch (fallbackErr) {
         if (fallbackErr?.message === 'No se pudo leer la imagen') {
           throw fallbackErr;
         }
-
         throw new Error(err?.message || 'No se pudo subir la imagen');
       }
     } finally {

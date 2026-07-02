@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where, limit, orderBy, addDoc, increment, Timestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit, orderBy, addDoc, increment, Timestamp, doc, updateDoc, deleteDoc, startAfter, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
 
@@ -53,6 +53,57 @@ export const cargarPromocionesActivas = async (limitePromos = 30) => {
   } catch (err) {
     logError(err, { accion: 'cargarPromocionesActivas', servicio: 'promocionesService' });
     return [];
+  }
+};
+
+/**
+ * Cargar los datos del home page (empresas aprobadas + promociones activas)
+ * con el mismo enriquecimiento que hacía el componente HomePage.
+ */
+export const obtenerDatosHomePage = async () => {
+  try {
+    const [empresasSnapshot, promocionesSnapshot] = await Promise.all([
+      getDocs(query(
+        collection(db, 'empresa'),
+        where('estado', '==', 'aprobado'),
+        limit(100)
+      )),
+      getDocs(query(
+        collection(db, 'promociones'),
+        where('estado', '==', 'aprobado'),
+        where('activa', '==', true),
+        limit(20)
+      )),
+    ]);
+
+    const empresasMap = {};
+    empresasSnapshot.forEach((doc) => {
+      empresasMap[doc.id] = { id: doc.id, ...doc.data() };
+    });
+
+    const promociones = promocionesSnapshot.docs.map((doc) => {
+      const data = { id: doc.id, ...doc.data() };
+      const empresa = data.empresaId ? empresasMap[data.empresaId] : null;
+
+      let rawLat = data.lat ?? empresa?.lat;
+      let rawLng = data.lng ?? empresa?.lng;
+
+      if (typeof rawLat === 'string') rawLat = parseFloat(rawLat.replace(',', '.'));
+      if (typeof rawLng === 'string') rawLng = parseFloat(rawLng.replace(',', '.'));
+
+      return {
+        ...data,
+        empresaNombre: data.empresaNombre || empresa?.nombre || empresa?.empresaNombre || 'Negocio',
+        lat: isNaN(rawLat) ? undefined : rawLat,
+        lng: isNaN(rawLng) ? undefined : rawLng,
+        categoria: data.categoria || empresa?.categoria,
+      };
+    });
+
+    return { empresasMap, promociones };
+  } catch (err) {
+    logError(err, { accion: 'obtenerDatosHomePage', servicio: 'promocionesService' });
+    return { empresasMap: {}, promociones: [] };
   }
 };
 
@@ -127,6 +178,111 @@ export const cargarPromocionesDisponibles = async (limitePromos = 30) => {
     return [];
   }
 };
+
+export const obtenerPromocionesPublicas = async (pageSize = 12) => {
+  try {
+    const q = query(
+      collection(db, 'promociones'),
+      where('activa', '==', true),
+      orderBy('createdAt', 'desc'),
+      limit(pageSize)
+    );
+    const snapshot = await getDocs(q);
+    return {
+      promociones: snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+      lastDoc: snapshot.docs[snapshot.docs.length - 1] || null,
+      hasMore: snapshot.docs.length === pageSize,
+    };
+  } catch (err) {
+    logError(err, { accion: 'obtenerPromocionesPublicas', servicio: 'promocionesService' });
+    return { promociones: [], lastDoc: null, hasMore: false };
+  }
+};
+
+export const obtenerPromocionesPublicasSiguientePagina = async (lastDoc, pageSize = 12) => {
+  try {
+    if (!lastDoc) return { promociones: [], lastDoc: null, hasMore: false };
+    const q = query(
+      collection(db, 'promociones'),
+      where('activa', '==', true),
+      orderBy('createdAt', 'desc'),
+      startAfter(lastDoc),
+      limit(pageSize)
+    );
+    const snapshot = await getDocs(q);
+    return {
+      promociones: snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+      lastDoc: snapshot.docs[snapshot.docs.length - 1] || null,
+      hasMore: snapshot.docs.length === pageSize,
+    };
+  } catch (err) {
+    logError(err, { accion: 'obtenerPromocionesPublicasSiguientePagina', servicio: 'promocionesService' });
+    return { promociones: [], lastDoc: null, hasMore: false };
+  }
+};
+
+export const eliminarPromocionPublica = async (promocionId) => {
+  try {
+    await deleteDoc(doc(db, 'promociones', promocionId));
+  } catch (err) {
+    logError(err, { accion: 'eliminarPromocionPublica', promocionId, servicio: 'promocionesService' });
+    throw err;
+  }
+};
+
+export const obtenerEmpresasLimitadas = async (limitSize = 100) => {
+  try {
+    const q = query(collection(db, 'empresa'), limit(limitSize));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (err) {
+    logError(err, { accion: 'obtenerEmpresasLimitadas', servicio: 'promocionesService' });
+    return [];
+  }
+};
+
+export const obtenerPromocionesActivasLimitadas = async (limitSize = 100) => {
+  try {
+    const q = query(
+      collection(db, 'promociones'),
+      where('activa', '==', true),
+      limit(limitSize)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (err) {
+    logError(err, { accion: 'obtenerPromocionesActivasLimitadas', servicio: 'promocionesService' });
+    return [];
+  }
+};
+
+export const obtenerEmpresaPorId = async (empresaId) => {
+  try {
+    if (!empresaId) return null;
+    const snap = await getDoc(doc(db, 'empresa', empresaId));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  } catch (err) {
+    logError(err, { accion: 'obtenerEmpresaPorId', empresaId, servicio: 'promocionesService' });
+    throw err;
+  }
+};
+
+export const obtenerPromocionesPorEmpresa = async (empresaId) => {
+  try {
+    if (!empresaId) return [];
+    const q = query(
+      collection(db, 'promociones'),
+      where('empresaId', '==', empresaId),
+      where('activa', '==', true)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    logError(err, { accion: 'obtenerPromocionesPorEmpresa', empresaId, servicio: 'promocionesService' });
+    return [];
+  }
+};
+
 // ── Verificar disponibilidad de tickets (usada en PromoCard) ─────────────────
 
 export const verificarDisponibilidadTickets = (promocion) => {

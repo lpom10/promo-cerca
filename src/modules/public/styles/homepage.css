@@ -285,6 +285,37 @@
     font-size: 14px;
   }
 }
+
+/* Small screens: hero should be fluid and not overflow */
+@media (max-width: 768px) {
+  .hero {
+    height: auto;
+    padding: 40px 16px;
+    align-items: flex-start;
+  }
+
+  .hero-content {
+    max-width: 100%;
+    gap: 20px;
+  }
+
+  .hero-title {
+    font-size: 28px;
+    text-align: left;
+  }
+
+  .hero-subtitle {
+    font-size: 15px;
+    text-align: left;
+  }
+
+  .hero-img-wrap {
+    display: none;
+  }
+
+  .hero-search { flex-direction: column; }
+  .hero-search .hero-search-btn { width: 100%; }
+}
 /* ===========================
    SECCIÓN Como funciona
 =========================== */

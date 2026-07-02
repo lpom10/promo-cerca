@@ -9,10 +9,9 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import L from "leaflet";
-import { collection, getDocs, query, limit, where } from "firebase/firestore";
-import { db } from "../../../firebase";
 import { categorias } from "../../../data/categorias";
-import { verificarDisponibilidadTickets } from "../services/promocionesService";
+import { logError } from "../../../shared/utils/errorHandler";
+import { obtenerDatosHomePage, verificarDisponibilidadTickets } from "../services/promocionesService";
 
 import fondo from "../../../assets/fondo.png";
 import logo from "../../../assets/logo.png";
@@ -166,73 +165,21 @@ const HomePage = () => {
   const navigate = useNavigate();
   const [empresasMap, setEmpresasMap] = React.useState({});
 
-  // Cargar empresas aprobadas
   React.useEffect(() => {
-    const cargarEmpresas = async () => {
+    const cargarDatosHome = async () => {
       try {
-        const qe = query(
-          collection(db, "empresa"),
-          where("estado", "==", "aprobado"),
-          limit(100),
-        );
-        const empSnap = await getDocs(qe);
-        const newEmpresasMap = {};
-        empSnap.forEach((d) => {
-          newEmpresasMap[d.id] = { id: d.id, ...d.data() };
-        });
-        setEmpresasMap(newEmpresasMap);
-      } catch (err) {
-        logError(err, { accion: "cargarEmpresas", componente: "HomePage" });
-      }
-    };
-    cargarEmpresas();
-  }, []);
+        const { empresasMap: nuevasEmpresasMap, promociones: promosEnriquecidas } =
+          await obtenerDatosHomePage();
 
-  // Cargar promociones activas
-  React.useEffect(() => {
-    const cargarPromociones = async () => {
-      try {
-        // Simplificación de la consulta para evitar procesamiento excesivo en el cliente
-        const qp = query(
-          collection(db, "promociones"),
-          where("estado", "==", "aprobado"),
-          where("activa", "==", true),
-          limit(20),
-        );
-        const promoSnap = await getDocs(qp);
-
-        const promosEnriquecidas = promoSnap.docs.map((doc) => {
-          const data = { id: doc.id, ...doc.data() };
-          const e = data.empresaId ? empresasMap[data.empresaId] : null;
-
-          let rawLat = data.lat ?? e?.lat;
-          let rawLng = data.lng ?? e?.lng;
-
-          if (typeof rawLat === "string")
-            rawLat = parseFloat(rawLat.replace(",", "."));
-          if (typeof rawLng === "string")
-            rawLng = parseFloat(rawLng.replace(",", "."));
-
-          return {
-            ...data,
-            empresaNombre:
-              data.empresaNombre || e?.nombre || e?.empresaNombre || "Negocio",
-            lat: isNaN(rawLat) ? undefined : rawLat,
-            lng: isNaN(rawLng) ? undefined : rawLng,
-            categoria: data.categoria || e?.categoria,
-          };
-        });
-
+        setEmpresasMap(nuevasEmpresasMap);
         setPromociones(promosEnriquecidas);
       } catch (err) {
-        logError(err, { accion: "cargarPromociones", componente: "HomePage" });
+        logError(err, { accion: "cargarDatosHome", componente: "HomePage" });
       }
     };
 
-    if (Object.keys(empresasMap).length > 0) {
-      cargarPromociones();
-    }
-  }, [empresasMap]);
+    cargarDatosHome();
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();

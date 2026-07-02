@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { db, storage } from '../../../../../firebase';
-import { collection, addDoc, getDoc, doc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useAuth } from '../../../../../shared/hooks/useAuth';
+import { obtenerInfoAdminPago, subirComprobantePago, crearSuscripcionPendiente } from '../../../../services/empresaService';
 import { handleError, logError } from '../../../../../shared/utils/errorHandler';
 import './PaymentModal.css';
+import toast from 'react-hot-toast';
 
 const PaymentModal = ({ onClose, plan, onSuccess }) => {
   const [adminInfo, setAdminInfo] = useState({ nombre: '', ruc: '', numeroCuenta: '' });
@@ -15,9 +15,9 @@ const PaymentModal = ({ onClose, plan, onSuccess }) => {
   useEffect(() => {
     const fetchInfo = async () => {
       try {
-        const infoSnap = await getDoc(doc(db, 'admin', 'info'));
-        if (infoSnap.exists()) {
-          setAdminInfo(infoSnap.data());
+        const info = await obtenerInfoAdminPago();
+        if (info) {
+          setAdminInfo(info);
         }
       } catch (err) {
         logError(err, { accion: 'fetchAdminInfo' });
@@ -53,6 +53,8 @@ const PaymentModal = ({ onClose, plan, onSuccess }) => {
     reader.readAsDataURL(selected);
   };
 
+  const { user } = useAuth();
+
   const handleSubmit = async () => {
     setError(null);
 
@@ -65,33 +67,15 @@ const PaymentModal = ({ onClose, plan, onSuccess }) => {
     setUploading(true);
 
     try {
-      let url = 'https://via.placeholder.com/300?text=Comprobante';
-      
+      let receiptUrl = 'https://via.placeholder.com/300?text=Comprobante';
       if (file) {
-        const sanitizedFileName = file.name
-          .replace(/[^a-zA-Z0-9.-]/g, '_')
-          .substring(0, 100);
-        
-        const storageRef = ref(
-          storage,
-          `comprobantes/${Date.now()}_${sanitizedFileName}`
-        );
-        
-        await uploadBytes(storageRef, file);
-        url = await getDownloadURL(storageRef);
+        receiptUrl = await subirComprobantePago(file, user?.uid);
       }
 
-      await addDoc(collection(db, 'pagos'), {
-        planId: plan.id,
-        monto: plan.precio,
-        receiptUrl: url,
-        status: 'pendiente',
-        createdAt: new Date(),
-      });
-
-      if (onSuccess) onSuccess();
+      const payment = await crearSuscripcionPendiente(user?.uid, plan, null, receiptUrl);
+      if (onSuccess) onSuccess(payment.id);
       onClose();
-      alert('¡Comprobante enviado! El equipo lo revisará pronto.');
+      toast.success('¡Comprobante enviado! El equipo lo revisará pronto.');
     } catch (err) {
       const errorInfo = handleError(err, { accion: 'payment_upload' });
       setError(errorInfo.mensaje);

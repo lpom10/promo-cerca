@@ -1,8 +1,8 @@
 // src/modules/empresa/hooks/useEmpresaDashboard.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { obtenerPerfilEmpresa, obtenerSuscripcionEmpresa, obtenerEstadisticasEmpresa, obtenerFinanzasEmpresa } from '../services/empresaService';
 import { obtenerPromocionesPorEmpresa } from '../services/promocionesServices';
-import { useAuth } from '../../../shared/context/AuthContext';
+import { useAuth } from '../../../shared/hooks/useAuth';
 import { logError } from '../../../shared/utils/errorHandler';
 
 export const useEmpresaDashboard = () => {
@@ -15,41 +15,42 @@ export const useEmpresaDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (!user?.uid) {
+  const cargarDatos = useCallback(async (uid) => {
+    if (!uid) {
       setLoading(false);
       return;
     }
 
-    const cargarDatos = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    try {
+      setLoading(true);
+      setError(null);
 
-        const [perfilData, suscripcionData, estadisticasData, promocionesData, finanzasData] = 
-          await Promise.all([
-            obtenerPerfilEmpresa(user.uid),
-            obtenerSuscripcionEmpresa(user.uid),
-            obtenerEstadisticasEmpresa(user.uid),
-            obtenerPromocionesPorEmpresa(user.uid),
-            obtenerFinanzasEmpresa(user.uid),
-          ]);
+      const [perfilData, suscripcionData, estadisticasData, promocionesData, finanzasData] = 
+        await Promise.all([
+          obtenerPerfilEmpresa(uid),
+          obtenerSuscripcionEmpresa(uid),
+          obtenerEstadisticasEmpresa(uid),
+          obtenerPromocionesPorEmpresa(uid),
+          obtenerFinanzasEmpresa(uid),
+        ]);
 
-        setPerfil(perfilData);
-        setSuscripcion(suscripcionData);
-        setEstadisticas(estadisticasData);
-        setFinanzas(finanzasData);
-        setPromociones(promocionesData);
-      } catch (err) {
-        logError('useEmpresaDashboard', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setPerfil(perfilData);
+      setSuscripcion(suscripcionData);
+      setEstadisticas(estadisticasData);
+      setFinanzas(finanzasData);
+      setPromociones(promocionesData);
+    } catch (err) {
+      logError('useEmpresaDashboard', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-    cargarDatos();
-  }, [user?.uid]);
+  useEffect(() => {
+    if (!user?.uid) return;
+    cargarDatos(user.uid);
+  }, [user?.uid, cargarDatos]);
 
   return {
     perfil,
@@ -60,8 +61,8 @@ export const useEmpresaDashboard = () => {
     loading,
     error,
     refetch: () => {
-      // Función para recargar manualmente
-      setLoading(true);
+      if (!user?.uid) return;
+      cargarDatos(user.uid);
     },
   };
 };
