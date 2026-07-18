@@ -6,9 +6,22 @@ service cloud.firestore {
       return request.auth != null && exists(/databases/$(database)/documents/admin/$(request.auth.uid));
     }
 
-    // Usuarios: solo el propio usuario puede leer y escribir su documento
+    // Usuarios: solo el propio usuario puede leer su documento; create/update restringidos
     match /usuarios/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.tipo == 'cliente'
+        && request.resource.data.estado == 'aprobado'
+        && request.resource.data.nombre is string
+        && request.resource.data.email is string
+        && request.resource.data.telefono is string
+        && (!('cedula' in request.resource.data) || request.resource.data.cedula is string)
+        && request.resource.data.createdAt is timestamp;
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'telefono']);
+      allow delete: if false;
     }
 
     // Empresa: cualquiera puede leer, solo la empresa o admin puede escribir
@@ -17,9 +30,13 @@ service cloud.firestore {
       allow write: if request.auth != null && (request.auth.uid == empresaId || isAdmin());
     }
 
-    // Admin docs: solo lectura del propio doc, nunca escritura desde cliente
+    // Admin docs: lectura restringida al propio admin o al documento público de información de pagos
     match /admin/{adminId} {
-      allow read: if request.auth != null && request.auth.uid == adminId;
+      allow read: if request.auth != null && (
+        request.auth.uid == adminId ||
+        (adminId == 'info' && exists(/databases/$(database)/documents/empresa/$(request.auth.uid))) ||
+        isAdmin()
+      );
       allow write: if false;
     }
 
@@ -65,10 +82,42 @@ service cloud.firestore {
       allow update: if isAdmin();
     }
 
-    // TODO: la creación cruzada de notificaciones cliente→empresa debería moverse a una Cloud Function en el futuro.
+    match /referidos/{referralId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.usuarioId ||
+        resource.data.publico == true
+      );
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.usuarioId
+        && request.resource.data.codigo is string
+        && request.resource.data.codigo.size() > 0
+        && request.resource.data.creadoEn is timestamp
+        && (!('publico' in request.resource.data) || request.resource.data.publico is bool);
+      allow update: if request.auth != null && (
+        (
+          request.auth.uid == resource.data.usuarioId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bonusEntregado', 'bonusEntregadoEn', 'bonusTipo', 'bonusDetalle', 'contadorReferidosAplicado'])
+        ) ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalReferidos'])
+          && request.resource.data.totalReferidos == resource.data.totalReferidos + 1
+          && exists(/databases/$(database)/documents/referidos/$(request.auth.uid))
+          && get(/databases/$(database)/documents/referidos/$(request.auth.uid)).data.referidoPor == referralId
+        ) ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalBonosEntregados'])
+          && request.resource.data.totalBonosEntregados == resource.data.totalBonosEntregados + 1
+          && exists(/databases/$(database)/documents/referidos/$(request.auth.uid))
+          && get(/databases/$(database)/documents/referidos/$(request.auth.uid)).data.referidoPor == referralId
+        )
+      );
+      allow delete: if false;
+    }
+
     match /notificaciones/{notifId} {
       allow create: if request.auth != null
         && request.resource.data.usuarioId is string
+        && (request.auth.uid == request.resource.data.usuarioId || isAdmin())
         && request.resource.data.tipo in ['nueva_promocion','promocion_vencimiento','promocion_vencida','ticket_canjeado','empresa_aprobada','empresa_rechazada','nueva_resena','bonus_referido','tickets_agotados']
         && request.resource.data.titulo is string && request.resource.data.titulo.size() <= 200
         && request.resource.data.mensaje is string && request.resource.data.mensaje.size() <= 1000

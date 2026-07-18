@@ -44,7 +44,7 @@ const LocationMarker = ({ position, setPosition }) => {
 const FORM_INICIAL = {
   nombre: '', email: '', password: '', confirmPassword: '',
   telefono: '', negocio: '', categoria: '', direccion: '',
-  ruc: '', cedula: '', lat: null, lng: null,
+  ruc: '', cedula: '', codigoReferido: '', lat: null, lng: null,
 };
 
 const Registro = () => {
@@ -89,7 +89,10 @@ const Registro = () => {
     e.preventDefault();
 
     const rl = rateLimiter.check(`registro_${form.email}`, 3, 60000);
-    if (!rl.permitido) { setErrores({ general: rl.mensaje }); return; }
+    if (!rl.permitido) {
+      setErrores({ general: `${rl.mensaje} La protección real del acceso se aplica en el servidor.` });
+      return;
+    }
 
     const erroresValidacion = validar();
     if (Object.keys(erroresValidacion).length > 0) { setErrores(erroresValidacion); return; }
@@ -261,6 +264,13 @@ const Registro = () => {
                 <input className="auth-input" name="telefono" value={form.telefono} onChange={handleChange} placeholder="0991234567" maxLength="10" />
                 {errores.telefono && <span className="auth-field-error">{errores.telefono}</span>}
               </div>
+
+              {tipo === 'cliente' && (
+                <div className="auth-field">
+                  <label className="auth-label">Código de referido <span className="optional">(opcional)</span></label>
+                  <input className="auth-input" name="codigoReferido" value={form.codigoReferido} onChange={handleChange} placeholder="Ej: PROMOABC1" />
+                </div>
+              )}
 
               {tipo === 'empresa' && (
                 <>

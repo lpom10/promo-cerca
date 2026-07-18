@@ -12,7 +12,8 @@ import {
   addDoc,
   Timestamp,
 } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
 
 // ── GET: Obtener todos los tickets de una empresa ──
@@ -31,6 +32,8 @@ export const obtenerTicketsEmpresa = async (empresaId) => {
   }
 };
 
+const canjearTicketCallable = httpsCallable(functions, 'canjearTicketCallable');
+
 // ── TRANSACTION: Canjear un ticket ──
 export const canjearTicket = async (ticketId, empresaId) => {
   try {
@@ -38,45 +41,8 @@ export const canjearTicket = async (ticketId, empresaId) => {
       throw new Error('Ticket ID y Empresa ID son requeridos');
     }
 
-    const resultado = await runTransaction(db, async (transaction) => {
-      // 1. Obtener ticket
-      const ticketRef = doc(db, 'tickets', ticketId);
-      const ticketSnap = await transaction.get(ticketRef);
-      
-      if (!ticketSnap.exists()) {
-        throw new Error('Ticket no existe');
-      }
-
-      const ticket = ticketSnap.data();
-      
-      if (ticket.empresaId !== empresaId) {
-        throw new Error('Ticket no pertenece a esta empresa');
-      }
-
-      if (ticket.estado === 'canjeado') {
-        throw new Error('Ticket ya fue canjeado');
-      }
-
-      if (ticket.estado === 'expirado') {
-        throw new Error('Ticket expirado');
-      }
-
-      // 2. Actualizar ticket
-      transaction.update(ticketRef, {
-        estado: 'canjeado',
-        fechaCanjeado: new Date(),
-      });
-
-      // 3. Actualizar contador en promoción
-      const promoRef = doc(db, 'promociones', ticket.promocionId);
-      transaction.update(promoRef, {
-        ticketsCanjeados: increment(1),
-      });
-
-      return { exito: true, ticket: { id: ticketId, ...ticket } };
-    });
-
-    return resultado;
+    const result = await canjearTicketCallable({ ticketId, empresaId });
+    return result.data;
   } catch (err) {
     logError('canjearTicket', err);
     throw err;

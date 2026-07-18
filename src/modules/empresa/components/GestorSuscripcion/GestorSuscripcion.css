@@ -34,6 +34,35 @@
   margin-bottom: 15px;
 }
 
+.suscripcion-pendiente {
+  background: linear-gradient(135deg, rgba(251, 76, 35, 0.08) 0%, rgba(251, 76, 35, 0.03) 100%);
+  border-left: 4px solid #fb4c23;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  border: 1px solid rgba(251, 76, 35, 0.2);
+}
+
+.suscripcion-pendiente h3 {
+  color: #c2410c;
+  margin-bottom: 10px;
+}
+
+.suscripcion-pendiente p {
+  margin-bottom: 8px;
+  color: #1e293b;
+}
+
+.suscripcion-tiempo {
+  font-weight: 700;
+  color: #fb4c23 !important;
+}
+
+.suscripcion-ayuda {
+  font-size: 0.95rem;
+  color: #64748b !important;
+}
+
 .plan-actual {
   background: white;
   padding: 20px;
@@ -59,6 +88,22 @@
 
 .planes-container {
   margin-top: 30px;
+}
+
+.planes-hero {
+  margin-top: 12px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(251, 76, 35, 0.08) 0%, rgba(255, 107, 76, 0.04) 100%);
+  border: 1px solid rgba(251, 76, 35, 0.18);
+}
+
+.planes-hero p {
+  margin: 0;
+  color: #7c2d12;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 .planes-grid {

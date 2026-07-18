@@ -11,6 +11,7 @@ import {
   orderBy,
   Timestamp,
   onSnapshot,
+  limit,
 } from 'firebase/firestore';
 import { logError } from '../utils/errorHandler';
 
@@ -70,11 +71,12 @@ export const obtenerNotificaciones = async (usuarioId, limite = 20) => {
     const q = query(
       collection(db, 'notificaciones'),
       where('usuarioId', '==', usuarioId),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(limite)
     );
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.slice(0, limite).map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     logError(error, { accion: 'obtenerNotificaciones', usuarioId });
     throw error;
@@ -90,7 +92,8 @@ export const suscribirseNotificaciones = (usuarioId, callback) => {
     const q = query(
       collection(db, 'notificaciones'),
       where('usuarioId', '==', usuarioId),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(50)
     );
 
     return onSnapshot(
@@ -129,7 +132,8 @@ export const marcarTodoComoLeido = async (usuarioId) => {
     const q = query(
       collection(db, 'notificaciones'),
       where('usuarioId', '==', usuarioId),
-      where('leida', '==', false)
+      where('leida', '==', false),
+      limit(100)
     );
 
     const snapshot = await getDocs(q);
@@ -162,7 +166,8 @@ export const obtenerConteoNoLeidas = async (usuarioId) => {
     const q = query(
       collection(db, 'notificaciones'),
       where('usuarioId', '==', usuarioId),
-      where('leida', '==', false)
+      where('leida', '==', false),
+      limit(100)
     );
 
     const snapshot = await getDocs(q);

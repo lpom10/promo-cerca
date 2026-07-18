@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../../../firebase';
 import { logError, handleError } from '../../../shared/utils/errorHandler';
+import { crearCodigoReferido, aplicarCodigoReferido } from '../../cliente/services/referidosService';
 
 // ─────────────────────────────────────────────
 // LOGIN
@@ -234,6 +235,14 @@ export const registrarConEmail = async (tipo, form) => {
     const datos = construirDatosUsuario(tipo, form);
     await setDoc(doc(db, coleccion, firebaseUser.uid), datos);
 
+    if (tipo === 'cliente') {
+      const codigo = form.codigoReferido || form.referredBy || '';
+      await crearCodigoReferido(firebaseUser.uid);
+      if (codigo) {
+        await aplicarCodigoReferido(firebaseUser.uid, codigo);
+      }
+    }
+
     return firebaseUser;
   } catch (error) {
     // Si ya tiene campo asignado, es nuestro error de duplicado — re-lanzar tal cual
@@ -279,6 +288,11 @@ export const registrarConGoogle = async (tipo, form) => {
       estado: 'aprobado',
       createdAt: new Date(),
     });
+
+    await crearCodigoReferido(fbUser.uid);
+    if (form.codigoReferido || form.referredBy) {
+      await aplicarCodigoReferido(fbUser.uid, form.codigoReferido || form.referredBy);
+    }
 
     return { fbUser, esNuevo: true };
   } catch (error) {

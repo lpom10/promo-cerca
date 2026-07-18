@@ -99,7 +99,7 @@ import '../styles/auth.css';
       );
 
       if (!checkRateLimit.permitido) {
-        setErrores({ general: checkRateLimit.mensaje });
+        setErrores({ general: `${checkRateLimit.mensaje} La protección real del acceso se aplica en el servidor.` });
         setLoading(false);
         return;
       }

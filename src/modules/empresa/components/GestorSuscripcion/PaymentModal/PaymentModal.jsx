@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../../../shared/hooks/useAuth';
-import { obtenerInfoAdminPago, subirComprobantePago, crearSuscripcionPendiente } from '../../../../services/empresaService';
+import { obtenerInfoAdminPago, subirComprobantePago, crearSuscripcionPendiente } from '../../../services/empresaService';
 import { handleError, logError } from '../../../../../shared/utils/errorHandler';
 import './PaymentModal.css';
 import toast from 'react-hot-toast';
@@ -75,7 +75,7 @@ const PaymentModal = ({ onClose, plan, onSuccess }) => {
       const payment = await crearSuscripcionPendiente(user?.uid, plan, null, receiptUrl);
       if (onSuccess) onSuccess(payment.id);
       onClose();
-      toast.success('¡Comprobante enviado! El equipo lo revisará pronto.');
+      toast.success('¡Comprobante enviado! Lo revisaremos en menos de 24 horas y te notificaremos automáticamente.');
     } catch (err) {
       const errorInfo = handleError(err, { accion: 'payment_upload' });
       setError(errorInfo.mensaje);
@@ -104,6 +104,12 @@ const PaymentModal = ({ onClose, plan, onSuccess }) => {
           <p><strong>Nombre:</strong> {adminInfo.nombre || '—'}</p>
           <p><strong>RUC:</strong> {adminInfo.ruc || '—'}</p>
           <p><strong>Cuenta:</strong> {adminInfo.numeroCuenta || '—'}</p>
+        </section>
+
+        <section className="payment-sla-box" aria-label="SLA de revisión de pago">
+          <h3>Proceso manual de revisión</h3>
+          <p><strong>SLA:</strong> revisamos y respondemos en menos de 24 horas.</p>
+          <p>Te notificaremos automáticamente cuando tu comprobante sea aprobado o rechazado.</p>
         </section>
         
         <section className="payment-receipt-upload">

@@ -1,5 +1,5 @@
 // src/modules/empresa/services/empresaService.js
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, orderBy, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, orderBy, Timestamp, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
@@ -40,7 +40,9 @@ export const obtenerSuscripcionEmpresa = async (empresaId) => {
     if (!empresaId) throw new Error('Empresa ID es requerido');
     const q = query(
       collection(db, 'suscripciones'),
-      where('empresaId', '==', empresaId)
+      where('empresaId', '==', empresaId),
+      orderBy('createdAt', 'desc'),
+      limit(10)
     );
     const snapshot = await getDocs(q);
     if (snapshot.empty) return null;
@@ -64,6 +66,30 @@ export const obtenerHistorialSuscripcionesEmpresa = async (empresaId) => {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (err) {
     logError('obtenerHistorialSuscripcionesEmpresa', err);
+    throw err;
+  }
+};
+
+export const suscribirseSuscripcionesEmpresa = (empresaId, callback) => {
+  try {
+    if (!empresaId) throw new Error('Empresa ID es requerido');
+    if (typeof callback !== 'function') throw new Error('Callback inválido');
+
+    const q = query(
+      collection(db, 'suscripciones'),
+      where('empresaId', '==', empresaId),
+      orderBy('createdAt', 'desc')
+    );
+
+    return import('firebase/firestore').then(({ onSnapshot }) => onSnapshot(q, (snapshot) => {
+      const suscripciones = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      callback(suscripciones);
+    }, (error) => {
+      logError('suscribirseSuscripcionesEmpresa', error);
+      callback([]);
+    }));
+  } catch (err) {
+    logError('suscribirseSuscripcionesEmpresa', err);
     throw err;
   }
 };
@@ -116,20 +142,34 @@ export const crearSuscripcionPendiente = async (empresaId, plan, paymentId = nul
     if (!empresaId) throw new Error('Empresa ID es requerido');
     if (!plan || !plan.id) throw new Error('Plan inválido');
 
-    const suscripcion = {
+    const solicitudesExistentesSnap = await getDocs(
+      query(collection(db, 'pagos'), where('empresaId', '==', empresaId))
+    );
+
+    const yaTienePendiente = solicitudesExistentesSnap.docs.some((docSnap) => {
+      const status = docSnap.data()?.status ?? docSnap.data()?.estado;
+      return status === 'espera' || status === 'pendiente';
+    });
+
+    if (yaTienePendiente) {
+      throw new Error('Ya tienes una solicitud de suscripción pendiente. Espera a que se revise antes de enviar otra.');
+    }
+
+    const pago = {
       empresaId,
       planId: plan.id,
       planNombre: plan.nombre,
       precio: plan.precio,
-      estado: 'espera',
+      monto: plan.precio,
+      status: 'espera',
       paymentId,
       receiptUrl,
-      createdAt: new Date(),
+      createdAt: Timestamp.now(),
       proximoRenovacion: null,
     };
 
-    const suscripcionRef = await addDoc(collection(db, 'suscripciones'), suscripcion);
-    return { id: suscripcionRef.id, ...suscripcion };
+    const pagoRef = await addDoc(collection(db, 'pagos'), pago);
+    return { id: pagoRef.id, ...pago };
   } catch (err) {
     logError('crearSuscripcionPendiente', err);
     throw err;
@@ -150,7 +190,9 @@ export const obtenerFinanzasEmpresa = async (empresaId) => {
 
     const ticketsQuery = query(
       collection(db, 'tickets'),
-      where('empresaId', '==', empresaId)
+      where('empresaId', '==', empresaId),
+      orderBy('fechaGeneracion', 'desc'),
+      limit(100)
     );
     const ticketsSnap = await getDocs(ticketsQuery);
     const tickets = ticketsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -225,7 +267,9 @@ export const obtenerEstadisticasEmpresa = async (empresaId) => {
     // 3. Contar vistas totales
     const vistasQuery = query(
       collection(db, 'vistas'),
-      where('empresaId', '==', empresaId)
+      where('empresaId', '==', empresaId),
+      orderBy('timestamp', 'desc'),
+      limit(100)
     );
     const vistasSnap = await getDocs(vistasQuery);
     const vistasTotal = vistasSnap.size;

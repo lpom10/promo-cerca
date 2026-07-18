@@ -1,5 +1,5 @@
 import {
-  collection, query, where, getDocs, doc, updateDoc, getDoc,
+  collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy, limit,
 } from 'firebase/firestore';
 import { auth, db } from '../../../firebase';
 import { updateProfile } from 'firebase/auth';
@@ -37,8 +37,8 @@ const fetchByIds = async (coleccion, ids) => {
 export const cargarDatosCliente = async (userId) => {
   try {
     const [ticketSnap, favSnap] = await Promise.all([
-      getDocs(query(collection(db, 'tickets'), where('usuarioId', '==', userId))),
-      getDocs(query(collection(db, 'favoritos'), where('usuarioId', '==', userId))),
+      getDocs(query(collection(db, 'tickets'), where('usuarioId', '==', userId), orderBy('fechaGeneracion', 'desc'), limit(50))),
+      getDocs(query(collection(db, 'favoritos'), where('usuarioId', '==', userId), orderBy('createdAt', 'desc'), limit(50))),
     ]);
 
     const myTickets   = ticketSnap.docs.map(d => ({ id: d.id, ...d.data() }));

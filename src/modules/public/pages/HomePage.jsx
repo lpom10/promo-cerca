@@ -50,6 +50,32 @@ const ScrollWheelZoom = ({ enabled }) => {
   return null;
 };
 
+const useHasHoverSupport = () => {
+  const [hasHoverSupport, setHasHoverSupport] = React.useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.matchMedia("(hover: hover)").matches;
+  });
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(hover: hover)");
+    const updateHoverSupport = () => setHasHoverSupport(mediaQuery.matches);
+
+    updateHoverSupport();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateHoverSupport);
+      return () => mediaQuery.removeEventListener("change", updateHoverSupport);
+    }
+
+    mediaQuery.addListener(updateHoverSupport);
+    return () => mediaQuery.removeListener(updateHoverSupport);
+  }, []);
+
+  return hasHoverSupport;
+};
+
 const VisibleMarkers = ({ promociones, navigate, getEmoji }) => {
   const map = useMap();
   const [visibleItems, setVisibleItems] = React.useState([]);
@@ -162,6 +188,7 @@ const HomePage = () => {
   const [search, setSearch] = React.useState("");
   const [promociones, setPromociones] = React.useState([]);
   const [mapHovered, setMapHovered] = React.useState(false);
+  const hasHoverSupport = useHasHoverSupport();
   const navigate = useNavigate();
   const [empresasMap, setEmpresasMap] = React.useState({});
 
@@ -215,6 +242,8 @@ const HomePage = () => {
   const getEmoji = (categoriaId) =>
     categorias.find((c) => c.id === categoriaId)?.emoji || "🏷️";
 
+  const shouldEnableZoom = !hasHoverSupport || mapHovered;
+
   return (
     <>
       <div
@@ -258,8 +287,8 @@ const HomePage = () => {
             <div className="hp-map-wrapper">
               <div
                 className="hp-map-container"
-                onMouseEnter={() => setMapHovered(true)}
-                onMouseLeave={() => setMapHovered(false)}
+                onMouseEnter={() => hasHoverSupport && setMapHovered(true)}
+                onMouseLeave={() => hasHoverSupport && setMapHovered(false)}
               >
                 <MapContainer
                   center={[-4.007, -79.211]}
@@ -271,7 +300,7 @@ const HomePage = () => {
                     url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
                     attribution='&copy; <a href="https://carto.com/">Carto</a>'
                   />
-                  <ScrollWheelZoom enabled={mapHovered} />
+                  <ScrollWheelZoom enabled={shouldEnableZoom} />
                   <VisibleMarkers
                     promociones={activePromos}
                     navigate={navigate}

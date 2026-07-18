@@ -1,44 +1,71 @@
 import {
   collection, query, where, orderBy,
   getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, onSnapshot,
+  limit, startAfter, getCountFromServer,
 } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
 
 // ─────────────────────────────────────────────
 // CONSULTAS
 // ─────────────────────────────────────────────
 
-export const obtenerSolicitudesPendientes = async () => {
-  const snap = await getDocs(query(collection(db, 'empresa'), where('estado', '==', 'pendiente')));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+const PAGE_SIZE = 20;
+
+const construirQueryPaginada = (coleccion, restricciones = [], pageSize = PAGE_SIZE, lastDoc = null) => {
+  const constraints = [...restricciones];
+  if (lastDoc) constraints.push(startAfter(lastDoc));
+  constraints.push(limit(pageSize));
+  return query(collection(db, coleccion), ...constraints);
 };
 
-export const obtenerEmpresasAprobadas = async () => {
-  const snap = await getDocs(query(collection(db, 'empresa'), where('estado', '==', 'aprobado')));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+export const obtenerSolicitudesPendientes = async (pageSize = PAGE_SIZE, lastDoc = null) => {
+  const snap = await getDocs(construirQueryPaginada('empresa', [where('estado', '==', 'pendiente'), orderBy('createdAt', 'desc')], pageSize, lastDoc));
+  return {
+    items: snap.docs.map(d => ({ id: d.id, ...d.data() })),
+    lastDoc: snap.docs[snap.docs.length - 1] || null,
+    hasMore: snap.docs.length === pageSize,
+  };
 };
 
-export const obtenerPromosEnRevision = async () => {
-  const snap = await getDocs(query(collection(db, 'promociones'), where('estado', '==', 'pendiente')));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+export const obtenerEmpresasAprobadas = async (pageSize = PAGE_SIZE, lastDoc = null) => {
+  const snap = await getDocs(construirQueryPaginada('empresa', [where('estado', '==', 'aprobado'), orderBy('createdAt', 'desc')], pageSize, lastDoc));
+  return {
+    items: snap.docs.map(d => ({ id: d.id, ...d.data() })),
+    lastDoc: snap.docs[snap.docs.length - 1] || null,
+    hasMore: snap.docs.length === pageSize,
+  };
 };
 
-export const obtenerTodasPromociones = async () => {
-  const snap = await getDocs(query(collection(db, 'promociones'), orderBy('createdAt', 'desc')));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+export const obtenerPromosEnRevision = async (pageSize = PAGE_SIZE, lastDoc = null) => {
+  const snap = await getDocs(construirQueryPaginada('promociones', [where('estado', '==', 'pendiente'), orderBy('createdAt', 'desc')], pageSize, lastDoc));
+  return {
+    items: snap.docs.map(d => ({ id: d.id, ...d.data() })),
+    lastDoc: snap.docs[snap.docs.length - 1] || null,
+    hasMore: snap.docs.length === pageSize,
+  };
+};
+
+export const obtenerTodasPromociones = async (pageSize = PAGE_SIZE, lastDoc = null) => {
+  const snap = await getDocs(construirQueryPaginada('promociones', [orderBy('createdAt', 'desc')], pageSize, lastDoc));
+  return {
+    items: snap.docs.map(d => ({ id: d.id, ...d.data() })),
+    lastDoc: snap.docs[snap.docs.length - 1] || null,
+    hasMore: snap.docs.length === pageSize,
+  };
 };
 
 export const obtenerEstadisticasGlobales = async () => {
-  const [ticketsSnap, empresasSnap, promosSnap] = await Promise.all([
-    getDocs(collection(db, 'tickets')),
-    getDocs(collection(db, 'empresa')),
-    getDocs(collection(db, 'promociones')),
+  const [ticketsCount, empresasCount, promosCount] = await Promise.all([
+    getCountFromServer(query(collection(db, 'tickets'))),
+    getCountFromServer(query(collection(db, 'empresa'))),
+    getCountFromServer(query(collection(db, 'promociones'))),
   ]);
   return {
-    totalTickets:  ticketsSnap.size,
-    totalEmpresas: empresasSnap.size,
-    totalPromos:   promosSnap.size,
+    totalTickets: ticketsCount.data().count,
+    totalEmpresas: empresasCount.data().count,
+    totalPromos: promosCount.data().count,
   };
 };
 
@@ -55,7 +82,7 @@ export const enriquecerPagosConNombre = async (pagosData) => {
 };
 
 export const suscribirseAPagosPendientes = (onCambio) => {
-  const pagosQuery = query(collection(db, 'pagos'), where('status', '==', 'espera'));
+  const pagosQuery = query(collection(db, 'pagos'), where('status', '==', 'espera'), orderBy('createdAt', 'desc'), limit(50));
   return onSnapshot(pagosQuery, async (snap) => {
     const pagos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const enriquecidos = await enriquecerPagosConNombre(pagos);
@@ -120,32 +147,23 @@ export const eliminarPromocion = async (promoId) => {
 // PAGOS Y SUSCRIPCIONES
 // ─────────────────────────────────────────────
 
+const aprobarPagoCallable = httpsCallable(functions, 'aprobarPagoCallable');
+const rechazarPagoCallable = httpsCallable(functions, 'rechazarPagoCallable');
+
 export const aprobarPago = async (pago) => {
   try {
-    await updateDoc(doc(db, 'pagos', pago.id), { status: 'aprobado' });
-    const fechaVencimiento = new Date();
-    fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
-    await addDoc(collection(db, 'suscripciones'), {
-      empresaId:             pago.empresaId,
-      plan:                  pago.planId,
-      estado:                'activa',
-      precio:                pago.monto,
-      duracion:              30,
-      fechaInicio:           new Date(),
-      fechaVencimiento,
-      metodoPago:            'transferencia',
-      renovacionAutomatica:  true,
-      createdAt:             new Date(),
-    });
+    const result = await aprobarPagoCallable({ pago });
+    return result.data;
   } catch (error) {
-    logError(error, { accion: 'aprobarPago', pagoId: pago.id });
+    logError(error, { accion: 'aprobarPago', pagoId: pago?.id });
     throw error;
   }
 };
 
 export const rechazarPago = async (pagoId, motivo) => {
   try {
-    await updateDoc(doc(db, 'pagos', pagoId), { status: 'rechazado', motivo });
+    const result = await rechazarPagoCallable({ pagoId, motivo });
+    return result.data;
   } catch (error) {
     logError(error, { accion: 'rechazarPago', pagoId });
     throw error;

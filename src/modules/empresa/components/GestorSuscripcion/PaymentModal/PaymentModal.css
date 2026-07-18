@@ -108,6 +108,30 @@
   font-weight: 600;
 }
 
+.payment-sla-box {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-left: 4px solid #fb4c23;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+.payment-sla-box h3 {
+  color: #9a2c0f;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.payment-sla-box p {
+  color: #7c2d12;
+  font-size: 13px;
+  margin: 0 0 6px;
+}
+
 .payment-receipt-upload {
   margin-bottom: 24px;
 }
