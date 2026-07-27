@@ -1,11 +1,11 @@
 import React from "react";
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from "react-native";
-import { colors } from "@/app/theme/colors";
+import { useTheme } from "@/app/theme/ThemeContext";
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: "primary" | "secondary" | "outline" | "ghost";
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "destructive";
   isLoading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
@@ -21,13 +21,44 @@ export function Button({
   style,
   textStyle,
 }: ButtonProps) {
+  const { colors } = useTheme();
   const isOutlineOrGhost = variant === "outline" || variant === "ghost";
+
+  // Determinar colores basados en la variante
+  let bgColor;
+  let textColor = colors.primaryForeground;
+  let borderColor;
+
+  switch (variant) {
+    case "primary":
+      bgColor = colors.primary;
+      textColor = colors.primaryForeground;
+      break;
+    case "secondary":
+      bgColor = colors.secondary;
+      textColor = colors.secondaryForeground;
+      break;
+    case "destructive":
+      bgColor = colors.destructive;
+      textColor = colors.destructiveForeground;
+      break;
+    case "outline":
+      bgColor = "transparent";
+      borderColor = colors.primary;
+      textColor = colors.primary;
+      break;
+    case "ghost":
+      bgColor = "transparent";
+      textColor = colors.primary;
+      break;
+  }
 
   return (
     <TouchableOpacity
       style={[
         styles.button,
-        styles[variant],
+        { backgroundColor: bgColor },
+        borderColor ? { borderWidth: 1, borderColor } : null,
         disabled && styles.disabled,
         style,
       ]}
@@ -36,12 +67,12 @@ export function Button({
       activeOpacity={0.8}
     >
       {isLoading ? (
-        <ActivityIndicator color={isOutlineOrGhost ? colors.primary : "white"} />
+        <ActivityIndicator color={textColor} />
       ) : (
         <Text
           style={[
             styles.text,
-            isOutlineOrGhost && styles.textOutlineOrGhost,
+            { color: textColor },
             textStyle,
           ]}
         >
@@ -62,26 +93,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   text: {
-    color: "white",
     fontWeight: "600",
     fontSize: 16,
-  },
-  primary: {
-    backgroundColor: colors.primary,
-  },
-  secondary: {
-    backgroundColor: colors.textSecondary,
-  },
-  outline: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  ghost: {
-    backgroundColor: "transparent",
-  },
-  textOutlineOrGhost: {
-    color: colors.primary,
   },
   disabled: {
     opacity: 0.5,

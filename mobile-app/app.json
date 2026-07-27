@@ -33,6 +33,12 @@
             "imageWidth": 76
           }
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Permite a la app usar tu ubicación para mostrar promociones cerca de ti."
+        }
       ]
     ],
     "experiments": {      

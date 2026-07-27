@@ -9,7 +9,7 @@ import { colors } from "../theme/colors";
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigator() {
-  const { isAuth, isInitialized, initializeAuthListener } = useAuthStore();
+  const { isInitialized, initializeAuthListener } = useAuthStore();
 
   useEffect(() => {
     const unsubscribe = initializeAuthListener();
@@ -25,18 +25,16 @@ export default function RootNavigator() {
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {!isAuth ? (
-        <Stack.Screen
-          name="Auth"
-          component={AuthNavigator}
-        />
-      ) : (
-        <Stack.Screen
-          name="Main"
-          component={MainNavigator}
-        />
-      )}
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Main">
+      <Stack.Screen
+        name="Main"
+        component={MainNavigator}
+      />
+      <Stack.Screen
+        name="Auth"
+        component={AuthNavigator}
+        options={{ presentation: 'modal' }}
+      />
     </Stack.Navigator>
   );
 }

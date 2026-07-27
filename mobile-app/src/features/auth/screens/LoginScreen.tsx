@@ -2,18 +2,22 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Tag, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
-import { colors } from '@/app/theme/colors';
 import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/app/store/useAuthStore';
+import { useTheme } from '@/app/theme/ThemeContext';
+import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
   const { login, isLoading } = useAuthStore();
+  const { colors } = useTheme();
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -22,8 +26,16 @@ export default function LoginScreen() {
     }
     
     try {
-      await login(email, password);
+      setIsLoggingIn(true);
+      const cleanEmail = email.trim();
+      console.log("Intentando login con:", cleanEmail);
+      await login(cleanEmail, password);
+      setIsLoggingIn(false);
+      // Redirigir al inicio después de iniciar sesión con éxito
+      navigation.navigate("Main");
     } catch (error: any) {
+      setIsLoggingIn(false);
+      console.log("Error de login:", error.code, error.message);
       // Firebase auth error handling
       let errorMessage = "No se pudo iniciar sesión.";
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
@@ -38,16 +50,21 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView 
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} bounces={false} keyboardShouldPersistTaps="handled">
         <LinearGradient
           colors={[colors.primary, '#f97316', '#ea580c']}
           style={styles.headerGradient}
         >
+          <View style={styles.topBar}>
+             <View style={{ flex: 1 }} />
+             <ThemeToggle />
+          </View>
+          
           <View style={styles.iconContainer}>
-            <View style={styles.iconBackground}>
+            <View style={[styles.iconBackground, { backgroundColor: colors.card }]}>
               <Tag color={colors.primary} size={48} />
             </View>
             <Text style={styles.title}>Bienvenido</Text>
@@ -56,7 +73,7 @@ export default function LoginScreen() {
         </LinearGradient>
 
         <View style={styles.formContainer}>
-          <View style={styles.formCard}>
+          <View style={[styles.formCard, { backgroundColor: colors.card, shadowColor: colors.border }]}>
             <Input
               label="Correo electrónico"
               placeholder="tu@email.com"
@@ -86,16 +103,16 @@ export default function LoginScreen() {
             />
 
             <TouchableOpacity style={styles.forgotPasswordContainer}>
-              <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
+              <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
 
-            <Button title="Iniciar Sesión" onPress={handleLogin} isLoading={isLoading} />
+            <Button title="Iniciar Sesión" onPress={handleLogin} isLoading={isLoggingIn} />
           </View>
 
           <View style={styles.footerContainer}>
-            <Text style={styles.footerText}>¿No tienes cuenta? </Text>
+            <Text style={[styles.footerText, { color: colors.textSecondary }]}>¿No tienes cuenta? </Text>
             <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-              <Text style={styles.registerText}>Regístrate</Text>
+              <Text style={[styles.registerText, { color: colors.primary }]}>Regístrate</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -107,27 +124,29 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
   },
   headerGradient: {
-    paddingTop: 80,
+    paddingTop: 40,
     paddingBottom: 60,
     paddingHorizontal: 24,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
   },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 16,
+  },
   iconContainer: {
     alignItems: 'center',
   },
   iconBackground: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 16,
     elevation: 5,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
@@ -150,11 +169,9 @@ const styles = StyleSheet.create({
     marginTop: -32,
   },
   formCard: {
-    backgroundColor: 'white',
     borderRadius: 24,
     padding: 24,
     elevation: 5,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
@@ -164,7 +181,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   forgotPasswordText: {
-    color: colors.primary,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -175,11 +191,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   footerText: {
-    color: colors.textSecondary,
     fontSize: 14,
   },
   registerText: {
-    color: colors.primary,
     fontWeight: 'bold',
     fontSize: 14,
   },

@@ -1,6 +1,6 @@
 import React from "react";
 import { View, TextInput, Text, StyleSheet, TextInputProps } from "react-native";
-import { colors } from "@/app/theme/colors";
+import { useTheme } from "@/app/theme/ThemeContext";
 
 export interface InputProps extends TextInputProps {
   label?: string;
@@ -17,14 +17,20 @@ export function Input({
   style,
   ...props
 }: InputProps) {
+  const { colors } = useTheme();
+  
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: colors.text }]}>{label}</Text>}
       
       <View
         style={[
           styles.inputContainer,
-          error ? styles.inputError : null,
+          { 
+            borderColor: colors.border,
+            backgroundColor: colors.inputBackground 
+          },
+          error ? { borderColor: colors.danger } : null,
           style,
         ]}
       >
@@ -33,6 +39,7 @@ export function Input({
         <TextInput
           style={[
             styles.input,
+            { color: colors.text },
             icon ? styles.inputWithLeftIcon : null,
             rightIcon ? styles.inputWithRightIcon : null,
           ]}
@@ -43,7 +50,7 @@ export function Input({
         {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
       </View>
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
     </View>
   );
 }
@@ -54,7 +61,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: colors.text,
     marginBottom: 8,
     fontWeight: "500",
   },
@@ -62,19 +68,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#E5E7EB", // Equivalent to Tailwind's gray-200
     borderRadius: 12,
-    backgroundColor: "white",
     height: 48,
-  },
-  inputError: {
-    borderColor: colors.danger,
   },
   input: {
     flex: 1,
     height: "100%",
     paddingHorizontal: 16,
-    color: colors.text,
     fontSize: 16,
   },
   inputWithLeftIcon: {
@@ -96,7 +96,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   errorText: {
-    color: colors.danger,
     fontSize: 12,
     marginTop: 4,
   },
