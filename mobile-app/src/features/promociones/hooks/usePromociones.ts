@@ -16,10 +16,21 @@ export interface Promocion {
   distanciaRealKm?: number; // Para ordenar internamente
   latitude?: number;
   longitude?: number;
+  empresaId?: string;
+}
+
+export interface EmpresaConPromociones {
+  id: string;
+  nombre: string;
+  markerColor: string;
+  latitude: number;
+  longitude: number;
+  promociones: Promocion[];
 }
 
 export const usePromociones = () => {
   const [promociones, setPromociones] = useState<Promocion[]>([]);
+  const [empresasAgrupadas, setEmpresasAgrupadas] = useState<EmpresaConPromociones[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { location, isLoading: isLocationLoading, errorMsg: locationError } = useLocation();
@@ -112,13 +123,43 @@ export const usePromociones = () => {
             distanciaRealKm: distanciaReal,
             latitude: lat,
             longitude: lon,
+            empresaId: data.empresaId,
           });
         });
+
+        // Ordenar por distancia (los que tienen Infinity irán al final)
 
         // Ordenar por distancia (los que tienen Infinity irán al final)
         promosData.sort((a, b) => (a.distanciaRealKm || Infinity) - (b.distanciaRealKm || Infinity));
 
         setPromociones(promosData);
+
+        // Agrupar por empresa
+        const grouped: Record<string, EmpresaConPromociones> = {};
+        Object.values(empresasMap).forEach(empresa => {
+          const lat = empresa.latitud || empresa.coordenadas?.latitude;
+          const lon = empresa.longitud || empresa.coordenadas?.longitude;
+          if (lat && lon) {
+            grouped[empresa.id] = {
+              id: empresa.id,
+              nombre: empresa.nombre || empresa.negocio || 'Negocio',
+              markerColor: empresa.markerColor || '#ea580c',
+              latitude: lat,
+              longitude: lon,
+              promociones: []
+            };
+          }
+        });
+
+        promosData.forEach(promo => {
+          if (promo.empresaId && grouped[promo.empresaId]) {
+            grouped[promo.empresaId].promociones.push(promo);
+          }
+        });
+
+        const agrupadasArray = Object.values(grouped).filter(g => g.promociones.length > 0);
+        setEmpresasAgrupadas(agrupadasArray);
+        
       } catch (err: any) {
         console.error("Error fetching promociones:", err);
         setError(err.message || 'Error al cargar promociones');
@@ -133,5 +174,6 @@ export const usePromociones = () => {
     }
   }, [location, isLocationLoading]); // Se recarga cuando la ubicación cambia
 
-  return { promociones, isLoading: isLoading || isLocationLoading, error: error || locationError };
+  return { promociones, empresasAgrupadas, isLoading: isLoading || isLocationLoading, error: error || locationError };
 };
+

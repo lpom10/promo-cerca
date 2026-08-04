@@ -11,7 +11,7 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { location, isLoading: isLocationLoading } = useLocation();
-  const { promociones, isLoading: isPromosLoading } = usePromociones();
+  const { empresasAgrupadas, isLoading: isPromosLoading } = usePromociones();
   const mapRef = useRef<MapView>(null);
 
   // Center map on user location when it loads
@@ -55,21 +55,22 @@ export default function MapScreen() {
         showsUserLocation={true}
         showsMyLocationButton={false} // We have a custom FAB
       >
-        {promociones.map((promo) => {
-          if (promo.latitude && promo.longitude) {
+        {empresasAgrupadas.map((empresa) => {
+          if (empresa.latitude && empresa.longitude) {
+            const promoCount = empresa.promociones.length;
             return (
               <Marker
-                key={promo.id}
+                key={empresa.id}
                 coordinate={{ 
-                  latitude: Number(promo.latitude), 
-                  longitude: Number(promo.longitude) 
+                  latitude: Number(empresa.latitude), 
+                  longitude: Number(empresa.longitude) 
                 }}
-                title={promo.store}
-                description={promo.title}
+                title={empresa.nombre}
+                description={`${promoCount} promociones activas`}
               >
-                <View style={[styles.pinBadge, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.pinText}>{promo.discount}</Text>
-                  <View style={[styles.pinTriangle, { borderTopColor: colors.primary }]} />
+                <View style={[styles.pinBadge, { backgroundColor: empresa.markerColor || colors.primary }]}>
+                  <Text style={styles.pinText}>{promoCount}</Text>
+                  <View style={[styles.pinTriangle, { borderTopColor: empresa.markerColor || colors.primary }]} />
                 </View>
               </Marker>
             );

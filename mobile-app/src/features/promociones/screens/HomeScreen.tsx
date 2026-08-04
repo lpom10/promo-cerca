@@ -160,7 +160,12 @@ export default function HomeScreen() {
         ) : (
           <View style={styles.promotionsContainer}>
             {filteredPromociones.map(promo => (
-              <TouchableOpacity key={promo.id} style={[styles.promoCard, { backgroundColor: colors.card, shadowColor: colors.border }]} activeOpacity={0.9}>
+              <TouchableOpacity 
+                key={promo.id} 
+                style={[styles.promoCard, { backgroundColor: colors.card, shadowColor: colors.border }]} 
+                activeOpacity={0.9}
+                onPress={() => navigation.navigate('PromoDetail', { promo })}
+              >
                 {/* Image Section */}
                 <View style={styles.promoImageContainer}>
                   <Image source={{ uri: promo.image }} style={styles.promoImage} />

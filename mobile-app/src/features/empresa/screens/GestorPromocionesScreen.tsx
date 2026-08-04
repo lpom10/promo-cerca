@@ -1,16 +1,32 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useTheme } from '@/app/theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEmpresaPromociones } from '../hooks/useEmpresaPromociones';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Plus, Clock, Eye, MapPin, MoreVertical } from 'lucide-react-native';
 import { Promocion } from '@/features/promociones/types/promocion';
+import { CreatePromotionModal } from '../components/CreatePromotionModal';
+import { useAuthStore } from '@/app/store/useAuthStore';
 
 export default function GestorPromocionesScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { promociones, isLoading } = useEmpresaPromociones();
+  const { userDetails } = useAuthStore();
+  
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+
+  const handleOpenCreateModal = () => {
+    if (!userDetails?.latitud || !userDetails?.longitud) {
+      Alert.alert(
+        'Ubicación Requerida',
+        'Para publicar una promoción, primero debes configurar la ubicación exacta de tu negocio en tu Perfil.'
+      );
+      return;
+    }
+    setIsCreateModalVisible(true);
+  };
 
   const renderPromo = ({ item }: { item: Promocion }) => {
     // Assuming status logic or data exists
@@ -81,7 +97,7 @@ export default function GestorPromocionesScreen() {
       )}
 
       {/* Floating Action Button */}
-      <TouchableOpacity style={styles.fab} activeOpacity={0.8}>
+      <TouchableOpacity style={styles.fab} activeOpacity={0.8} onPress={handleOpenCreateModal}>
         <LinearGradient
           colors={[colors.primary, '#ea580c']}
           style={styles.fabGradient}
@@ -89,6 +105,11 @@ export default function GestorPromocionesScreen() {
           <Plus color="white" size={28} />
         </LinearGradient>
       </TouchableOpacity>
+
+      <CreatePromotionModal 
+        visible={isCreateModalVisible}
+        onClose={() => setIsCreateModalVisible(false)}
+      />
     </View>
   );
 }

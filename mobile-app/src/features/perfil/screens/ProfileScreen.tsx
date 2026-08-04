@@ -135,31 +135,31 @@ export default function ProfileScreen() {
             {userType === 'empresa' ? (
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: colors.primary }]}>3</Text>
+                  <Text style={[styles.statValue, { color: colors.primary }]}>{userDetails?.metrics?.promos || 0}</Text>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Promos</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: colors.primary }]}>4.8</Text>
+                  <Text style={[styles.statValue, { color: colors.primary }]}>{userDetails?.metrics?.rating || 0}</Text>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}><Star color={colors.textSecondary} size={12}/> Rating</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: colors.primary }]}>142</Text>
+                  <Text style={[styles.statValue, { color: colors.primary }]}>{userDetails?.metrics?.redeemedCoupons || 0}</Text>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Canjes</Text>
                 </View>
               </View>
             ) : (
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: colors.primary }]}>12</Text>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Tickets</Text>
+                  <Text style={[styles.statValue, { color: colors.primary }]}>{userDetails?.metrics?.totalRedeemed || 0}</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Canjeados</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: colors.primary }]}>8</Text>
+                  <Text style={[styles.statValue, { color: colors.primary }]}>{userDetails?.favoritos?.length || 0}</Text>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Favoritos</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: colors.primary }]}>24</Text>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Canjeados</Text>
+                  <Text style={[styles.statValue, { color: colors.primary }]}>{userDetails?.metrics?.points || 0}</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Puntos</Text>
                 </View>
               </View>
             )}

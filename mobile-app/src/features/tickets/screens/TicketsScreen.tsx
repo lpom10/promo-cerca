@@ -112,7 +112,10 @@ export default function TicketsScreen() {
                 <View style={[styles.circleRight, { backgroundColor: colors.background }]} />
               </View>
 
-              <TouchableOpacity style={styles.qrButton}>
+              <TouchableOpacity 
+                style={styles.qrButton}
+                onPress={() => navigation.navigate('TicketDetail', { ticketId: ticket.id })}
+              >
                 <QrCode color={colors.primary} size={20} />
                 <Text style={[styles.qrButtonText, { color: colors.primary }]}>Toca para ver código QR</Text>
               </TouchableOpacity>

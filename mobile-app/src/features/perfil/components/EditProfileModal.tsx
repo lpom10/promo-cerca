@@ -6,6 +6,7 @@ import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import { useAuthStore } from '@/app/store/useAuthStore';
 import { validarTelefono, sanitizarNumero } from '@/shared/utils/validators';
+import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 
 interface EditProfileModalProps {
   visible: boolean;
@@ -23,6 +24,9 @@ export const EditProfileModal = ({ visible, onClose }: EditProfileModalProps) =>
     telefono: '',
     negocio: '',
     direccion: '',
+    markerColor: '',
+    latitud: null as number | null,
+    longitud: null as number | null,
   });
 
   // Pre-fill data
@@ -33,6 +37,9 @@ export const EditProfileModal = ({ visible, onClose }: EditProfileModalProps) =>
         telefono: userDetails.telefono || '',
         negocio: userDetails.negocio || '',
         direccion: userDetails.direccion || '',
+        markerColor: userDetails.markerColor || '',
+        latitud: userDetails.latitud || userDetails.coordenadas?.latitude || null,
+        longitud: userDetails.longitud || userDetails.coordenadas?.longitude || null,
       });
     }
   }, [visible, userDetails]);
@@ -71,6 +78,9 @@ export const EditProfileModal = ({ visible, onClose }: EditProfileModalProps) =>
       if (userType === 'empresa') {
         updateData.negocio = form.negocio.trim();
         updateData.direccion = form.direccion.trim();
+        if (form.markerColor) updateData.markerColor = form.markerColor.trim();
+        if (form.latitud !== null) updateData.latitud = form.latitud;
+        if (form.longitud !== null) updateData.longitud = form.longitud;
       }
 
       await updateProfile(updateData);
@@ -148,6 +158,44 @@ export const EditProfileModal = ({ visible, onClose }: EditProfileModalProps) =>
                   onChangeText={(v) => handleChange('direccion', v)}
                   icon={<MapPin color={colors.textSecondary} size={20} />}
                 />
+                <Input
+                  label="Color del Marcador (Hex)"
+                  placeholder="Ej. #FF0000"
+                  value={form.markerColor}
+                  onChangeText={(v) => handleChange('markerColor', v)}
+                  icon={<MapPin color={form.markerColor || colors.textSecondary} size={20} />}
+                />
+                
+                <Text style={[styles.mapLabel, { color: colors.text }]}>Ubicación Exacta (Requerido para publicar promos)</Text>
+                <Text style={[styles.mapSublabel, { color: colors.textSecondary }]}>Toca el mapa para establecer la ubicación de tu local</Text>
+                
+                <View style={styles.mapContainer}>
+                  <MapView
+                    provider={PROVIDER_DEFAULT}
+                    style={styles.map}
+                    initialRegion={{
+                      latitude: form.latitud || -3.9931,
+                      longitude: form.longitud || -79.2042,
+                      latitudeDelta: 0.05,
+                      longitudeDelta: 0.05,
+                    }}
+                    onPress={(e) => {
+                      setForm(prev => ({
+                        ...prev,
+                        latitud: e.nativeEvent.coordinate.latitude,
+                        longitud: e.nativeEvent.coordinate.longitude,
+                      }));
+                    }}
+                  >
+                    {form.latitud && form.longitud && (
+                      <Marker
+                        coordinate={{ latitude: form.latitud, longitude: form.longitud }}
+                        pinColor={form.markerColor || colors.primary}
+                      />
+                    )}
+                  </MapView>
+                </View>
+
               </View>
             )}
 
@@ -221,5 +269,25 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     borderTopWidth: 1,
-  }
+  },
+  mapLabel: {
+    marginTop: 16,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  mapSublabel: {
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  mapContainer: {
+    height: 180,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  map: {
+    width: '100%',
+    height: '100%',
+  },
 });

@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
 import { useTheme } from '@/app/theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScanLine, Search, CheckCircle2, XCircle } from 'lucide-react-native';
 import { Button } from '@/shared/ui/Button';
+import { CameraView, Camera } from 'expo-camera';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '@/core/config/firebase';
 
 export default function CanjeTicketsScreen() {
   const { colors } = useTheme();
@@ -12,27 +15,70 @@ export default function CanjeTicketsScreen() {
   const [ticketCode, setTicketCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [result, setResult] = useState<'success' | 'error' | null>(null);
+  
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanned, setScanned] = useState(false);
 
-  const handleVerify = () => {
-    if (!ticketCode.trim()) return;
-    
+  useEffect(() => {
+    const getCameraPermissions = async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
+    };
+    getCameraPermissions();
+  }, []);
+
+  const verifyTicketInFirestore = async (code: string) => {
     setIsVerifying(true);
     setResult(null);
 
-    // Simulate API call for now
-    setTimeout(() => {
-      setIsVerifying(false);
-      // Fake logic: if it ends with "1", it's valid. Otherwise invalid.
-      if (ticketCode.endsWith('1')) {
-        setResult('success');
+    try {
+      const ticketRef = doc(db, 'redemptions', code);
+      const ticketDoc = await getDoc(ticketRef);
+
+      if (ticketDoc.exists()) {
+        const data = ticketDoc.data();
+        if (data.status === 'PENDING') {
+          await updateDoc(ticketRef, { status: 'REDEEMED' });
+          setResult('success');
+        } else {
+          setResult('error'); // Ya fue canjeado o expirado
+        }
       } else {
         setResult('error');
       }
-    }, 1500);
+    } catch (error) {
+      console.error("Error verifying ticket:", error);
+      setResult('error');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleVerify = () => {
+    if (!ticketCode.trim()) return;
+    verifyTicketInFirestore(ticketCode);
   };
 
   const handleScan = () => {
-    Alert.alert("Escanear QR", "La cámara se abrirá en una futura actualización.");
+    if (hasPermission === null) {
+      Alert.alert("Permisos de cámara", "Solicitando permisos de cámara...");
+      return;
+    }
+    if (hasPermission === false) {
+      Alert.alert("Permisos de cámara", "No hay acceso a la cámara. Habilita los permisos en la configuración.");
+      return;
+    }
+    setIsScanning(true);
+    setScanned(false);
+    setResult(null);
+  };
+
+  const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
+    setScanned(true);
+    setIsScanning(false);
+    setTicketCode(data);
+    verifyTicketInFirestore(data);
   };
 
   return (
@@ -47,16 +93,35 @@ export default function CanjeTicketsScreen() {
         </View>
 
         {/* Scanner Placeholder */}
-        <TouchableOpacity 
-          style={[styles.scannerPlaceholder, { backgroundColor: colors.card, borderColor: colors.border }]}
-          activeOpacity={0.8}
-          onPress={handleScan}
-        >
-          <View style={[styles.scanIconWrapper, { backgroundColor: colors.primary + '15' }]}>
-            <ScanLine color={colors.primary} size={48} />
+        {isScanning ? (
+          <View style={[styles.scannerPlaceholder, { overflow: 'hidden', borderWidth: 0 }]}>
+            <CameraView 
+              style={StyleSheet.absoluteFillObject}
+              facing="back"
+              onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+              barcodeScannerSettings={{
+                barcodeTypes: ['qr'],
+              }}
+            />
+            <TouchableOpacity 
+              style={styles.closeScannerButton}
+              onPress={() => setIsScanning(false)}
+            >
+              <XCircle color="white" size={32} />
+            </TouchableOpacity>
           </View>
-          <Text style={[styles.scanText, { color: colors.primary }]}>Toca para abrir la cámara</Text>
-        </TouchableOpacity>
+        ) : (
+          <TouchableOpacity 
+            style={[styles.scannerPlaceholder, { backgroundColor: colors.card, borderColor: colors.border }]}
+            activeOpacity={0.8}
+            onPress={handleScan}
+          >
+            <View style={[styles.scanIconWrapper, { backgroundColor: colors.primary + '15' }]}>
+              <ScanLine color={colors.primary} size={48} />
+            </View>
+            <Text style={[styles.scanText, { color: colors.primary }]}>Toca para abrir la cámara</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.divider}>
           <View style={[styles.line, { backgroundColor: colors.border }]} />
@@ -208,5 +273,14 @@ const styles = StyleSheet.create({
   resultDesc: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  closeScannerButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+    padding: 4,
   }
 });
