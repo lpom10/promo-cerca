@@ -12,6 +12,9 @@ import {
   updateDoc,
   runTransaction,
   increment,
+  orderBy,
+  limit,
+  startAfter,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../../../firebase';
@@ -59,18 +62,18 @@ export const generarCodigoTicket = () => {
   return codigo;
 };
 
-export const crearTicket = async (usuarioId, promocionId, empresaId, promocionData, usuarioData) => {
+export const crearTicket = async (usuarioId, promocionId, empresaId, promocionData = {}, usuarioData = {}) => {
   try {
     if (!usuarioId || typeof usuarioId !== 'string') throw new Error('Usuario ID inválido');
     if (!promocionId || typeof promocionId !== 'string') throw new Error('Promoción ID inválido');
     if (!empresaId || typeof empresaId !== 'string') throw new Error('Empresa ID inválido');
-    if (!promocionData || typeof promocionData !== 'object') throw new Error('Datos de promoción inválidos');
+    if (promocionData != null && typeof promocionData !== 'object') throw new Error('Datos de promoción inválidos');
 
+    // El servidor ignora los campos financieros/fecha de promocionData para evitar manipulación.
     const resultado = await crearTicketCallable({
       usuarioId,
       promocionId,
       empresaId,
-      promocionData,
       usuarioData,
     });
 
@@ -86,10 +89,24 @@ export const crearTicket = async (usuarioId, promocionId, empresaId, promocionDa
   }
 };
 
-export const obtenerTicketsUsuario = async (usuarioId) => {
+const buildTicketsQuery = ({ field, value, pageSize = 50, lastDoc = null }) => {
+  const constraints = [
+    where(field, '==', value),
+    orderBy('fechaGeneracion', 'desc'),
+  ];
+
+  if (lastDoc) {
+    constraints.push(startAfter(lastDoc));
+  }
+
+  constraints.push(limit(pageSize));
+  return query(collection(db, 'tickets'), ...constraints);
+};
+
+export const obtenerTicketsUsuario = async (usuarioId, pageSize = 50, lastDoc = null) => {
   try {
     if (!usuarioId || typeof usuarioId !== 'string') throw new Error('Usuario ID inválido');
-    const snap = await getDocs(query(collection(db, 'tickets'), where('usuarioId', '==', usuarioId)));
+    const snap = await getDocs(buildTicketsQuery({ field: 'usuarioId', value: usuarioId, pageSize, lastDoc }));
     return snap.docs.map(parseTicket);
   } catch (error) {
     logError(error, { accion: 'obtenerTicketsUsuario' });
@@ -97,10 +114,10 @@ export const obtenerTicketsUsuario = async (usuarioId) => {
   }
 };
 
-export const obtenerTicketsEmpresa = async (empresaId) => {
+export const obtenerTicketsEmpresa = async (empresaId, pageSize = 50, lastDoc = null) => {
   try {
     if (!empresaId || typeof empresaId !== 'string') throw new Error('Empresa ID inválido');
-    const snap = await getDocs(query(collection(db, 'tickets'), where('empresaId', '==', empresaId)));
+    const snap = await getDocs(buildTicketsQuery({ field: 'empresaId', value: empresaId, pageSize, lastDoc }));
     return snap.docs.map(parseTicket);
   } catch (error) {
     logError(error, { accion: 'obtenerTicketsEmpresa' });

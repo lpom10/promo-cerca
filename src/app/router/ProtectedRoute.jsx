@@ -4,6 +4,7 @@ import { useUserProfile } from '../../core/auth/useUserProfile';
 import { useAuth } from '../../shared/hooks/useAuth';
 import { Spinner } from '../../shared/ui';
 import { PATHS } from '../../router/paths';
+import { logError } from '../../shared/utils/errorHandler';
 
 const ProtectedRoute = ({ redirectTo = PATHS.login }) => {
   const { user, logout, loading: authLoading } = useAuth();
@@ -16,11 +17,18 @@ const ProtectedRoute = ({ redirectTo = PATHS.login }) => {
   useEffect(() => {
     if (!loading && user && role === null && !hasLoggedOut) {
       setHasLoggedOut(true);
-      logout()
-        .catch(() => {})
-        .finally(() => {
+
+      const handleInvalidRole = async () => {
+        try {
+          await logout();
+        } catch (error) {
+          logError(error, { accion: 'ProtectedRoute_logout' });
+        } finally {
           navigate(PATHS.login, { replace: true });
-        });
+        }
+      };
+
+      handleInvalidRole();
     }
   }, [loading, user, role, logout, navigate, hasLoggedOut]);
 

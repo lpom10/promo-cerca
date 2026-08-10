@@ -1,7 +1,8 @@
 // src/modules/empresa/services/empresaService.js
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, orderBy, Timestamp, limit, getCountFromServer } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, orderBy, Timestamp, limit, startAfter, getCountFromServer } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../../firebase';
+import { db, storage, functions } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
 
 // ── GET: Obtener perfil de empresa ──
@@ -54,14 +55,20 @@ export const obtenerSuscripcionEmpresa = async (empresaId) => {
   }
 };
 
-export const obtenerHistorialSuscripcionesEmpresa = async (empresaId) => {
+export const obtenerHistorialSuscripcionesEmpresa = async (empresaId, pageSize = 20, lastDoc = null) => {
   try {
     if (!empresaId) throw new Error('Empresa ID es requerido');
-    const q = query(
-      collection(db, 'suscripciones'),
+    const constraints = [
       where('empresaId', '==', empresaId),
-      orderBy('createdAt', 'desc')
-    );
+      orderBy('createdAt', 'desc'),
+    ];
+
+    if (lastDoc) {
+      constraints.push(startAfter(lastDoc));
+    }
+
+    constraints.push(limit(pageSize));
+    const q = query(collection(db, 'suscripciones'), ...constraints);
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (err) {
@@ -137,39 +144,21 @@ export const obtenerInfoAdminPago = async () => {
   }
 };
 
+const crearSuscripcionPendienteCallable = httpsCallable(functions, 'crearSuscripcionPendienteCallable');
+
 export const crearSuscripcionPendiente = async (empresaId, plan, paymentId = null, receiptUrl = null) => {
   try {
     if (!empresaId) throw new Error('Empresa ID es requerido');
     if (!plan || !plan.id) throw new Error('Plan inválido');
 
-    const solicitudesExistentesSnap = await getDocs(
-      query(collection(db, 'pagos'), where('empresaId', '==', empresaId))
-    );
-
-    const yaTienePendiente = solicitudesExistentesSnap.docs.some((docSnap) => {
-      const status = docSnap.data()?.status ?? docSnap.data()?.estado;
-      return status === 'espera' || status === 'pendiente';
-    });
-
-    if (yaTienePendiente) {
-      throw new Error('Ya tienes una solicitud de suscripción pendiente. Espera a que se revise antes de enviar otra.');
-    }
-
-    const pago = {
+    const response = await crearSuscripcionPendienteCallable({
       empresaId,
       planId: plan.id,
-      planNombre: plan.nombre,
-      precio: plan.precio,
-      monto: plan.precio,
-      status: 'espera',
       paymentId,
       receiptUrl,
-      createdAt: Timestamp.now(),
-      proximoRenovacion: null,
-    };
+    });
 
-    const pagoRef = await addDoc(collection(db, 'pagos'), pago);
-    return { id: pagoRef.id, ...pago };
+    return response.data;
   } catch (err) {
     logError(err, { accion: 'crearSuscripcionPendiente' });
     throw err;

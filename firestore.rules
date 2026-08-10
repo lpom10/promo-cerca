@@ -34,8 +34,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    function isActiveCompany() {
+      return resource.data.estado in ['aprobado', 'activa', 'publicada'];
+    }
+
     match /empresa/{empresaId} {
-      allow read: if true;
+      allow read: if isOwner(empresaId) || isAdmin() || resource.data.publico == true || isActiveCompany();
       allow create: if isOwner(empresaId)
         && request.resource.data.nombre is string
         && request.resource.data.email is string
@@ -59,8 +63,11 @@ service cloud.firestore {
         && request.resource.data.activa is bool
         && request.resource.data.estado is string
         && request.resource.data.createdAt is timestamp;
-      allow update: if (isOwner(resource.data.empresaId) || isAdmin())
-        || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visualizaciones']));
+      // Las visualizaciones se incrementan solo desde la función callable segura,
+      // no desde el cliente directo, para evitar spam de actualizaciones de contador.
+      allow update: if isAdmin()
+        || (isOwner(resource.data.empresaId)
+          && request.resource.data.visualizaciones == resource.data.visualizaciones);
       allow delete: if isOwner(resource.data.empresaId) || isAdmin();
     }
 
@@ -93,8 +100,21 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    function esPlanValido(planId, precio, monto) {
+      return (planId == 'basico' && precio == 9.99 && monto == 9.99)
+        || (planId == 'profesional' && precio == 24.99 && monto == 24.99)
+        || (planId == 'empresarial' && precio == 99.99 && monto == 99.99);
+    }
+
     match /pagos/{pagoId} {
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.empresaId;
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.empresaId
+        && request.resource.data.empresaId is string
+        && request.resource.data.planId is string
+        && request.resource.data.status == 'espera'
+        && request.resource.data.precio is number
+        && request.resource.data.monto is number
+        && esPlanValido(request.resource.data.planId, request.resource.data.precio, request.resource.data.monto);
       allow read: if isOwner(resource.data.empresaId) || isAdmin();
       allow update: if isAdmin();
     }

@@ -5,6 +5,7 @@ import { useAuth } from '../../shared/hooks/useAuth';
 import { Spinner } from '../../shared/ui';
 import { PATHS } from '../../router/paths';
 import { getDashboardPathByRole } from '../../router/dashboardPaths';
+import { logError } from '../../shared/utils/errorHandler';
 
 const RoleGuard = ({ allowedRoles, fallbackPath = null }) => {
   const { user, logout } = useAuth();
@@ -15,11 +16,18 @@ const RoleGuard = ({ allowedRoles, fallbackPath = null }) => {
   useEffect(() => {
     if (!loading && user && role === null && !hasLoggedOut) {
       setHasLoggedOut(true);
-      logout()
-        .catch(() => {})
-        .finally(() => {
+
+      const handleInvalidRole = async () => {
+        try {
+          await logout();
+        } catch (error) {
+          logError(error, { accion: 'RoleGuard_logout' });
+        } finally {
           navigate(PATHS.login, { replace: true });
-        });
+        }
+      };
+
+      handleInvalidRole();
     }
   }, [loading, user, role, logout, navigate, hasLoggedOut]);
 

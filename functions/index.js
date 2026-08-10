@@ -6,6 +6,22 @@ admin.initializeApp();
 
 const db = admin.firestore();
 
+// Whitelist de planes usada por Cloud Functions y referenciada en src/data/planes.js.
+// Mantener sincronizado con el frontend para evitar diferencias entre creación de pagos y precios.
+const PLANES_PERMITIDOS = {
+  basico: { nombre: 'Plan Básico', precio: 9.99, duracion: 30 },
+  profesional: { nombre: 'Plan Profesional', precio: 24.99, duracion: 30 },
+  empresarial: { nombre: 'Plan Empresarial', precio: 99.99, duracion: 30 },
+};
+
+const getPlanInfo = (planId) => PLANES_PERMITIDOS[planId] || null;
+
+const sanitizeUserString = (value, fallback = '', maxLength = 100) => {
+  if (typeof value !== 'string') return fallback;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && trimmed.length <= maxLength ? trimmed : fallback;
+};
+
 const ensureAuthenticated = (request) => {
   if (!request.auth?.uid) {
     throw new HttpsError('unauthenticated', 'Debe iniciar sesión para realizar esta acción.');
@@ -143,6 +159,57 @@ exports.rechazarPagoCallable = onCall(async (request) => {
   return { ok: true, pagoId };
 });
 
+exports.crearSuscripcionPendienteCallable = onCall(async (request) => {
+  const { data, auth } = request;
+  ensureAuthenticated(request);
+
+  const empresaId = data?.empresaId;
+  const planId = data?.planId;
+  const receiptUrl = data?.receiptUrl || '';
+  const paymentId = data?.paymentId || null;
+
+  if (!empresaId || typeof empresaId !== 'string') {
+    throw new HttpsError('invalid-argument', 'Empresa ID inválido.');
+  }
+  if (!planId || typeof planId !== 'string') {
+    throw new HttpsError('invalid-argument', 'Plan ID inválido.');
+  }
+  if (request.auth.uid !== empresaId && !(await isAdmin(request.auth.uid))) {
+    throw new HttpsError('permission-denied', 'No puedes crear un pago para otra empresa.');
+  }
+
+  const plan = getPlanInfo(planId);
+  if (!plan) {
+    throw new HttpsError('invalid-argument', 'Plan no válido.');
+  }
+
+  const pendingPaymentSnap = await db.collection('pagos')
+    .where('empresaId', '==', empresaId)
+    .where('status', '==', 'espera')
+    .limit(1)
+    .get();
+
+  if (!pendingPaymentSnap.empty) {
+    throw new HttpsError('already-exists', 'Ya existe una solicitud de pago pendiente para esta empresa.');
+  }
+
+  const pago = {
+    empresaId,
+    planId,
+    planNombre: plan.nombre,
+    precio: plan.precio,
+    monto: plan.precio,
+    status: 'espera',
+    paymentId,
+    receiptUrl,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    proximoRenovacion: null,
+  };
+
+  const pagoRef = await db.collection('pagos').add(pago);
+  return { id: pagoRef.id, ...pago };
+});
+
 exports.canjearTicketCallable = onCall(async (request) => {
   const { data, auth } = request;
   ensureAuthenticated(request);
@@ -206,7 +273,6 @@ exports.crearTicketCallable = onCall(async (request) => {
   const usuarioId = data?.usuarioId || auth.uid;
   const promocionId = data?.promocionId;
   const empresaId = data?.empresaId;
-  const promocionData = data?.promocionData || {};
   const usuarioData = data?.usuarioData || {};
 
   if (!usuarioId || typeof usuarioId !== 'string') {
@@ -221,6 +287,9 @@ exports.crearTicketCallable = onCall(async (request) => {
   if (data?.usuarioId && data.usuarioId !== auth.uid) {
     throw new HttpsError('permission-denied', 'No puedes crear un ticket para otro usuario.');
   }
+
+  const usuarioNombre = sanitizeUserString(usuarioData?.nombre, 'Cliente');
+  const usuarioTelefono = sanitizeUserString(usuarioData?.telefono, 'N/A');
 
   const ticketId = `${usuarioId}_${promocionId}`;
   const ticketRef = db.collection('tickets').doc(ticketId);
@@ -246,11 +315,7 @@ exports.crearTicketCallable = onCall(async (request) => {
     }
 
     const ahora = new Date();
-    const fechaExp = promocionData.fechaHoraExpiracion?.toDate?.()
-      || promocionData.fechaHoraExpiracion
-      || promo.fechaHoraExpiracion?.toDate?.()
-      || promo.fechaHoraExpiracion;
-
+    const fechaExp = promo.fechaHoraExpiracion?.toDate?.() || promo.fechaHoraExpiracion || promo.fechaFin;
     if (fechaExp) {
       const fechaExpiracion = fechaExp instanceof Date ? fechaExp : new Date(fechaExp);
       if (ahora > fechaExpiracion) {
@@ -268,20 +333,20 @@ exports.crearTicketCallable = onCall(async (request) => {
 
     const ticket = {
       usuarioId,
-      usuarioNombre: usuarioData?.nombre || 'Cliente',
-      usuarioTelefono: usuarioData?.telefono || 'N/A',
+      usuarioNombre,
+      usuarioTelefono,
       promocionId,
       empresaId,
       codigo: Math.random().toString(36).slice(2, 10).toUpperCase(),
       estado: 'generado',
       fechaGeneracion: admin.firestore.FieldValue.serverTimestamp(),
       fechaCanjeado: null,
-      promocionTitulo: promocionData?.titulo || promo.titulo || 'Promoción',
-      empresaNombre: promocionData?.empresaNombre || promocionData?.empresa?.nombre || promo.empresaNombre || 'Empresa',
-      descuento: promocionData?.descuento ?? promo.descuento ?? null,
-      precioOriginal: promocionData?.precioOriginal ?? promo.precioOriginal ?? null,
-      precioDescuento: promocionData?.precioDescuento ?? promo.precioDescuento ?? null,
-      fechaHoraExpiracion: promocionData?.fechaHoraExpiracion || promo.fechaHoraExpiracion || promo.fechaFin || null,
+      promocionTitulo: promo.titulo || 'Promoción',
+      empresaNombre: promo.empresaNombre || promo.empresa?.nombre || 'Empresa',
+      descuento: promo.descuento ?? null,
+      precioOriginal: promo.precioOriginal ?? null,
+      precioDescuento: promo.precioDescuento ?? null,
+      fechaHoraExpiracion: promo.fechaHoraExpiracion || promo.fechaFin || null,
       recordatorioExpiracionEnviado: false,
     };
 
@@ -306,7 +371,7 @@ exports.crearTicketCallable = onCall(async (request) => {
       usuarioId: empresaId,
       tipo: 'tickets_agotados',
       titulo: 'Tickets agotados',
-      mensaje: `La promoción "${promocionData?.titulo || 'esta promoción'}" ya no tiene tickets disponibles.`,
+      mensaje: `La promoción "${resultado.ticket.promocionTitulo}" ya no tiene tickets disponibles.`,
       datos: { promocionId, empresaId },
       leida: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -314,6 +379,38 @@ exports.crearTicketCallable = onCall(async (request) => {
   }
 
   return { ok: true, ticket: { id: ticketId, ...resultado.ticket } };
+});
+
+exports.registrarVisualizacionCallable = onCall(async (request) => {
+  const { data } = request;
+
+  const promocionId = data?.promocionId;
+  const empresaId = data?.empresaId;
+  const usuarioId = data?.usuarioId || null;
+
+  if (!promocionId || typeof promocionId !== 'string') {
+    throw new HttpsError('invalid-argument', 'Promoción ID inválido.');
+  }
+  if (!empresaId || typeof empresaId !== 'string') {
+    throw new HttpsError('invalid-argument', 'Empresa ID inválido.');
+  }
+
+  const vistaRef = db.collection('vistas').doc();
+  const promocionRef = db.collection('promociones').doc(promocionId);
+
+  await db.runTransaction(async (transaction) => {
+    transaction.set(vistaRef, {
+      promocionId,
+      empresaId,
+      usuarioId,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    transaction.update(promocionRef, {
+      visualizaciones: admin.firestore.FieldValue.increment(1),
+    });
+  });
+
+  return { ok: true };
 });
 
 exports.crearNotificacionSegura = onCall(async (request) => {

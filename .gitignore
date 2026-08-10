@@ -12,10 +12,9 @@ dist
 dist-ssr
 *.local
 
-# Environment variables - NUNCA COMMITEARTODOS
-.env
-.env.local
-.env.*.local
+# Environment variables - NUNCA COMITEAR
+.env*
+!.env.example
 
 # Editor directories and files
 .vscode/*

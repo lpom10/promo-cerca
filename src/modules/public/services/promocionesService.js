@@ -1,31 +1,49 @@
 import { collection, getDocs, query, where, limit, orderBy, addDoc, increment, Timestamp, doc, updateDoc, deleteDoc, startAfter, getDoc } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
 
 const ESTADOS_PROMOCIONES_PUBLICAS = ['aprobada', 'aprobado', 'activa', 'publicada'];
+const ESTADOS_EMPRESAS_PUBLICAS = ['aprobado', 'activa', 'publicada'];
+
+const mergeEmpresas = (snapshots) => {
+  const empresasMap = {};
+  snapshots.forEach((snapshot) => {
+    snapshot.forEach((doc) => {
+      empresasMap[doc.id] = { id: doc.id, ...doc.data() };
+    });
+  });
+  return Object.values(empresasMap)
+    .sort((a, b) => (b.createdAt?.toMillis?.() || new Date(b.createdAt).getTime()) - (a.createdAt?.toMillis?.() || new Date(a.createdAt).getTime()))
+    .slice(0, 100)
+    .reduce((acc, empresa) => {
+      acc[empresa.id] = empresa;
+      return acc;
+    }, {});
+};
 
 /**
- * Cargar todas las empresas aprobadas
+ * Cargar todas las empresas públicas o activas
  * @returns {Promise<Object>} Mapa de empresas { empresaId: empresaData }
  */
 export const cargarEmpresasAprobadas = async () => {
   try {
-    const q = query(
-      collection(db, 'empresa'),
-      where('estado', '==', 'aprobado'),
-      limit(100)
-    );
-    const snapshot = await getDocs(q);
-    
-    const empresasMap = {};
-    snapshot.forEach(doc => {
-      empresasMap[doc.id] = {
-        id: doc.id,
-        ...doc.data()
-      };
-    });
-    
-    return empresasMap;
+    const [activasSnap, publicasSnap] = await Promise.all([
+      getDocs(query(
+        collection(db, 'empresa'),
+        where('estado', 'in', ESTADOS_EMPRESAS_PUBLICAS),
+        orderBy('createdAt', 'desc'),
+        limit(100)
+      )),
+      getDocs(query(
+        collection(db, 'empresa'),
+        where('publico', '==', true),
+        orderBy('createdAt', 'desc'),
+        limit(100)
+      )),
+    ]);
+
+    return mergeEmpresas([activasSnap, publicasSnap]);
   } catch (err) {
     logError(err, { accion: 'cargarEmpresasAprobadas', servicio: 'promocionesService' });
     return {};
@@ -68,13 +86,15 @@ export const obtenerDatosHomePage = async () => {
     const [empresasSnapshot, promocionesSnapshot] = await Promise.all([
       getDocs(query(
         collection(db, 'empresa'),
-        where('estado', '==', 'aprobado'),
+        where('estado', 'in', ESTADOS_EMPRESAS_PUBLICAS),
+        orderBy('createdAt', 'desc'),
         limit(100)
       )),
       getDocs(query(
         collection(db, 'promociones'),
-        where('estado', '==', 'aprobado'),
+        where('estado', 'in', ESTADOS_PROMOCIONES_PUBLICAS),
         where('activa', '==', true),
+        orderBy('createdAt', 'desc'),
         limit(20)
       )),
     ]);
@@ -235,23 +255,43 @@ export const eliminarPromocionPublica = async (promocionId) => {
   }
 };
 
-export const obtenerEmpresasLimitadas = async (limitSize = 100) => {
+export const obtenerEmpresasLimitadas = async (limitSize = 30) => {
   try {
-    const q = query(collection(db, 'empresa'), limit(limitSize));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const [activasSnap, publicasSnap] = await Promise.all([
+      getDocs(query(
+        collection(db, 'empresa'),
+        where('estado', 'in', ESTADOS_EMPRESAS_PUBLICAS),
+        orderBy('createdAt', 'desc'),
+        limit(limitSize)
+      )),
+      getDocs(query(
+        collection(db, 'empresa'),
+        where('publico', '==', true),
+        orderBy('createdAt', 'desc'),
+        limit(limitSize)
+      )),
+    ]);
+
+    const empresasMap = {};
+    activasSnap.forEach((doc) => { empresasMap[doc.id] = { id: doc.id, ...doc.data() }; });
+    publicasSnap.forEach((doc) => { empresasMap[doc.id] = { id: doc.id, ...doc.data() }; });
+
+    return Object.values(empresasMap)
+      .sort((a, b) => (b.createdAt?.toMillis?.() || new Date(b.createdAt).getTime()) - (a.createdAt?.toMillis?.() || new Date(a.createdAt).getTime()))
+      .slice(0, limitSize);
   } catch (err) {
     logError(err, { accion: 'obtenerEmpresasLimitadas', servicio: 'promocionesService' });
     return [];
   }
 };
 
-export const obtenerPromocionesActivasLimitadas = async (limitSize = 100) => {
+export const obtenerPromocionesActivasLimitadas = async (limitSize = 30) => {
   try {
     const q = query(
       collection(db, 'promociones'),
       where('activa', '==', true),
       where('estado', 'in', ESTADOS_PROMOCIONES_PUBLICAS),
+      orderBy('createdAt', 'desc'),
       limit(limitSize)
     );
     const snapshot = await getDocs(q);
@@ -266,7 +306,11 @@ export const obtenerEmpresaPorId = async (empresaId) => {
   try {
     if (!empresaId) return null;
     const snap = await getDoc(doc(db, 'empresa', empresaId));
-    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    const empresaData = snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    if (empresaData && !empresaData.publico && !ESTADOS_EMPRESAS_PUBLICAS.includes(empresaData.estado)) {
+      return null;
+    }
+    return empresaData;
   } catch (err) {
     logError(err, { accion: 'obtenerEmpresaPorId', empresaId, servicio: 'promocionesService' });
     throw err;
@@ -346,18 +390,15 @@ export const formatearTiempoRestante = (t) => {
   return `${t.segundos}s`;
 };
 
-// ── Registrar visualización de una promoción ──────────────────────────────────
+const registrarVisualizacionCallable = httpsCallable(functions, 'registrarVisualizacionCallable');
 
+// ── Registrar visualización de una promoción ──────────────────────────────────
 export const registrarVisualizacion = async (promocionId, empresaId, usuarioId = null) => {
   try {
     if (!promocionId || typeof promocionId !== 'string') throw new Error('Promoción ID inválido');
     if (!empresaId   || typeof empresaId   !== 'string') throw new Error('Empresa ID inválido');
 
-    await addDoc(collection(db, 'vistas'), {
-      promocionId, empresaId, usuarioId,
-      timestamp: Timestamp.now(),
-    });
-    await updateDoc(doc(db, 'promociones', promocionId), { visualizaciones: increment(1) });
+    await registrarVisualizacionCallable({ promocionId, empresaId, usuarioId });
   } catch (error) {
     logError(error, { accion: 'registrarVisualizacion' });
     // no relanzar — es acción secundaria

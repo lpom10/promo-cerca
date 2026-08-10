@@ -16,57 +16,12 @@ export const AuthProvider = ({ children }) => {
   React.useEffect(() => {
     let isMounted = true;
 
-    const verifyProfile = async (uid) => {
-      const checkProfile = async () => {
-        try {
-          const [userSnap, empresaSnap, adminSnap] = await Promise.all([
-            getDoc(doc(db, 'usuarios', uid)),
-            getDoc(doc(db, 'empresa', uid)),
-            getDoc(doc(db, 'admin', uid)),
-          ]);
-
-          return userSnap.exists() || empresaSnap.exists() || adminSnap.exists();
-        } catch (error) {
-          logError(error, { accion: 'verify_orphan_account', uid });
-          return false;
-        }
-      };
-
-      const firstTry = await checkProfile();
-      if (firstTry) return true;
-
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      return await checkProfile();
-    };
-
     const unsubscribe = onAuthStateChanged(
       auth,
-      async (firebaseUser) => {
+      (firebaseUser) => {
         if (!isMounted) return;
 
-        if (!firebaseUser) {
-          setUser(null);
-          setLoading(false);
-          return;
-        }
-
-        setLoading(true);
-        const hasProfile = await verifyProfile(firebaseUser.uid);
-
-        if (!isMounted) return;
-
-        if (!hasProfile) {
-          try {
-            await signOut(auth);
-          } catch (error) {
-            logError(error, { accion: 'signOut_orphan_account' });
-          }
-          setUser(null);
-          setLoading(false);
-          return;
-        }
-
-        setUser(firebaseUser);
+        setUser(firebaseUser || null);
         setLoading(false);
       },
       (error) => {

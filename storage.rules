@@ -13,6 +13,10 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
+    function isPromoPublico() {
+      return resource != null && resource.metadata.publico == 'true';
+    }
+
     // Comprobantes de pago de suscripciones: solo la propia empresa sube el suyo,
     // y solo la empresa dueña o un admin pueden leerlo (dato sensible).
     match /comprobantes/{empresaId}/{fileName} {
@@ -21,9 +25,10 @@ service firebase.storage {
       allow update, delete: if false;
     }
 
-    // Imágenes de promociones: lectura pública, escritura solo por la empresa dueña.
+    // Imágenes de promociones: lectura pública solo si el archivo está marcado como público,
+    // en caso contrario la lectura exige autenticación y que sea el propietario o un admin.
     match /promociones/{empresaId}/{fileName} {
-      allow read: if true;
+      allow read: if isPromoPublico() || (request.auth != null && (request.auth.uid == empresaId || isAdmin()));
       allow create: if request.auth != null && request.auth.uid == empresaId && esImagenValida();
       allow update, delete: if request.auth != null && (request.auth.uid == empresaId || isAdmin());
     }

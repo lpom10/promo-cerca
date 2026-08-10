@@ -281,7 +281,7 @@ const Locales = () => {
 
     if (user && userType === 'cliente') {
       try {
-        const newTicket = await crearTicket(user.uid, local.id, local.empresaId, local, userDetails);
+        const newTicket = await crearTicket(user.uid, local.id, local.empresaId, undefined, userDetails);
         setActiveTicket(newTicket);
         setTicketLocal(local);
       } catch (error) {

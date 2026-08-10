@@ -146,8 +146,8 @@ const Mapa = () => {
 
         // Traemos empresas y promociones sin filtros de ordenamiento que oculten datos
         const [empresasDocs, promosDocs] = await Promise.all([
-          obtenerEmpresasLimitadas(100),
-          obtenerPromocionesActivasLimitadas(100),
+          obtenerEmpresasLimitadas(30),
+          obtenerPromocionesActivasLimitadas(30),
         ]);
 
         const empresasMap = {};
@@ -363,7 +363,7 @@ const Mapa = () => {
     try {
       setTicketLoading(true);
       try { await registrarVisualizacion(promo.id, selected.empresa.empresaId, user.uid); } catch (e) { /* ignore */ }
-      const ticket = await crearTicket(user.uid, promo.id, selected.empresa.empresaId, promo, userDetails);
+      const ticket = await crearTicket(user.uid, promo.id, selected.empresa.empresaId, undefined, userDetails);
       setGeneratedTicket(ticket);
     } catch (err) {
       logError(err, { accion: 'crearTicket', componente: 'Mapa' });
