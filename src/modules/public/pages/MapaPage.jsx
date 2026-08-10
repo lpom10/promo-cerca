@@ -74,6 +74,106 @@ const MapaFocus = ({ targetId, markerRefs, locales }) => {
   return null;
 };
 
+const VisibleMarkers = ({ items, markerRefs, setSelected }) => {
+  const map = useMap();
+  const [clusters, setClusters] = useState([]);
+  const moveTimeout = useRef(null);
+
+  const rebuildClusters = () => {
+    const zoom = map.getZoom();
+    const bounds = map.getBounds();
+    const cell = Math.max(0.001, 0.5 / Math.pow(2, Math.max(0, zoom - 3)));
+
+    const buckets = {};
+    items.forEach((empresa) => {
+      const lat = Number(empresa.lat);
+      const lng = Number(empresa.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      if (!bounds.contains([lat, lng])) return; // only markers inside view
+      const keyLat = Math.round(lat / cell) * cell;
+      const keyLng = Math.round(lng / cell) * cell;
+      const key = `${keyLat}_${keyLng}`;
+      if (!buckets[key]) buckets[key] = { lat: keyLat, lng: keyLng, empresas: [] };
+      buckets[key].empresas.push(empresa);
+    });
+
+    const arr = Object.values(buckets).map((b) => ({
+      lat: b.lat,
+      lng: b.lng,
+      empresas: b.empresas,
+      count: b.empresas.reduce((s, e) => s + (e.promoCount || 0), 0),
+    }));
+    setClusters(arr);
+  };
+
+  useEffect(() => {
+    rebuildClusters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
+
+  useMapEvents({
+    moveend: () => {
+      if (moveTimeout.current) clearTimeout(moveTimeout.current);
+      moveTimeout.current = setTimeout(() => rebuildClusters(), 150);
+    },
+    zoomend: () => {
+      if (moveTimeout.current) clearTimeout(moveTimeout.current);
+      moveTimeout.current = setTimeout(() => rebuildClusters(), 150);
+    }
+  });
+
+  return clusters.map((cluster, i) => {
+    const isCluster = cluster.empresas.length > 1 || cluster.count > 1;
+    const firstEmpresa = cluster.empresas[0];
+    const primaryPromo = firstEmpresa && firstEmpresa.promociones && firstEmpresa.promociones[0];
+    return (
+      <Marker
+        key={`cluster-${i}-${cluster.lat}-${cluster.lng}`}
+        position={[cluster.lat, cluster.lng]}
+        icon={createEmpresaIcon({ count: cluster.count, isCluster })}
+        ref={(ref) => { if (ref && firstEmpresa) markerRefs.current[firstEmpresa.empresaId] = ref; }}
+        eventHandlers={{ click: () => setSelected({ empresa: firstEmpresa, promo: primaryPromo }) }}
+      >
+        <Tooltip direction="top" offset={[0, -50]} opacity={1}>
+          <div style={{ width: isCluster ? 300 : 220 }}>
+            {isCluster ? (
+              <div>
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>{cluster.count} promociones en este punto</div>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  {cluster.empresas.slice(0, 4).flatMap(e => e.promociones.slice(0, 2)).slice(0, 6).map((promo) => (
+                    <div key={promo.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {promo.imagen ? <img src={promo.imagen} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6 }} loading="lazy"/> : <div style={{ width: 40, height: 40, background: '#e2e8f0', borderRadius: 6 }} />}
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{promo.titulo}</div>
+                        <div style={{ fontSize: 12, color: '#64748b', display: 'flex', gap: '5px', alignItems: 'center' }}>
+                          <span>-{promo.descuento}%</span>
+                          {promo.precioOriginal && <span style={{ textDecoration: 'line-through', fontSize: '10px' }}>${promo.precioOriginal}</span>}
+                          {promo.precioDescuento && <span style={{ fontWeight: 'bold', color: '#2B87FF' }}>${promo.precioDescuento}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                {primaryPromo?.imagen ? <img src={primaryPromo.imagen} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8 }} loading="lazy"/> : <div style={{ width: 56, height: 56, background: '#eef2ff', borderRadius: 8, display:'flex', alignItems:'center', justifyContent:'center' }}>{getEmoji(firstEmpresa?.categoria)}</div>}
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {firstEmpresa.empresaNombre}
+                    {primaryPromo?.precioDescuento && <span style={{ fontSize: '12px', color: '#2B87FF', marginLeft: '8px' }}>${primaryPromo.precioDescuento}</span>}
+                  </div>
+                  <div style={{ fontSize: 13, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{primaryPromo?.titulo || 'Promoción'}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </Tooltip>
+      </Marker>
+    );
+  });
+};
+
 const Mapa = () => {
   const [searchParams] = useSearchParams();
   const targetId = searchParams.get('id');
@@ -235,118 +335,7 @@ const Mapa = () => {
     return matchCat && matchSearch;
   });
 
-  const todasPromos = locales.filter((promo) => {
-    if (promo.activa === false) return false;
-
-    const matchCat = catActiva === 'todos' || promo.categoria === catActiva;
-    const searchLower = search.toLowerCase();
-    const matchSearch = !searchLower || 
-      promo.empresaNombre?.toLowerCase().includes(searchLower) || 
-      promo.titulo?.toLowerCase().includes(searchLower);
-    
-    return matchCat && matchSearch;
-  });
-
-  const totalPromos = todasPromos.length;
-
-  const VisibleMarkers = ({ items }) => {
-    const map = useMap();
-    const [clusters, setClusters] = useState([]);
-    const moveTimeout = useRef(null);
-
-    const rebuildClusters = () => {
-      const zoom = map.getZoom();
-      const bounds = map.getBounds();
-      const cell = Math.max(0.001, 0.5 / Math.pow(2, Math.max(0, zoom - 3)));
-
-      const buckets = {};
-      items.forEach((empresa) => {
-        const lat = Number(empresa.lat);
-        const lng = Number(empresa.lng);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-        if (!bounds.contains([lat, lng])) return; // only markers inside view
-        const keyLat = Math.round(lat / cell) * cell;
-        const keyLng = Math.round(lng / cell) * cell;
-        const key = `${keyLat}_${keyLng}`;
-        if (!buckets[key]) buckets[key] = { lat: keyLat, lng: keyLng, empresas: [] };
-        buckets[key].empresas.push(empresa);
-      });
-
-      const arr = Object.values(buckets).map((b) => ({
-        lat: b.lat,
-        lng: b.lng,
-        empresas: b.empresas,
-        count: b.empresas.reduce((s, e) => s + (e.promoCount || 0), 0),
-      }));
-      setClusters(arr);
-    };
-
-    useEffect(() => {
-      rebuildClusters();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [items]);
-
-    useMapEvents({
-      moveend: () => {
-        if (moveTimeout.current) clearTimeout(moveTimeout.current);
-        moveTimeout.current = setTimeout(() => rebuildClusters(), 150);
-      },
-      zoomend: () => {
-        if (moveTimeout.current) clearTimeout(moveTimeout.current);
-        moveTimeout.current = setTimeout(() => rebuildClusters(), 150);
-      }
-    });
-
-    return clusters.map((cluster, i) => {
-      const isCluster = cluster.empresas.length > 1 || cluster.count > 1;
-      const firstEmpresa = cluster.empresas[0];
-      const primaryPromo = firstEmpresa && firstEmpresa.promociones && firstEmpresa.promociones[0];
-      return (
-      <Marker
-        key={`cluster-${i}-${cluster.lat}-${cluster.lng}`}
-        position={[cluster.lat, cluster.lng]}
-        icon={createEmpresaIcon({ count: cluster.count, isCluster })}
-        ref={(ref) => { if (ref && firstEmpresa) markerRefs.current[firstEmpresa.empresaId] = ref; }}
-        eventHandlers={{ click: () => setSelected({ empresa: firstEmpresa, promo: primaryPromo }) }}
-      >
-        <Tooltip direction="top" offset={[0, -50]} opacity={1}>
-          <div style={{ width: isCluster ? 300 : 220 }}>
-            {isCluster ? (
-              <div>
-                <div style={{ fontWeight: 800, marginBottom: 6 }}>{cluster.count} promociones en este punto</div>
-                <div style={{ display: 'grid', gap: 6 }}>
-                  {cluster.empresas.slice(0, 4).flatMap(e => e.promociones.slice(0, 2)).slice(0, 6).map((promo) => (
-                    <div key={promo.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      {promo.imagen ? <img src={promo.imagen} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6 }} loading="lazy"/> : <div style={{ width: 40, height: 40, background: '#e2e8f0', borderRadius: 6 }} />}
-                      <div style={{ overflow: 'hidden' }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{promo.titulo}</div>
-                        <div style={{ fontSize: 12, color: '#64748b', display: 'flex', gap: '5px', alignItems: 'center' }}>
-                          <span>-{promo.descuento}%</span>
-                          {promo.precioOriginal && <span style={{ textDecoration: 'line-through', fontSize: '10px' }}>${promo.precioOriginal}</span>}
-                          {promo.precioDescuento && <span style={{ fontWeight: 'bold', color: '#2B87FF' }}>${promo.precioDescuento}</span>}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                {primaryPromo?.imagen ? <img src={primaryPromo.imagen} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8 }} loading="lazy"/> : <div style={{ width: 56, height: 56, background: '#eef2ff', borderRadius: 8, display:'flex', alignItems:'center', justifyContent:'center' }}>{getEmoji(firstEmpresa?.categoria)}</div>}
-                <div style={{ overflow: 'hidden' }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    {firstEmpresa.empresaNombre}
-                    {primaryPromo?.precioDescuento && <span style={{ fontSize: '12px', color: '#2B87FF', marginLeft: '8px' }}>${primaryPromo.precioDescuento}</span>}
-                  </div>
-                  <div style={{ fontSize: 13, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{primaryPromo?.titulo || 'Promoción'}</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </Tooltip>
-      </Marker>
-    )});
-  };
+  const totalPromos = promocionesFiltradas.length;
 
   const closeOverlay = () => setSelected(null);
 
@@ -386,7 +375,7 @@ const Mapa = () => {
       <aside className="mapa-sidebar">
         <div className="mapa-sidebar-header">
           <h2 className="mapa-sidebar-titulo">Emprendimientos cercanos <span className="mapa-count">({empresasParaMapa.length})</span></h2>
-          <div className="mapa-header-stats">Mostrando <strong>{empresasParaMapa.length}</strong> negocios · <strong>{todasPromos.length}</strong> promociones</div>
+          <div className="mapa-header-stats">Mostrando <strong>{empresasParaMapa.length}</strong> negocios · <strong>{totalPromos}</strong> promociones</div>
         </div>
         <div className="mapa-sidebar-card">
           <div className="mapa-card-controls">
@@ -422,10 +411,10 @@ const Mapa = () => {
             ))}
           </div>
           <div className="mapa-lista">
-          {todasPromos.length === 0 && (
+          {promocionesFiltradas.length === 0 && (
             <p className="mapa-sin-resultados">Sin resultados</p>
           )}
-          {todasPromos.slice(0, visibleCount).map((promo) => {
+          {promocionesFiltradas.slice(0, visibleCount).map((promo) => {
             const fechaExp = promo.fechaHoraExpiracion || promo.fechaFin;
             const tiempoRest = fechaExp ? calcularTiempoRestante(fechaExp) : null;
             const textoTiempo = tiempoRest ? formatearTiempoRestante(tiempoRest) : null;
@@ -465,7 +454,7 @@ const Mapa = () => {
               </div>
             );
           })}
-          {todasPromos.length > visibleCount && (
+          {promocionesFiltradas.length > visibleCount && (
             <div style={{ padding: 12, display: 'flex', justifyContent: 'center' }}>
               <button className="mapa-more-btn" onClick={() => setVisibleCount((v) => v + 6)}>Mostrar más</button>
             </div>
@@ -490,7 +479,7 @@ const Mapa = () => {
 
             <MapaFocus targetId={targetId} markerRefs={markerRefs} locales={empresas} />
 
-            <VisibleMarkers items={empresasParaMapa} />
+            <VisibleMarkers items={empresasParaMapa} markerRefs={markerRefs} setSelected={setSelected} />
           </MapContainer>
         )}
         {selected && (

@@ -24,9 +24,8 @@ service cloud.firestore {
     }
 
     function promoDeTicket(promocionId) {
-      return exists(/databases/$(database)/documents/promociones/$(promocionId))
-        ? get(/databases/$(database)/documents/promociones/$(promocionId)).data
-        : null;
+      let promoPath = /databases/$(database)/documents/promociones/$(promocionId);
+      return exists(promoPath) ? get(promoPath).data : null;
     }
 
     function ticketCoincideConPromo(promocionId, empresaId, descuento) {
