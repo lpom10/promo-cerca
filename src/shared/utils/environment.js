@@ -24,30 +24,12 @@ export const validateEnvVars = () => {
     }
   });
 
-  if (missing.length > 0) {
-    console.error(
-      'ADVERTENCIA: Las siguientes variables de entorno están faltando:',
-      missing
-    );
-    console.error(
-      'Por favor, copia .env.example a .env y llena los valores correctos.'
-    );
-
-    if (import.meta.env.MODE === 'production') {
-      throw new Error('Configuración incompleta. No se puede iniciar la aplicación.');
-    }
+  if (missing.length > 0 && import.meta.env.MODE === 'production') {
+    throw new Error('Configuración incompleta. No se puede iniciar la aplicación.');
   }
 };
 
 /**
  * Obtiene una variable de entorno de forma segura
  */
-export const getEnvVar = (key, defaultValue = null) => {
-  const value = import.meta.env[key];
-
-  if (!value && defaultValue === null) {
-    console.warn(`Variable de entorno no definida: ${key}`);
-  }
-
-  return value || defaultValue;
-};
+export const getEnvVar = (key, defaultValue = null) => import.meta.env[key] || defaultValue;

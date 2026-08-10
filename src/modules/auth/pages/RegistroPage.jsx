@@ -58,11 +58,20 @@ const Registro = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     let newValue = value;
-    if (['cedula', 'ruc', 'telefono'].includes(name)) newValue = sanitizarNumero(value);
-    else if (['nombre', 'negocio', 'direccion'].includes(name)) newValue = sanitizar(value);
+    if (['cedula', 'ruc', 'telefono'].includes(name)) {
+      newValue = sanitizarNumero(value);
+    } else if (['nombre', 'negocio', 'direccion'].includes(name)) {
+      newValue = sanitizar(value);
+    }
 
     setForm((f) => ({ ...f, [name]: newValue }));
-    if (errores[name]) setErrores(prev => { const next = { ...prev }; delete next[name]; return next; });
+    if (errores[name]) {
+      setErrores((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
   };
 
   const validar = () => {

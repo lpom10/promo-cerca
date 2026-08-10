@@ -1,13 +1,13 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const { onCall, HttpsError } = require('firebase-functions/v1/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 
 admin.initializeApp();
 
 const db = admin.firestore();
 
-const ensureAuthenticated = (context) => {
-  if (!context.auth?.uid) {
+const ensureAuthenticated = (request) => {
+  if (!request.auth?.uid) {
     throw new HttpsError('unauthenticated', 'Debe iniciar sesión para realizar esta acción.');
   }
 };
@@ -33,9 +33,10 @@ const canSendNotification = async (senderUid, payload) => {
   return false;
 };
 
-exports.aprobarPagoCallable = onCall(async (data, context) => {
-  ensureAuthenticated(context);
-  if (!(await isAdmin(context.auth.uid))) {
+exports.aprobarPagoCallable = onCall(async (request) => {
+  const { data, auth } = request;
+  ensureAuthenticated(request);
+  if (!(await isAdmin(auth.uid))) {
     throw new HttpsError('permission-denied', 'Solo un administrador puede aprobar pagos.');
   }
 
@@ -57,7 +58,7 @@ exports.aprobarPagoCallable = onCall(async (data, context) => {
 
   await pagoRef.update({
     status: 'aprobado',
-    procesadoPor: context.auth.uid,
+    procesadoPor: auth.uid,
     procesadoEn: admin.firestore.FieldValue.serverTimestamp(),
   });
 
@@ -104,9 +105,10 @@ exports.aprobarPagoCallable = onCall(async (data, context) => {
   return { ok: true, pagoId: pago.id };
 });
 
-exports.rechazarPagoCallable = onCall(async (data, context) => {
-  ensureAuthenticated(context);
-  if (!(await isAdmin(context.auth.uid))) {
+exports.rechazarPagoCallable = onCall(async (request) => {
+  const { data, auth } = request;
+  ensureAuthenticated(request);
+  if (!(await isAdmin(auth.uid))) {
     throw new HttpsError('permission-denied', 'Solo un administrador puede rechazar pagos.');
   }
 
@@ -122,7 +124,7 @@ exports.rechazarPagoCallable = onCall(async (data, context) => {
   await pagoRef.update({
     status: 'rechazado',
     motivo: data?.motivo || 'Rechazado por revisión administrativa',
-    procesadoPor: context.auth.uid,
+    procesadoPor: auth.uid,
     procesadoEn: admin.firestore.FieldValue.serverTimestamp(),
   });
 
@@ -141,8 +143,9 @@ exports.rechazarPagoCallable = onCall(async (data, context) => {
   return { ok: true, pagoId };
 });
 
-exports.canjearTicketCallable = onCall(async (data, context) => {
-  ensureAuthenticated(context);
+exports.canjearTicketCallable = onCall(async (request) => {
+  const { data, auth } = request;
+  ensureAuthenticated(request);
   const { ticketId, empresaId } = data || {};
 
   if (!ticketId || !empresaId) {
@@ -150,7 +153,6 @@ exports.canjearTicketCallable = onCall(async (data, context) => {
   }
 
   const ticketRef = db.collection('tickets').doc(ticketId);
-  const promoRef = null;
 
   await db.runTransaction(async (transaction) => {
     const ticketSnap = await transaction.get(ticketRef);
@@ -169,7 +171,7 @@ exports.canjearTicketCallable = onCall(async (data, context) => {
     transaction.update(ticketRef, {
       estado: 'canjeado',
       fechaCanjeado: admin.firestore.FieldValue.serverTimestamp(),
-      canjeadoPor: context.auth.uid,
+      canjeadoPor: auth.uid,
     });
 
     const promoDoc = await transaction.get(db.collection('promociones').doc(ticket.promocionId));
@@ -189,7 +191,7 @@ exports.canjearTicketCallable = onCall(async (data, context) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    if (await isCompanyOwner(context.auth.uid) || await isAdmin(context.auth.uid)) {
+    if (await isCompanyOwner(auth.uid) || await isAdmin(auth.uid)) {
       transaction.set(db.collection('notificaciones').doc(), notificacionPayload);
     }
   });
@@ -197,8 +199,126 @@ exports.canjearTicketCallable = onCall(async (data, context) => {
   return { ok: true, ticketId };
 });
 
-exports.crearNotificacionSegura = onCall(async (data, context) => {
-  ensureAuthenticated(context);
+exports.crearTicketCallable = onCall(async (request) => {
+  const { data, auth } = request;
+  ensureAuthenticated(request);
+
+  const usuarioId = data?.usuarioId || auth.uid;
+  const promocionId = data?.promocionId;
+  const empresaId = data?.empresaId;
+  const promocionData = data?.promocionData || {};
+  const usuarioData = data?.usuarioData || {};
+
+  if (!usuarioId || typeof usuarioId !== 'string') {
+    throw new HttpsError('invalid-argument', 'Usuario ID inválido.');
+  }
+  if (!promocionId || typeof promocionId !== 'string') {
+    throw new HttpsError('invalid-argument', 'Promoción ID inválido.');
+  }
+  if (!empresaId || typeof empresaId !== 'string') {
+    throw new HttpsError('invalid-argument', 'Empresa ID inválido.');
+  }
+  if (data?.usuarioId && data.usuarioId !== auth.uid) {
+    throw new HttpsError('permission-denied', 'No puedes crear un ticket para otro usuario.');
+  }
+
+  const ticketId = `${usuarioId}_${promocionId}`;
+  const ticketRef = db.collection('tickets').doc(ticketId);
+  const promoRef = db.collection('promociones').doc(promocionId);
+
+  const resultado = await db.runTransaction(async (transaction) => {
+    const ticketSnap = await transaction.get(ticketRef);
+    if (ticketSnap.exists) {
+      throw new HttpsError('already-exists', 'Ya has obtenido un ticket para esta promoción.');
+    }
+
+    const promoSnap = await transaction.get(promoRef);
+    if (!promoSnap.exists) {
+      throw new HttpsError('not-found', 'La promoción ya no existe.');
+    }
+
+    const promo = promoSnap.data() || {};
+    if (promo.empresaId !== empresaId) {
+      throw new HttpsError('permission-denied', 'La promoción no pertenece a la empresa indicada.');
+    }
+    if (promo.estado !== 'aprobado' || promo.activa !== true) {
+      throw new HttpsError('failed-precondition', 'La promoción no está disponible para generar tickets.');
+    }
+
+    const ahora = new Date();
+    const fechaExp = promocionData.fechaHoraExpiracion?.toDate?.()
+      || promocionData.fechaHoraExpiracion
+      || promo.fechaHoraExpiracion?.toDate?.()
+      || promo.fechaHoraExpiracion;
+
+    if (fechaExp) {
+      const fechaExpiracion = fechaExp instanceof Date ? fechaExp : new Date(fechaExp);
+      if (ahora > fechaExpiracion) {
+        throw new HttpsError('failed-precondition', 'La promoción ha expirado y no se pueden generar más tickets.');
+      }
+    }
+
+    const conteo = promo.ticketsGenerados || 0;
+    const siguiente = conteo + 1;
+    const limiteAlcanzado = Boolean(promo.ticketsMaximos && siguiente > promo.ticketsMaximos);
+
+    if (limiteAlcanzado) {
+      throw new HttpsError('failed-precondition', 'Lo sentimos, se acaban de agotar los tickets.');
+    }
+
+    const ticket = {
+      usuarioId,
+      usuarioNombre: usuarioData?.nombre || 'Cliente',
+      usuarioTelefono: usuarioData?.telefono || 'N/A',
+      promocionId,
+      empresaId,
+      codigo: Math.random().toString(36).slice(2, 10).toUpperCase(),
+      estado: 'generado',
+      fechaGeneracion: admin.firestore.FieldValue.serverTimestamp(),
+      fechaCanjeado: null,
+      promocionTitulo: promocionData?.titulo || promo.titulo || 'Promoción',
+      empresaNombre: promocionData?.empresaNombre || promocionData?.empresa?.nombre || promo.empresaNombre || 'Empresa',
+      descuento: promocionData?.descuento ?? promo.descuento ?? null,
+      precioOriginal: promocionData?.precioOriginal ?? promo.precioOriginal ?? null,
+      precioDescuento: promocionData?.precioDescuento ?? promo.precioDescuento ?? null,
+      fechaHoraExpiracion: promocionData?.fechaHoraExpiracion || promo.fechaHoraExpiracion || promo.fechaFin || null,
+      recordatorioExpiracionEnviado: false,
+    };
+
+    transaction.set(ticketRef, ticket);
+    transaction.update(promoRef, {
+      ticketsGenerados: admin.firestore.FieldValue.increment(1),
+      estadisticas: {
+        ticketsGenerados: siguiente,
+        porcentajeUso: promo.ticketsMaximos
+          ? Math.round((siguiente / promo.ticketsMaximos) * 100)
+          : 0,
+        ultimoTicketGenerado: admin.firestore.FieldValue.serverTimestamp(),
+      },
+    });
+
+    const agotado = Boolean(promo.ticketsMaximos && siguiente === promo.ticketsMaximos);
+    return { ticket, siguiente, agotado };
+  });
+
+  if (resultado.agotado) {
+    await db.collection('notificaciones').add({
+      usuarioId: empresaId,
+      tipo: 'tickets_agotados',
+      titulo: 'Tickets agotados',
+      mensaje: `La promoción "${promocionData?.titulo || 'esta promoción'}" ya no tiene tickets disponibles.`,
+      datos: { promocionId, empresaId },
+      leida: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
+  return { ok: true, ticket: { id: ticketId, ...resultado.ticket } };
+});
+
+exports.crearNotificacionSegura = onCall(async (request) => {
+  const { data, auth } = request;
+  ensureAuthenticated(request);
 
   const payload = data || {};
   const usuarioId = payload.usuarioId;
@@ -210,7 +330,7 @@ exports.crearNotificacionSegura = onCall(async (data, context) => {
     throw new HttpsError('invalid-argument', 'Faltan datos para crear la notificación.');
   }
 
-  if (!(await canSendNotification(context.auth.uid, payload))) {
+  if (!(await canSendNotification(auth.uid, payload))) {
     throw new HttpsError('permission-denied', 'No tienes permisos para crear esta notificación.');
   }
 

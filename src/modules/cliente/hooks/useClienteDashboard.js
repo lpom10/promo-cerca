@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { cargarDatosCliente, actualizarPerfilCliente } from '../services/clienteService';
-import { verificarNotificacionesExpiracion } from '../services/ticketService';
+import { obtenerTicketsUsuario, verificarNotificacionesExpiracion } from '../services/ticketService';
 
 const STATS_INICIAL = {
   ticketsActivos: 0,
@@ -30,6 +30,7 @@ export const useClienteDashboard = () => {
   const [promosData, setPromosData] = useState({});
   const [stats, setStats]           = useState(STATS_INICIAL);
   const [topEmpresa, setTopEmpresa] = useState(null);
+  const [error, setError]           = useState(null);
 
   // Perfil
   const [editMode, setEditMode]     = useState(false);
@@ -54,15 +55,37 @@ export const useClienteDashboard = () => {
 
     const cargar = async () => {
       setLoading(true);
+      setError(null);
       try {
-        const data = await cargarDatosCliente(user.uid);
+        const [data, ticketsData] = await Promise.all([
+          cargarDatosCliente(user.uid),
+          obtenerTicketsUsuario(user.uid),
+        ]);
         if (!activo) return;
-        setTickets(data.tickets);
-        setFavoritos(data.favoritos);
-        setEmpresasData(data.empresasData);
-        setPromosData(data.promosData);
+        const enrichedTickets = ticketsData.map((ticket) => ({
+          ...ticket,
+          _promo: data.promosData?.[ticket.promocionId] || null,
+          _empresa: data.empresasData?.[ticket.empresaId] || null,
+        }));
+        const ahorro = enrichedTickets
+          .filter((ticket) => ticket.estado === 'canjeado')
+          .reduce((sum, ticket) => sum + Number(ticket.precioDescuento || ticket.precioOriginal || 0), 0);
+        const nextStats = {
+          ticketsActivos: enrichedTickets.filter((ticket) => ticket.estado === 'generado').length,
+          ticketsCanjeados: enrichedTickets.filter((ticket) => ticket.estado === 'canjeado').length,
+          ahorroEstimado: ahorro,
+          empresasUnicas: new Set(enrichedTickets.map((ticket) => ticket.empresaId).filter(Boolean)).size,
+          favoritosCount: data.favoritos?.length || 0,
+        };
+        setTickets(enrichedTickets);
+        setFavoritos(data.favoritos || []);
+        setEmpresasData(data.empresasData || {});
+        setPromosData(data.promosData || {});
         setTopEmpresa(data.topEmpresa);
-        setStats(data.stats);
+        setStats(nextStats);
+      } catch (err) {
+        if (!activo) return;
+        setError(err.message || 'No se pudieron cargar los tickets del cliente');
       } finally {
         if (activo) setLoading(false);
       }
@@ -78,12 +101,26 @@ export const useClienteDashboard = () => {
     setLoading(true);
     try {
       const data = await cargarDatosCliente(user.uid);
-      setTickets(data.tickets);
-      setFavoritos(data.favoritos);
-      setEmpresasData(data.empresasData);
-      setPromosData(data.promosData);
+      const ticketsData = await obtenerTicketsUsuario(user.uid);
+      const enrichedTickets = ticketsData.map((ticket) => ({
+        ...ticket,
+        _promo: data.promosData?.[ticket.promocionId] || null,
+        _empresa: data.empresasData?.[ticket.empresaId] || null,
+      }));
+      setTickets(enrichedTickets);
+      setFavoritos(data.favoritos || []);
+      setEmpresasData(data.empresasData || {});
+      setPromosData(data.promosData || {});
       setTopEmpresa(data.topEmpresa);
-      setStats(data.stats);
+      setStats({
+        ticketsActivos: enrichedTickets.filter((ticket) => ticket.estado === 'generado').length,
+        ticketsCanjeados: enrichedTickets.filter((ticket) => ticket.estado === 'canjeado').length,
+        ahorroEstimado: enrichedTickets.filter((ticket) => ticket.estado === 'canjeado').reduce((sum, ticket) => sum + Number(ticket.precioDescuento || ticket.precioOriginal || 0), 0),
+        empresasUnicas: new Set(enrichedTickets.map((ticket) => ticket.empresaId).filter(Boolean)).size,
+        favoritosCount: data.favoritos?.length || 0,
+      });
+    } catch (err) {
+      setError(err.message || 'No se pudieron cargar los tickets del cliente');
     } finally {
       setLoading(false);
     }
@@ -122,7 +159,7 @@ export const useClienteDashboard = () => {
     ticketFilter, setTicketFilter,
     selectedTicketToView, setSelectedTicketToView,
     // Data
-    loading, tickets, favoritos, empresasData, promosData, stats, topEmpresa,
+    loading, tickets, favoritos, empresasData, promosData, stats, topEmpresa, error,
     filteredTickets,
     // Perfil
     editMode, setEditMode,

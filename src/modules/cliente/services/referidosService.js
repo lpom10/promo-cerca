@@ -4,11 +4,12 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   query,
+  runTransaction,
   setDoc,
   updateDoc,
   where,
-  writeBatch,
 } from 'firebase/firestore';
 import { logError } from '../../../shared/utils/errorHandler';
 import { crearNotificacion, NOTIFICATION_TYPES } from '../../../shared/services/notificationService';
@@ -70,32 +71,39 @@ export const aplicarCodigoReferido = async (usuarioId, codigoReferido) => {
     if (!referrerId || referrerId === usuarioId) return null;
 
     const referralDocRef = doc(db, COLECCION_REFERIDOS, usuarioId);
-    const existingReferral = await getDoc(referralDocRef);
-    if (
-      existingReferral.exists()
-      && existingReferral.data()?.referidoPor
-      && existingReferral.data()?.contadorReferidosAplicado === true
-    ) {
-      return null;
-    }
-
-    await setDoc(referralDocRef, {
-      ...(existingReferral.exists() ? existingReferral.data() : {}),
-      usuarioId,
-      publico: false,
-      referidoPor: referrerId,
-      codigoUsado: codigo,
-      contadorReferidosAplicado: false,
-      registradoEn: new Date(),
-    }, { merge: true });
+    const referrerDocRef = doc(db, COLECCION_REFERIDOS, referrerId);
 
     try {
-      await updateDoc(doc(db, COLECCION_REFERIDOS, referrerId), {
-        totalReferidos: (referrerDoc.data()?.totalReferidos || 0) + 1,
+      await runTransaction(db, async (tx) => {
+        const existingReferralSnap = await tx.get(referralDocRef);
+        const existingReferral = existingReferralSnap.exists() ? existingReferralSnap.data() : {};
+
+        if (
+          existingReferral?.referidoPor
+          && existingReferral?.contadorReferidosAplicado === true
+        ) {
+          return;
+        }
+
+        tx.set(referralDocRef, {
+          ...existingReferral,
+          usuarioId,
+          publico: false,
+          referidoPor: referrerId,
+          codigoUsado: codigo,
+          contadorReferidosAplicado: false,
+          registradoEn: new Date(),
+        }, { merge: true });
+
+        tx.update(referrerDocRef, {
+          totalReferidos: increment(1),
+        });
+
+        tx.update(referralDocRef, {
+          contadorReferidosAplicado: true,
+        });
       });
-      await updateDoc(referralDocRef, {
-        contadorReferidosAplicado: true,
-      });
+
       return { referrerId, codigo };
     } catch (error) {
       await updateDoc(referralDocRef, {
@@ -117,22 +125,24 @@ export const procesarBonusPorPrimerTicket = async (usuarioId, ticketData = {}) =
     const data = referralDoc.data();
     if (!data?.referidoPor || data?.bonusEntregado) return null;
 
-    const batch = writeBatch(db);
     const referrerRef = doc(db, COLECCION_REFERIDOS, data.referidoPor);
-    const referrerSnap = await getDoc(referrerRef);
-    if (!referrerSnap.exists()) return null;
+    const referralRef = referralDoc.ref;
 
-    const referrerData = referrerSnap.data() || {};
-    batch.update(referralDoc.ref, {
-      bonusEntregado: true,
-      bonusEntregadoEn: new Date(),
-      bonusTipo: 'ticket_extra',
-      bonusDetalle: `+${REWARD_TICKET_BONUS} ticket extra`,
+    await runTransaction(db, async (tx) => {
+      const referrerSnap = await tx.get(referrerRef);
+      const referralSnap = await tx.get(referralRef);
+      if (!referrerSnap.exists() || !referralSnap.exists()) return;
+
+      tx.update(referralRef, {
+        bonusEntregado: true,
+        bonusEntregadoEn: new Date(),
+        bonusTipo: 'ticket_extra',
+        bonusDetalle: `+${REWARD_TICKET_BONUS} ticket extra`,
+      });
+      tx.update(referrerRef, {
+        totalBonosEntregados: increment(1),
+      });
     });
-    batch.update(referrerRef, {
-      totalBonosEntregados: (referrerData.totalBonosEntregados || 0) + 1,
-    });
-    await batch.commit();
 
     await crearNotificacion(
       data.referidoPor,

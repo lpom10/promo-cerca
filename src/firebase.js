@@ -23,8 +23,8 @@ if (typeof window !== 'undefined' && import.meta.env.VITE_APP_CHECK_SITE_KEY) {
       provider: new ReCaptchaV3Provider(import.meta.env.VITE_APP_CHECK_SITE_KEY),
       isTokenAutoRefreshEnabled: true,
     });
-  } catch (error) {
-    console.warn('App Check no pudo inicializarse:', error);
+  } catch {
+    // App Check opcional; no interrumpir el arranque.
   }
 }
 

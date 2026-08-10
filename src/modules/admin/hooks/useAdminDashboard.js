@@ -9,6 +9,7 @@ import {
   obtenerTodasPromociones,
   obtenerEstadisticasGlobales,
   suscribirseAPagosPendientes,
+  suscribirseAEmpresasPendientes,
   aprobarEmpresa,
   rechazarEmpresa,
   eliminarEmpresa,
@@ -24,7 +25,7 @@ export const useAdminDashboard = () => {
 
   const [activeTab, setActiveTab]               = useState('solicitudes');
   const [loading, setLoading]                   = useState(true);
-  const [solicitudes, setSolicitudes]           = useState([]);
+  const [empresasPendientes, setEmpresasPendientes] = useState([]);
   const [empresasAprobadas, setEmpresasAprobadas] = useState([]);
   const [pagosPendientes, setPagosPendientes]   = useState([]);
   const [promosRevision, setPromosRevision]     = useState([]);
@@ -33,25 +34,45 @@ export const useAdminDashboard = () => {
 
   // ── Carga inicial ────────────────────────────────────────
   useEffect(() => {
+    let unsubPagos = null;
+    let unsubEmpresas = null;
+    let isMounted = true;
+
     const cargarInicial = async () => {
       try {
-        const [sols, empresas, promos] = await Promise.all([
+        const [pendientesIniciales, empresas, promos] = await Promise.all([
           obtenerSolicitudesPendientes(),
           obtenerEmpresasAprobadas(),
           obtenerPromosEnRevision(),
         ]);
-        setSolicitudes(sols);
+
+        if (!isMounted) return;
+        setEmpresasPendientes(pendientesIniciales);
         setEmpresasAprobadas(empresas);
         setPromosRevision(promos);
+      } catch (error) {
+        logError(error, { accion: 'cargarInicialAdminDashboard' });
+        if (!isMounted) return;
+        setEmpresasPendientes([]);
+        setEmpresasAprobadas([]);
+        setPromosRevision([]);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
-    cargarInicial();
 
-    // Listener en tiempo real para pagos pendientes
-    const unsubPagos = suscribirseAPagosPendientes(setPagosPendientes);
-    return () => unsubPagos();
+    cargarInicial();
+    unsubPagos = suscribirseAPagosPendientes(setPagosPendientes);
+    unsubEmpresas = suscribirseAEmpresasPendientes((empresas) => {
+      if (!isMounted) return;
+      setEmpresasPendientes(empresas);
+    });
+
+    return () => {
+      isMounted = false;
+      if (typeof unsubPagos === 'function') unsubPagos();
+      if (typeof unsubEmpresas === 'function') unsubEmpresas();
+    };
   }, []);
 
   // ── Carga bajo demanda por tab ───────────────────────────
@@ -60,23 +81,44 @@ export const useAdminDashboard = () => {
       obtenerEstadisticasGlobales().then(setStats).catch(() => {});
     }
     if (activeTab === 'promociones') {
-      obtenerTodasPromociones().then(setTodasPromociones).catch(() => {});
+      obtenerTodasPromociones()
+        .then((result) => setTodasPromociones(Array.isArray(result?.items) ? result.items : []))
+        .catch(() => setTodasPromociones([]));
     }
   }, [activeTab]);
 
   // ── Handlers ─────────────────────────────────────────────
-  const handleLogout = async () => { await logout(); navigate('/'); };
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      logError(error, { accion: 'handleLogout' });
+    }
+  };
 
   const handleAprobarEmpresa = async (empresaId) => {
-    await aprobarEmpresa(empresaId);
-    const aprobada = solicitudes.find(s => s.id === empresaId);
-    setSolicitudes(prev => prev.filter(s => s.id !== empresaId));
-    if (aprobada) setEmpresasAprobadas(prev => [...prev, { ...aprobada, estado: 'aprobado' }]);
+    try {
+      await aprobarEmpresa(empresaId);
+      const aprobada = empresasPendientes.find(s => s.id === empresaId);
+      setEmpresasPendientes(prev => prev.filter(s => s.id !== empresaId));
+      if (aprobada) setEmpresasAprobadas(prev => [...prev, { ...aprobada, estado: 'aprobado' }]);
+      return true;
+    } catch (error) {
+      logError(error, { accion: 'handleAprobarEmpresa', empresaId });
+      return false;
+    }
   };
 
   const handleRechazarEmpresa = async (empresaId, motivo) => {
-    await rechazarEmpresa(empresaId, motivo);
-    setSolicitudes(prev => prev.filter(s => s.id !== empresaId));
+    try {
+      await rechazarEmpresa(empresaId, motivo);
+      setEmpresasPendientes(prev => prev.filter(s => s.id !== empresaId));
+      return true;
+    } catch (error) {
+      logError(error, { accion: 'handleRechazarEmpresa', empresaId, motivo });
+      return false;
+    }
   };
 
   const handleEliminarEmpresa = async (empresaId) => {
@@ -91,8 +133,14 @@ export const useAdminDashboard = () => {
   };
 
   const handleGestionarPromocion = async (promoId, nuevoEstado) => {
-    await gestionarPromocion(promoId, nuevoEstado);
-    setPromosRevision(prev => prev.filter(p => p.id !== promoId));
+    try {
+      await gestionarPromocion(promoId, nuevoEstado);
+      setPromosRevision(prev => prev.filter(p => p.id !== promoId));
+      return true;
+    } catch (err) {
+      logError(err, { accion: 'handleGestionarPromocion', promoId, nuevoEstado });
+      return false;
+    }
   };
 
   const handleEliminarPromocion = async (promoId) => {
@@ -131,7 +179,7 @@ export const useAdminDashboard = () => {
     user, userDetails,
     activeTab, setActiveTab,
     loading,
-    solicitudes, empresasAprobadas, pagosPendientes,
+    empresasPendientes, empresasAprobadas, pagosPendientes,
     promosRevision, todasPromociones, stats,
     handleLogout,
     handleAprobarEmpresa, handleRechazarEmpresa, handleEliminarEmpresa,

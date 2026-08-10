@@ -1,5 +1,5 @@
 // src/modules/empresa/services/empresaService.js
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, orderBy, Timestamp, limit } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, orderBy, Timestamp, limit, getCountFromServer } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
@@ -12,7 +12,7 @@ export const obtenerPerfilEmpresa = async (empresaId) => {
     if (!docSnap.exists()) throw new Error('Empresa no encontrada');
     return { id: docSnap.id, ...docSnap.data() };
   } catch (err) {
-    logError('obtenerPerfilEmpresa', err);
+    logError(err, { accion: 'obtenerPerfilEmpresa' });
     throw err;
   }
 };
@@ -29,7 +29,7 @@ export const actualizarPerfilEmpresa = async (empresaId, datos) => {
     });
     return { exito: true };
   } catch (err) {
-    logError('actualizarPerfilEmpresa', err);
+    logError(err, { accion: 'actualizarPerfilEmpresa' });
     throw err;
   }
 };
@@ -49,7 +49,7 @@ export const obtenerSuscripcionEmpresa = async (empresaId) => {
     const doc = snapshot.docs[0];
     return { id: doc.id, ...doc.data() };
   } catch (err) {
-    logError('obtenerSuscripcionEmpresa', err);
+    logError(err, { accion: 'obtenerSuscripcionEmpresa' });
     throw err;
   }
 };
@@ -65,7 +65,7 @@ export const obtenerHistorialSuscripcionesEmpresa = async (empresaId) => {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (err) {
-    logError('obtenerHistorialSuscripcionesEmpresa', err);
+    logError(err, { accion: 'obtenerHistorialSuscripcionesEmpresa' });
     throw err;
   }
 };
@@ -85,11 +85,11 @@ export const suscribirseSuscripcionesEmpresa = (empresaId, callback) => {
       const suscripciones = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
       callback(suscripciones);
     }, (error) => {
-      logError('suscribirseSuscripcionesEmpresa', error);
+      logError(error, { accion: 'suscribirseSuscripcionesEmpresa' });
       callback([]);
     }));
   } catch (err) {
-    logError('suscribirseSuscripcionesEmpresa', err);
+    logError(err, { accion: 'suscribirseSuscripcionesEmpresa' });
     throw err;
   }
 };
@@ -132,7 +132,7 @@ export const obtenerInfoAdminPago = async () => {
     const infoDoc = await getDoc(doc(db, 'admin', 'info'));
     return infoDoc.exists() ? { id: infoDoc.id, ...infoDoc.data() } : null;
   } catch (err) {
-    logError('obtenerInfoAdminPago', err);
+    logError(err, { accion: 'obtenerInfoAdminPago' });
     throw err;
   }
 };
@@ -171,7 +171,7 @@ export const crearSuscripcionPendiente = async (empresaId, plan, paymentId = nul
     const pagoRef = await addDoc(collection(db, 'pagos'), pago);
     return { id: pagoRef.id, ...pago };
   } catch (err) {
-    logError('crearSuscripcionPendiente', err);
+    logError(err, { accion: 'crearSuscripcionPendiente' });
     throw err;
   }
 };
@@ -187,15 +187,20 @@ export const obtenerFinanzasEmpresa = async (empresaId) => {
     );
     const promosSnap = await getDocs(promosQuery);
     const promociones = promosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const totalPromociones = promociones.length;
 
     const ticketsQuery = query(
       collection(db, 'tickets'),
       where('empresaId', '==', empresaId),
-      orderBy('fechaGeneracion', 'desc'),
-      limit(100)
+      orderBy('fechaGeneracion', 'desc')
     );
     const ticketsSnap = await getDocs(ticketsQuery);
     const tickets = ticketsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const ticketsCountSnap = await getCountFromServer(query(
+      collection(db, 'tickets'),
+      where('empresaId', '==', empresaId)
+    ));
+    const ticketsGeneradosTotales = ticketsCountSnap.data().count;
 
     const ticketsPorPromocion = tickets.reduce((acc, ticket) => {
       const key = ticket.promocionId || 'sin-promocion';
@@ -225,22 +230,22 @@ export const obtenerFinanzasEmpresa = async (empresaId) => {
     });
 
     const ticketsCanjeados = tickets.filter(t => t.estado === 'canjeado').length;
-    const ticketsPendientes = tickets.filter(t => t.estado === 'pendiente').length;
+    const ticketsPendientes = tickets.filter(t => t.estado === 'generado').length;
 
     return {
       promocionesActivas,
-      promocionesTotales: promociones.length,
-      ticketsGenerados: tickets.length,
+      promocionesTotales: totalPromociones,
+      ticketsGenerados: ticketsGeneradosTotales,
       ticketsCanjeados,
       ticketsPendientes,
       valorOriginalEstimado: Number(valorOriginalEstimado.toFixed(2)),
       valorPromocionalEstimado: Number(valorPromocionalEstimado.toFixed(2)),
       ahorroEstimado: Number((valorOriginalEstimado - valorPromocionalEstimado).toFixed(2)),
-      tasaCanjeamiento: tickets.length ? Number(((ticketsCanjeados / tickets.length) * 100).toFixed(1)) : 0,
-      promedioDescuento: promociones.length ? Number((promedioDescuento / promociones.length).toFixed(1)) : 0,
+      tasaCanjeamiento: ticketsGeneradosTotales ? Number(((ticketsCanjeados / ticketsGeneradosTotales) * 100).toFixed(1)) : 0,
+      promedioDescuento: totalPromociones ? Number((promedioDescuento / totalPromociones).toFixed(1)) : 0,
     };
   } catch (err) {
-    logError('obtenerFinanzasEmpresa', err);
+    logError(err, { accion: 'obtenerFinanzasEmpresa' });
     throw err;
   }
 };
@@ -263,17 +268,14 @@ export const obtenerEstadisticasEmpresa = async (empresaId) => {
       const fin = p.fechaFin?.toDate?.() || new Date(p.fechaFin);
       return fin >= new Date();
     }).length;
-    
-    // 3. Contar vistas totales
-    const vistasQuery = query(
+
+    // 3. Contar vistas totales sin truncar el resultado
+    const vistasCountSnap = await getCountFromServer(query(
       collection(db, 'vistas'),
-      where('empresaId', '==', empresaId),
-      orderBy('timestamp', 'desc'),
-      limit(100)
-    );
-    const vistasSnap = await getDocs(vistasQuery);
-    const vistasTotal = vistasSnap.size;
-    
+      where('empresaId', '==', empresaId)
+    ));
+    const vistasTotal = vistasCountSnap.data().count;
+
     return {
       promosTotal: promociones.length,
       promosActivas,
@@ -281,7 +283,7 @@ export const obtenerEstadisticasEmpresa = async (empresaId) => {
       ultimaActualizacion: new Date().toISOString(),
     };
   } catch (err) {
-    logError('obtenerEstadisticasEmpresa', err);
+    logError(err, { accion: 'obtenerEstadisticasEmpresa' });
     throw err;
   }
 };

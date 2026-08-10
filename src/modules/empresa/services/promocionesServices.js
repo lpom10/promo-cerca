@@ -14,6 +14,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
+import { obtenerActivaPorEstado, obtenerEstadoInicialPromocion } from '../../../shared/utils/promocionModeracion';
 
 const sanitizarNombreArchivo = (nombre) => nombre.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
 
@@ -48,7 +49,7 @@ export const obtenerPromocionesPorEmpresa = async (empresaId) => {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (err) {
-    logError('obtenerPromocionesPorEmpresa', err);
+    logError(err, { accion: 'obtenerPromocionesPorEmpresa' });
     throw err;
   }
 };
@@ -59,11 +60,12 @@ export const crearPromocion = async (empresaId, datosPromocion) => {
     if (!empresaId) throw new Error('Empresa ID es requerido');
     if (!datosPromocion?.titulo) throw new Error('Título de promoción es requerido');
 
+    const estadoInicial = obtenerEstadoInicialPromocion(datosPromocion);
     const docRef = await addDoc(collection(db, 'promociones'), {
       ...datosPromocion,
       empresaId,
-      activa: true,
-      estado: datosPromocion.estado || 'activa',
+      activa: obtenerActivaPorEstado(estadoInicial),
+      estado: estadoInicial,
       creadoEn: Timestamp.now(),
       createdAt: Timestamp.now(),
       actualizadoEn: Timestamp.now(),
@@ -74,7 +76,7 @@ export const crearPromocion = async (empresaId, datosPromocion) => {
     
     return { id: docRef.id, ...datosPromocion, empresaId };
   } catch (err) {
-    logError('crearPromocion', err);
+    logError(err, { accion: 'crearPromocion' });
     throw err;
   }
 };
@@ -89,7 +91,7 @@ export const actualizarPromocion = async (promocionId, datosActualizacion) => {
     });
     return { exito: true };
   } catch (err) {
-    logError('actualizarPromocion', err);
+    logError(err, { accion: 'actualizarPromocion' });
     throw err;
   }
 };
@@ -101,7 +103,7 @@ export const eliminarPromocion = async (promocionId) => {
     await deleteDoc(doc(db, 'promociones', promocionId));
     return { exito: true };
   } catch (err) {
-    logError('eliminarPromocion', err);
+    logError(err, { accion: 'eliminarPromocion' });
     throw err;
   }
 };

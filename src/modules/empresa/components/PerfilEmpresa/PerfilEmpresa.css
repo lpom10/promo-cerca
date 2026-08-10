@@ -4,7 +4,7 @@
 
 .empresa-perfil-container {
   min-height: calc(100vh - 74px);
-  background: #0f172a;
+  background: var(--bg-primary);
   padding: 40px 5%;
   max-width: 1000px;
   margin: 0 auto;
@@ -14,7 +14,7 @@
 .empresa-perfil-error {
   text-align: center;
   padding: 60px 20px;
-  color: #cbd5e1;
+  color: #334155;
   font-size: 18px;
 }
 
@@ -22,10 +22,10 @@
   display: flex;
   gap: 30px;
   align-items: center;
-  background: #1e293b;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(253, 186, 116, 0.1));
   padding: 30px;
   border-radius: 16px;
-  border: 1px solid #334155;
+  border: 1px solid rgba(251, 76, 35, 0.18);
   margin-bottom: 30px;
 }
 
@@ -33,8 +33,8 @@
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: #0f172a;
-  border: 2px solid #ffc22f;
+  background: var(--color-accent);
+  border: 2px solid var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -54,14 +54,21 @@
 
 .empresa-perfil-info-header h1 {
   margin: 0 0 8px;
-  color: #f1f5f9;
+  color: var(--color-dark);
   font-size: 28px;
 }
 
 .empresa-perfil-info-header p {
   margin: 0 0 12px;
-  color: #94a3b8;
+  color: var(--color-gray);
   font-size: 14px;
+}
+
+.empresa-perfil-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .empresa-perfil-estado {
@@ -80,10 +87,26 @@
   color: #fff;
 }
 
+.empresa-perfil-btn-logout {
+  padding: 10px 18px;
+  border: 1px solid rgba(251, 76, 35, 0.25);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--color-primary-dark);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.empresa-perfil-btn-logout:hover {
+  background: rgba(251, 76, 35, 0.08);
+  border-color: var(--color-primary);
+}
+
 .empresa-perfil-tabs {
   display: flex;
   gap: 10px;
-  border-bottom: 2px solid #334155;
+  border-bottom: 2px solid rgba(251, 76, 35, 0.15);
   margin-bottom: 30px;
 }
 
@@ -91,7 +114,7 @@
   padding: 12px 20px;
   background: none;
   border: none;
-  color: #94a3b8;
+  color: var(--color-gray);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -101,18 +124,18 @@
 }
 
 .empresa-perfil-tab-btn:hover {
-  color: #cbd5e1;
+  color: var(--color-dark);
 }
 
 .empresa-perfil-tab-btn.active {
-  color: #ffc22f;
-  border-bottom-color: #ffc22f;
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
 }
 
 .empresa-perfil-content {
-  background: #1e293b;
+  background: var(--bg-card);
   border-radius: 12px;
-  border: 1px solid #334155;
+  border: 1px solid rgba(251, 76, 35, 0.14);
   padding: 30px;
   margin-bottom: 30px;
   min-height: 400px;
@@ -135,21 +158,21 @@
 
 .empresa-perfil-item {
   padding: 16px;
-  background: #0f172a;
+  background: var(--color-accent);
   border-radius: 8px;
-  border: 1px solid #334155;
+  border: 1px solid rgba(251, 76, 35, 0.12);
 }
 
 .empresa-perfil-item strong {
   display: block;
-  color: #ffc22f;
+  color: var(--color-primary);
   margin-bottom: 6px;
   font-size: 12px;
   text-transform: uppercase;
 }
 
 .empresa-perfil-item span {
-  color: #f1f5f9;
+  color: var(--color-dark);
   font-size: 16px;
 }
 
@@ -174,10 +197,10 @@
 .empresa-perfil-form-group input,
 .empresa-perfil-form-group textarea {
   padding: 12px;
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: #ffffff;
+  border: 1px solid rgba(251, 76, 35, 0.17);
   border-radius: 8px;
-  color: #f1f5f9;
+  color: var(--color-dark);
   font-family: inherit;
   font-size: 14px;
   transition: border-color 0.2s;

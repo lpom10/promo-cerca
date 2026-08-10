@@ -5,6 +5,18 @@ import { Spinner, ErrorBoundary } from '../../../shared/ui';
 import { obtenerTicketPorCodigo } from '../services/ticketService';
 import '../styles/canje-tickets.css';
 
+const getStatusLabel = (estado) => {
+  if (estado === 'canjeado') return 'Canjeado';
+  if (estado === 'expirado') return 'Expirado';
+  return 'Activo';
+};
+
+const getStatusClass = (estado) => {
+  if (estado === 'canjeado') return 'ticket-status canjeado';
+  if (estado === 'expirado') return 'ticket-status expirado';
+  return 'ticket-status activo';
+};
+
 const CanjeTicketsPage = () => {
   const { user } = useAuth();
   const { tickets, loading, error, canjear } = useCanjeTickets();
@@ -107,22 +119,25 @@ const CanjeTicketsPage = () => {
                 <div key={ticket.id} className="ticket-card">
                   <div className="ticket-header">
                     <h3>{ticket.promocionTitulo || 'Sin título'}</h3>
-                    <span className={`ticket-status ${ticket.estado || 'pendiente'}`}>
-                      {ticket.estado || 'Pendiente'}
+                    <span className={getStatusClass(ticket.estado)}>
+                      {getStatusLabel(ticket.estado)}
                     </span>
                   </div>
 
                   <div className="ticket-info">
                     <p><strong>Usuario:</strong> {ticket.usuarioNombre || ticket.usuarioEmail}</p>
-                    <p><strong>Descuento:</strong> {ticket.descuento}%</p>
-                    <p><strong>Fecha de generación:</strong> {new Date(ticket.fechaGenerado?.toDate?.()).toLocaleDateString()}</p>
-                    {ticket.fechaCanjeado && (
-                      <p><strong>Fecha de canje:</strong> {new Date(ticket.fechaCanjeado?.toDate?.()).toLocaleDateString()}</p>
+                    <p><strong>Descuento:</strong> {ticket.descuento || ticket.precioDescuento || '—'}</p>
+                    <p><strong>Fecha de generación:</strong> {ticket.fechaGeneracion ? new Date(ticket.fechaGeneracion?.toDate?.() || ticket.fechaGeneracion).toLocaleString() : '—'}</p>
+                    {ticket.redeemedAt && (
+                      <p><strong>Fecha de canje:</strong> {new Date(ticket.redeemedAt?.toDate?.() || ticket.redeemedAt).toLocaleString()}</p>
+                    )}
+                    {ticket.expiresAt && (
+                      <p><strong>Vence:</strong> {new Date(ticket.expiresAt?.toDate?.() || ticket.expiresAt).toLocaleString()}</p>
                     )}
                   </div>
 
                   <div className="ticket-actions">
-                    {ticket.estado !== 'canjeado' && (
+                    {ticket.estado !== 'canjeado' && ticket.estado !== 'expirado' && (
                       <button
                         onClick={() => handleCanjearTicket(ticket.id)}
                         className="btn-canjear"

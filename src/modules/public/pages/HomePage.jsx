@@ -233,11 +233,6 @@ const HomePage = () => {
     return tieneCoords && estaActiva && ticketsDisponibles;
   });
 
-  React.useEffect(() => {
-    if (import.meta.env.MODE === "development") {
-      console.debug("🗺️ PINES LISTOS:", activePromos.length);
-    }
-  }, [activePromos]);
 
   const getEmoji = (categoriaId) =>
     categorias.find((c) => c.id === categoriaId)?.emoji || "🏷️";

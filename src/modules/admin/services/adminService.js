@@ -6,6 +6,7 @@ import {
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
+import { crearCachePorClaveConcurrent } from '../../../shared/utils/concurrentCache';
 
 // ─────────────────────────────────────────────
 // CONSULTAS
@@ -20,31 +21,24 @@ const construirQueryPaginada = (coleccion, restricciones = [], pageSize = PAGE_S
   return query(collection(db, coleccion), ...constraints);
 };
 
+const ordenarPorFechaDesc = (items) => {
+  const obtenerValor = (value) => value?.toMillis?.() ?? value?.seconds ?? 0;
+  return items.slice().sort((a, b) => obtenerValor(b.createdAt) - obtenerValor(a.createdAt));
+};
+
 export const obtenerSolicitudesPendientes = async (pageSize = PAGE_SIZE, lastDoc = null) => {
-  const snap = await getDocs(construirQueryPaginada('empresa', [where('estado', '==', 'pendiente'), orderBy('createdAt', 'desc')], pageSize, lastDoc));
-  return {
-    items: snap.docs.map(d => ({ id: d.id, ...d.data() })),
-    lastDoc: snap.docs[snap.docs.length - 1] || null,
-    hasMore: snap.docs.length === pageSize,
-  };
+  const snap = await getDocs(query(collection(db, 'empresa'), where('estado', '==', 'pendiente'), limit(pageSize)));
+  return ordenarPorFechaDesc(snap.docs.map(d => ({ id: d.id, ...d.data() })));
 };
 
 export const obtenerEmpresasAprobadas = async (pageSize = PAGE_SIZE, lastDoc = null) => {
-  const snap = await getDocs(construirQueryPaginada('empresa', [where('estado', '==', 'aprobado'), orderBy('createdAt', 'desc')], pageSize, lastDoc));
-  return {
-    items: snap.docs.map(d => ({ id: d.id, ...d.data() })),
-    lastDoc: snap.docs[snap.docs.length - 1] || null,
-    hasMore: snap.docs.length === pageSize,
-  };
+  const snap = await getDocs(query(collection(db, 'empresa'), where('estado', '==', 'aprobado'), limit(pageSize)));
+  return ordenarPorFechaDesc(snap.docs.map(d => ({ id: d.id, ...d.data() })));
 };
 
 export const obtenerPromosEnRevision = async (pageSize = PAGE_SIZE, lastDoc = null) => {
   const snap = await getDocs(construirQueryPaginada('promociones', [where('estado', '==', 'pendiente'), orderBy('createdAt', 'desc')], pageSize, lastDoc));
-  return {
-    items: snap.docs.map(d => ({ id: d.id, ...d.data() })),
-    lastDoc: snap.docs[snap.docs.length - 1] || null,
-    hasMore: snap.docs.length === pageSize,
-  };
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
 export const obtenerTodasPromociones = async (pageSize = PAGE_SIZE, lastDoc = null) => {
@@ -57,24 +51,47 @@ export const obtenerTodasPromociones = async (pageSize = PAGE_SIZE, lastDoc = nu
 };
 
 export const obtenerEstadisticasGlobales = async () => {
-  const [ticketsCount, empresasCount, promosCount] = await Promise.all([
-    getCountFromServer(query(collection(db, 'tickets'))),
-    getCountFromServer(query(collection(db, 'empresa'))),
-    getCountFromServer(query(collection(db, 'promociones'))),
-  ]);
-  return {
-    totalTickets: ticketsCount.data().count,
-    totalEmpresas: empresasCount.data().count,
-    totalPromos: promosCount.data().count,
-  };
+  try {
+    const [ticketsCount, empresasCount, promosCount] = await Promise.all([
+      getCountFromServer(query(collection(db, 'tickets'))),
+      getCountFromServer(query(collection(db, 'empresa'))),
+      getCountFromServer(query(collection(db, 'promociones'))),
+    ]);
+    return {
+      totalTickets: ticketsCount.data().count,
+      totalEmpresas: empresasCount.data().count,
+      totalPromos: promosCount.data().count,
+    };
+  } catch (error) {
+    logError(error, { accion: 'obtenerEstadisticasGlobales' });
+    return {
+      totalTickets: 0,
+      totalEmpresas: 0,
+      totalPromos: 0,
+    };
+  }
 };
 
 /** Enriquece una lista de pagos con el nombre de la empresa correspondiente */
 export const enriquecerPagosConNombre = async (pagosData) => {
+  const obtenerNombreEmpresa = crearCachePorClaveConcurrent(async (empresaId) => {
+    if (!empresaId) {
+      return 'Empresa desconocida';
+    }
+
+    const empresaDoc = await getDoc(doc(db, 'empresa', empresaId));
+    return empresaDoc.exists() ? empresaDoc.data().negocio : 'Empresa desconocida';
+  });
+
   return Promise.all(pagosData.map(async (pago) => {
     try {
-      const empresaDoc = await getDoc(doc(db, 'empresa', pago.empresaId));
-      return { ...pago, empresaNombre: empresaDoc.exists() ? empresaDoc.data().negocio : 'Empresa desconocida' };
+      const empresaId = pago?.empresaId;
+      if (!empresaId) {
+        return { ...pago, empresaNombre: 'Empresa desconocida' };
+      }
+
+      const empresaNombre = await obtenerNombreEmpresa(empresaId);
+      return { ...pago, empresaNombre };
     } catch {
       return { ...pago, empresaNombre: 'Error al cargar nombre' };
     }
@@ -83,11 +100,56 @@ export const enriquecerPagosConNombre = async (pagosData) => {
 
 export const suscribirseAPagosPendientes = (onCambio) => {
   const pagosQuery = query(collection(db, 'pagos'), where('status', '==', 'espera'), orderBy('createdAt', 'desc'), limit(50));
-  return onSnapshot(pagosQuery, async (snap) => {
+  let unsubscribeFallback = null;
+  const unsubscribe = onSnapshot(pagosQuery, async (snap) => {
     const pagos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const enriquecidos = await enriquecerPagosConNombre(pagos);
     onCambio(enriquecidos);
+  }, (error) => {
+    if (import.meta.env.DEV && error?.code === 'failed-precondition' && !unsubscribeFallback) {
+      const fallbackQuery = query(collection(db, 'pagos'), where('status', '==', 'espera'), limit(50));
+      unsubscribeFallback = onSnapshot(fallbackQuery, async (snap) => {
+        const pagos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const enriquecidos = await enriquecerPagosConNombre(pagos);
+        onCambio(enriquecidos);
+      }, (fallbackError) => {
+        logError(fallbackError, { accion: 'suscribirseAPagosPendientes_fallback' });
+      });
+      return;
+    }
+    logError(error, { accion: 'suscribirseAPagosPendientes' });
   });
+
+  return () => {
+    unsubscribe();
+    if (unsubscribeFallback) unsubscribeFallback();
+  };
+};
+
+export const suscribirseAEmpresasPendientes = (onCambio) => {
+  const pendientesQuery = query(collection(db, 'empresa'), where('estado', '==', 'pendiente'), orderBy('createdAt', 'desc'), limit(50));
+  let unsubscribeFallback = null;
+  const unsubscribe = onSnapshot(pendientesQuery, (snap) => {
+    const empresas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    onCambio(empresas);
+  }, (error) => {
+    if (import.meta.env.DEV && error?.code === 'failed-precondition' && !unsubscribeFallback) {
+      const fallbackQuery = query(collection(db, 'empresa'), where('estado', '==', 'pendiente'), limit(50));
+      unsubscribeFallback = onSnapshot(fallbackQuery, (fallbackSnap) => {
+        const empresas = fallbackSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        onCambio(empresas);
+      }, (fallbackError) => {
+        logError(fallbackError, { accion: 'suscribirseAEmpresasPendientes_fallback' });
+      });
+      return;
+    }
+    logError(error, { accion: 'suscribirseAEmpresasPendientes' });
+  });
+
+  return () => {
+    unsubscribe();
+    if (unsubscribeFallback) unsubscribeFallback();
+  };
 };
 
 // ─────────────────────────────────────────────

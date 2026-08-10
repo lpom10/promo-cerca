@@ -73,17 +73,18 @@ export const validarRuc = (ruc) => {
 };
 
 /**
- * Sanitiza strings para prevenir XSS básico
+ * Sanitiza strings para prevenir XSS básico sin romper espacios en nombres y textos libres
  */
 export const sanitizar = (input) => {
   if (typeof input !== 'string') return '';
-  
+
   return input
-    .trim()
-    .substring(0, 500) // Limitar longitud
+    .normalize('NFKC')
     .replace(/[<>]/g, '') // Remover caracteres peligrosos
     .replace(/javascript:/gi, '') // Prevenir javascript: URIs
-    .replace(/on\w+\s*=/gi, ''); // Remover event handlers
+    .replace(/on\w+\s*=/gi, '') // Remover event handlers
+    .replace(/\s{2,}/g, ' ') // Colapsar múltiples espacios innecesarios
+    .substring(0, 500); // Limitar longitud
 };
 
 /**

@@ -23,7 +23,7 @@ export const useGestorPromociones = () => {
       setPromociones(datos);
       setError(null);
     } catch (err) {
-      logError('cargarPromociones', err);
+      logError(err, { accion: 'cargarPromociones' });
       setError(err.message);
     } finally {
       setLoading(false);

@@ -302,9 +302,6 @@ const Locales = () => {
         setLoading(true);
         const response = await obtenerPromocionesPublicas(pageSize);
 
-        if (response.promociones.length === 0) {
-          console.warn("⚠️ La consulta no devolvió ninguna promoción. Revisa que tus documentos tengan datos válidos en Firestore.");
-        }
 
         const ahora = new Date();
         const dataActivas = response.promociones.filter((promo) => {
@@ -322,7 +319,6 @@ const Locales = () => {
         setLastDoc(response.lastDoc);
         setHasMore(response.hasMore);
       } catch (error) {
-        console.error("Error detallado al cargar promociones:", error);
         logError(error, { accion: 'cargarPromocionesInicial', componente: 'Locales' });
       } finally {
         setLoading(false);

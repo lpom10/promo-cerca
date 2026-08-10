@@ -16,11 +16,17 @@ const GestorSuscripcion = () => {
   const [tick, setTick] = useState(Date.now());
 
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      setSuscripcionActiva(null);
+      setHistorialSuscripciones([]);
+      return undefined;
+    }
 
     cargarSuscripciones();
 
+    let active = true;
     const unsubscribePromise = suscribirseSuscripcionesEmpresa(user.uid, (suscripciones) => {
+      if (!active) return;
       const activa = suscripciones.find(s => s.estado === 'activa');
       setSuscripcionActiva(activa || null);
       setHistorialSuscripciones(suscripciones);
@@ -29,8 +35,11 @@ const GestorSuscripcion = () => {
     const intervalId = setInterval(() => setTick(Date.now()), 60000);
 
     return () => {
+      active = false;
       clearInterval(intervalId);
-      unsubscribePromise?.then((unsubscribe) => unsubscribe?.());
+      if (typeof unsubscribePromise?.then === 'function') {
+        unsubscribePromise.then((unsubscribe) => unsubscribe?.());
+      }
     };
   }, [user?.uid]);
 

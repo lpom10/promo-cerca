@@ -2,6 +2,8 @@ import { collection, getDocs, query, where, limit, orderBy, addDoc, increment, T
 import { db } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
 
+const ESTADOS_PROMOCIONES_PUBLICAS = ['aprobada', 'aprobado', 'activa', 'publicada'];
+
 /**
  * Cargar todas las empresas aprobadas
  * @returns {Promise<Object>} Mapa de empresas { empresaId: empresaData }
@@ -40,6 +42,7 @@ export const cargarPromocionesActivas = async (limitePromos = 30) => {
     const q = query(
       collection(db, 'promociones'),
       where('activa', '==', true),
+      where('estado', 'in', ESTADOS_PROMOCIONES_PUBLICAS),
       orderBy('createdAt', 'desc'),
       limit(limitePromos)
     );
@@ -184,6 +187,7 @@ export const obtenerPromocionesPublicas = async (pageSize = 12) => {
     const q = query(
       collection(db, 'promociones'),
       where('activa', '==', true),
+      where('estado', 'in', ESTADOS_PROMOCIONES_PUBLICAS),
       orderBy('createdAt', 'desc'),
       limit(pageSize)
     );
@@ -205,6 +209,7 @@ export const obtenerPromocionesPublicasSiguientePagina = async (lastDoc, pageSiz
     const q = query(
       collection(db, 'promociones'),
       where('activa', '==', true),
+      where('estado', 'in', ESTADOS_PROMOCIONES_PUBLICAS),
       orderBy('createdAt', 'desc'),
       startAfter(lastDoc),
       limit(pageSize)
@@ -246,6 +251,7 @@ export const obtenerPromocionesActivasLimitadas = async (limitSize = 100) => {
     const q = query(
       collection(db, 'promociones'),
       where('activa', '==', true),
+      where('estado', 'in', ESTADOS_PROMOCIONES_PUBLICAS),
       limit(limitSize)
     );
     const snapshot = await getDocs(q);
@@ -273,7 +279,8 @@ export const obtenerPromocionesPorEmpresa = async (empresaId) => {
     const q = query(
       collection(db, 'promociones'),
       where('empresaId', '==', empresaId),
-      where('activa', '==', true)
+      where('activa', '==', true),
+      where('estado', 'in', ESTADOS_PROMOCIONES_PUBLICAS)
     );
     const snap = await getDocs(q);
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -365,7 +372,8 @@ export const obtenerPromocionesTrending = async (limite = 5) => {
 
     const snap = await getDocs(query(
       collection(db, 'promociones'),
-      where('activa', '==', true)
+      where('activa', '==', true),
+      where('estado', 'in', ESTADOS_PROMOCIONES_PUBLICAS)
     ));
 
     return snap.docs

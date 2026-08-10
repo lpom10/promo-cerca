@@ -41,14 +41,14 @@ export const logError = (error, contexto = {}, level = ERROR_LEVELS.ERROR) => {
     stack: isDev ? error?.stack : undefined,
   };
 
-  // En producción, enviar a un servicio de logging seguro
+  // En producción, registrar el error de forma explícita para no perder eventos críticos.
   if (isDev) {
     console[level === ERROR_LEVELS.CRITICAL ? 'error' : 'warn'](
       `[${level}] ${contexto.accion || 'Error'}:`,
       errorInfo
     );
   } else {
-    console.warn('[ERROR PRODUCCION]', { ...errorInfo, stack: undefined });
+    console.error('[ERROR PRODUCCION]', { ...errorInfo, stack: undefined });
   }
 
   return errorInfo;

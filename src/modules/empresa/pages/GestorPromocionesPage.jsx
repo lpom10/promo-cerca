@@ -102,7 +102,6 @@ const GestorPromocionesPage = () => {
     try {
       return await subirImagenPromocion(file, user.uid);
     } catch (err) {
-      console.warn('Firebase Storage no aceptó la subida; se usará una imagen en memoria.', err);
       try {
         return await convertirADataUrl(file);
       } catch (fallbackErr) {

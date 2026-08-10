@@ -2,17 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import { useEmpresaDashboard } from '../hooks';
-import PerfilEmpresa from "../components/PerfilEmpresa/PerfilEmpresa";
-import GestorSuscripcion from "../components/GestorSuscripcion/GestorSuscripcion";
-import { Spinner, ErrorBoundary } from "../../../shared/ui";
+import PerfilEmpresa from '../components/PerfilEmpresa/PerfilEmpresa';
+import GestorSuscripcion from '../components/GestorSuscripcion/GestorSuscripcion';
+import { Spinner, ErrorBoundary } from '../../../shared/ui';
 import '../../../shared/ui/dashboard-pro.css';
-
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('es-EC', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0));
+import { formatCurrency } from '../../../core/firebase/firestoreUtils';
 
 const TABS = [
   { id: 'resumen',      icon: '📊', label: 'Resumen' },
@@ -161,10 +155,56 @@ const EmpresaDashboardPage = () => {
 
             {activeTab === 'tickets' && (
               <>
-                <h2 className="dpro-section-title">🎟️ Gestión de Tickets</h2>
-                <div className="dpro-empty">
-                  <div className="dpro-empty-icon">🎟️</div>
-                  <div className="dpro-empty-text">Módulo de tickets en construcción</div>
+                <h2 className="dpro-section-title">🎟️ Tickets y rendimiento</h2>
+                <div className="dpro-kpi-grid">
+                  <div className="dpro-kpi-card blue">
+                    <div className="dpro-kpi-value">{finanzas?.ticketsEmitidos ?? 0}</div>
+                    <div className="dpro-kpi-label">Emitidos</div>
+                  </div>
+                  <div className="dpro-kpi-card green">
+                    <div className="dpro-kpi-value">{finanzas?.ticketsCanjeados ?? 0}</div>
+                    <div className="dpro-kpi-label">Canjeados</div>
+                  </div>
+                  <div className="dpro-kpi-card cyan">
+                    <div className="dpro-kpi-value">{finanzas?.ticketsActivos ?? 0}</div>
+                    <div className="dpro-kpi-label">Activos</div>
+                  </div>
+                  <div className="dpro-kpi-card gold">
+                    <div className="dpro-kpi-value">{finanzas?.ticketsExpirados ?? 0}</div>
+                    <div className="dpro-kpi-label">Expirados</div>
+                  </div>
+                </div>
+                <div className="dpro-table-wrap" style={{ marginTop: 16 }}>
+                  <table className="dpro-table">
+                    <thead>
+                      <tr>
+                        <th>Promoción</th>
+                        <th>Emitidos</th>
+                        <th>Canjeados</th>
+                        <th>Tasa de canje</th>
+                        <th>Ingresos</th>
+                        <th>Margen</th>
+                        <th>Rentable</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(finanzas?.promociones || []).map((promo) => (
+                        <tr key={promo.id}>
+                          <td>{promo.titulo || promo.nombre || 'Sin título'}</td>
+                          <td>{promo.ticketsEmitidos ?? 0}</td>
+                          <td>{promo.ticketsCanjeados ?? 0}</td>
+                          <td>{promo.tasaCanje?.toFixed(1) ?? 0}%</td>
+                          <td>{formatCurrency(promo.ingresosGenerados)}</td>
+                          <td>{formatCurrency(promo.margenEmpresa)}</td>
+                          <td>
+                            <span className={`dpro-chip ${promo.rentable ? 'active' : 'generado'}`}>
+                              {promo.rentable ? 'Sí' : 'No'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </>
             )}
@@ -180,16 +220,26 @@ const EmpresaDashboardPage = () => {
                           <th>Título</th>
                           <th>Descripción</th>
                           <th>Estado</th>
+                          <th>Canje</th>
+                          <th>Ingresos</th>
+                          <th>Rentable</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {promociones.map(promo => (
+                        {promociones.map((promo) => (
                           <tr key={promo.id}>
                             <td>{promo.titulo}</td>
                             <td>{promo.descripcion}</td>
                             <td>
-                              <span className={`dpro-chip ${promo.estado || 'generado'}`}>
-                                {promo.estado || 'activa'}
+                              <span className={`dpro-chip ${promo.estadoPromocion || promo.estado || 'activo'}`}>
+                                {promo.estadoPromocion || promo.estado || 'activo'}
+                              </span>
+                            </td>
+                            <td>{promo.tasaCanje?.toFixed(1) ?? 0}%</td>
+                            <td>{formatCurrency(promo.ingresosGenerados)}</td>
+                            <td>
+                              <span className={`dpro-chip ${promo.rentable ? 'active' : 'generado'}`}>
+                                {promo.rentable ? 'Sí' : 'No'}
                               </span>
                             </td>
                           </tr>

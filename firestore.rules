@@ -2,98 +2,120 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAdmin() {
-      return request.auth != null && exists(/databases/$(database)/documents/admin/$(request.auth.uid));
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    // Usuarios: solo el propio usuario puede leer su documento; create/update restringidos
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/admin/$(request.auth.uid));
+    }
+
+    function isActivePromotion() {
+      return resource.data.activa == true && (
+        resource.data.estado == 'aprobada' ||
+        resource.data.estado == 'aprobado' ||
+        resource.data.estado == 'activa' ||
+        resource.data.estado == 'publicada'
+      );
+    }
+
     match /usuarios/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null
-        && request.auth.uid == userId
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId)
         && request.resource.data.tipo == 'cliente'
-        && request.resource.data.estado == 'aprobado'
         && request.resource.data.nombre is string
         && request.resource.data.email is string
-        && request.resource.data.telefono is string
-        && (!('cedula' in request.resource.data) || request.resource.data.cedula is string)
         && request.resource.data.createdAt is timestamp;
-      allow update: if request.auth != null
-        && request.auth.uid == userId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'telefono']);
+      allow update: if isOwner(userId);
       allow delete: if false;
     }
 
-    // Empresa: cualquiera puede leer, solo la empresa o admin puede escribir
     match /empresa/{empresaId} {
       allow read: if true;
-      allow write: if request.auth != null && (request.auth.uid == empresaId || isAdmin());
+      allow create: if isOwner(empresaId)
+        && request.resource.data.nombre is string
+        && request.resource.data.email is string
+        && request.resource.data.estado in ['pendiente', 'aprobado'];
+      allow update: if isOwner(empresaId) || isAdmin();
+      allow delete: if false;
     }
 
-    // Admin docs: lectura restringida al propio admin o al documento público de información de pagos
     match /admin/{adminId} {
-      allow read: if request.auth != null && (
-        request.auth.uid == adminId ||
-        (adminId == 'info' && exists(/databases/$(database)/documents/empresa/$(request.auth.uid))) ||
-        isAdmin()
-      );
+      allow read: if isOwner(adminId) || isAdmin();
       allow write: if false;
     }
 
-    // Tickets: cliente crea, cliente o empresa pueden leer, empresa puede canjear con campos restringidos
+    match /promociones/{promoId} {
+      allow read: if isActivePromotion() || isOwner(resource.data.empresaId) || isAdmin();
+      allow create: if isAuthenticated()
+        && (request.auth.uid == request.resource.data.empresaId || isAdmin())
+        && request.resource.data.empresaId is string
+        && request.resource.data.titulo is string
+        && request.resource.data.descripcion is string
+        && request.resource.data.activa is bool
+        && request.resource.data.estado is string
+        && request.resource.data.createdAt is timestamp;
+      allow update: if (isOwner(resource.data.empresaId) || isAdmin())
+        || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visualizaciones']));
+      allow delete: if isOwner(resource.data.empresaId) || isAdmin();
+    }
+
     match /tickets/{ticketId} {
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.usuarioId;
-      allow read: if request.auth != null && (
-        request.auth.uid == resource.data.usuarioId || request.auth.uid == resource.data.empresaId
-      );
-      allow update: if request.auth != null
-        && request.auth.uid == resource.data.empresaId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'fechaCanjeado']);
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.usuarioId
+        && request.resource.data.usuarioId is string
+        && request.resource.data.empresaId is string
+        && request.resource.data.promocionId is string
+        && request.resource.data.codigo is string
+        && request.resource.data.estado is string
+        && request.resource.data.createdAt is timestamp;
+      allow read: if isOwner(resource.data.usuarioId) || isOwner(resource.data.empresaId);
+      allow update: if isOwner(resource.data.empresaId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'estado',
+          'redeemedAt',
+          'expiredAt',
+          'updatedAt',
+          'recordatorioExpiracionEnviado',
+          'recordatorioExpiracionEnviadoAt',
+          'fechaCanjeado'
+        ]);
       allow delete: if false;
     }
 
-    // Promociones: lectura pública, escritura por empresa dueña o admin; el contador público de visualizaciones se actualiza con update restringido
-    match /promociones/{promoId} {
-      allow read: if true;
-      allow create: if request.auth != null && (request.auth.uid == request.resource.data.empresaId || isAdmin());
-      allow delete: if request.auth != null && (request.auth.uid == resource.data.empresaId || isAdmin());
-      allow update: if (request.auth != null && (request.auth.uid == resource.data.empresaId || isAdmin()))
-        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visualizaciones']);
-    }
-
-    // Favoritos: solo el usuario puede manipular sus favoritos
     match /favoritos/{favId} {
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.usuarioId;
-      allow read, delete: if request.auth != null && request.auth.uid == resource.data.usuarioId;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.usuarioId;
+      allow read, delete: if isAuthenticated() && request.auth.uid == resource.data.usuarioId;
+      allow update: if false;
     }
 
-    // Pagos y suscripciones: lectura restringida (admin/empresa), escritura controlada
     match /pagos/{pagoId} {
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.empresaId;
-      allow read: if request.auth != null && (
-        request.auth.uid == resource.data.empresaId || isAdmin()
-      );
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.empresaId;
+      allow read: if isOwner(resource.data.empresaId) || isAdmin();
       allow update: if isAdmin();
     }
 
     match /suscripciones/{subId} {
-      allow read: if request.auth != null && (request.auth.uid == resource.data.empresaId || isAdmin());
-      allow create: if request.auth != null && (request.auth.uid == request.resource.data.empresaId || isAdmin());
+      allow read: if isOwner(resource.data.empresaId) || isAdmin();
+      allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.empresaId || isAdmin());
       allow update: if isAdmin();
     }
 
     match /referidos/{referralId} {
-      allow read: if request.auth != null && (
-        request.auth.uid == resource.data.usuarioId ||
-        resource.data.publico == true
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.usuarioId || resource.data.publico == true
       );
-      allow create: if request.auth != null
+      allow create: if isAuthenticated()
         && request.auth.uid == request.resource.data.usuarioId
         && request.resource.data.codigo is string
         && request.resource.data.codigo.size() > 0
         && request.resource.data.creadoEn is timestamp
         && (!('publico' in request.resource.data) || request.resource.data.publico is bool);
-      allow update: if request.auth != null && (
+      allow update: if isAuthenticated() && (
         (
           request.auth.uid == resource.data.usuarioId
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bonusEntregado', 'bonusEntregadoEn', 'bonusTipo', 'bonusDetalle', 'contadorReferidosAplicado'])
@@ -115,15 +137,15 @@ service cloud.firestore {
     }
 
     match /notificaciones/{notifId} {
-      allow create: if request.auth != null
+      allow create: if isAuthenticated()
         && request.resource.data.usuarioId is string
         && (request.auth.uid == request.resource.data.usuarioId || isAdmin())
         && request.resource.data.tipo in ['nueva_promocion','promocion_vencimiento','promocion_vencida','ticket_canjeado','empresa_aprobada','empresa_rechazada','nueva_resena','bonus_referido','tickets_agotados']
         && request.resource.data.titulo is string && request.resource.data.titulo.size() <= 200
         && request.resource.data.mensaje is string && request.resource.data.mensaje.size() <= 1000
         && request.resource.data.leida == false;
-      allow read, delete: if request.auth != null && request.auth.uid == resource.data.usuarioId;
-      allow update: if request.auth != null && request.auth.uid == resource.data.usuarioId
+      allow read, delete: if isAuthenticated() && request.auth.uid == resource.data.usuarioId;
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.usuarioId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['leida']);
     }
 
@@ -136,7 +158,6 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
-    // Default: deny everything else
     match /{document=**} {
       allow read, write: if false;
     }

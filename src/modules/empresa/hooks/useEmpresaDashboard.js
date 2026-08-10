@@ -1,7 +1,7 @@
-// src/modules/empresa/hooks/useEmpresaDashboard.js
 import { useState, useEffect, useCallback } from 'react';
-import { obtenerPerfilEmpresa, obtenerSuscripcionEmpresa, obtenerEstadisticasEmpresa, obtenerFinanzasEmpresa } from '../services/empresaService';
+import { obtenerPerfilEmpresa, obtenerSuscripcionEmpresa } from '../services/empresaService';
 import { obtenerPromocionesPorEmpresa } from '../services/promocionesServices';
+import { obtenerAnalyticsEmpresa } from '../services/empresaAnalyticsService';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import { logError } from '../../../shared/utils/errorHandler';
 
@@ -25,23 +25,28 @@ export const useEmpresaDashboard = () => {
       setLoading(true);
       setError(null);
 
-      const [perfilData, suscripcionData, estadisticasData, promocionesData, finanzasData] = 
-        await Promise.all([
-          obtenerPerfilEmpresa(uid),
-          obtenerSuscripcionEmpresa(uid),
-          obtenerEstadisticasEmpresa(uid),
-          obtenerPromocionesPorEmpresa(uid),
-          obtenerFinanzasEmpresa(uid),
-        ]);
+      const [perfilData, suscripcionData, analyticsData, promocionesData] = await Promise.all([
+        obtenerPerfilEmpresa(uid),
+        obtenerSuscripcionEmpresa(uid),
+        obtenerAnalyticsEmpresa(uid),
+        obtenerPromocionesPorEmpresa(uid),
+      ]);
 
       setPerfil(perfilData);
       setSuscripcion(suscripcionData);
-      setEstadisticas(estadisticasData);
-      setFinanzas(finanzasData);
-      setPromociones(promocionesData);
+      setEstadisticas({
+        promosActivas: analyticsData.promocionesActivas,
+        promosTotal: analyticsData.promociones?.length || 0,
+        vistasTotal: 0,
+      });
+      setFinanzas(analyticsData);
+      setPromociones(promocionesData.map((promo) => ({
+        ...promo,
+        ...(analyticsData.promociones?.find((item) => item.id === promo.id) || {}),
+      })));
     } catch (err) {
-      logError('useEmpresaDashboard', err);
-      setError(err.message);
+      logError(err, { accion: 'useEmpresaDashboard' });
+      setError(err.message || 'No se pudieron cargar los datos del dashboard');
     } finally {
       setLoading(false);
     }

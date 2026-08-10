@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+      return request.auth != null &&
+        firestore.exists(/databases/(default)/documents/admin/$(request.auth.uid));
+    }
+
+    function esImagenValida() {
+      return request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Comprobantes de pago de suscripciones: solo la propia empresa sube el suyo,
+    // y solo la empresa dueña o un admin pueden leerlo (dato sensible).
+    match /comprobantes/{empresaId}/{fileName} {
+      allow read: if request.auth != null && (request.auth.uid == empresaId || isAdmin());
+      allow create: if request.auth != null && request.auth.uid == empresaId && esImagenValida();
+      allow update, delete: if false;
+    }
+
+    // Imágenes de promociones: lectura pública, escritura solo por la empresa dueña.
+    match /promociones/{empresaId}/{fileName} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == empresaId && esImagenValida();
+      allow update, delete: if request.auth != null && (request.auth.uid == empresaId || isAdmin());
+    }
+
+    // Por defecto, denegar todo lo demás.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

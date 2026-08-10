@@ -46,7 +46,7 @@ const ClienteDashboard = () => {
     activeTab, setActiveTab,
     ticketFilter, setTicketFilter,
     selectedTicketToView, setSelectedTicketToView,
-    loading, tickets, favoritos, stats, topEmpresa,
+    loading, tickets, favoritos, stats, topEmpresa, error,
     filteredTickets,
     editMode, setEditMode,
     saving, formData, setFormData,
@@ -116,13 +116,15 @@ const ClienteDashboard = () => {
                     <div className="dpro-kpi-grid">
                       <StatCard icon="🎟️" label="Tickets Activos"   value={stats.ticketsActivos}   color="cyan"  sub="Listos para canjear" />
                       <StatCard icon="✅" label="Tickets Canjeados"  value={stats.ticketsCanjeados}  color="green" sub="Promos ya usadas" />
-                      <StatCard icon="💸" label="Ahorro Estimado"    value={`$${stats.ahorroEstimado.toFixed(0)}`} color="gold" sub="En descuentos canjeados" />
+                      <StatCard icon="💸" label="Ahorro Acumulado"   value={`$${stats.ahorroEstimado.toFixed(0)}`} color="gold" sub="En descuentos canjeados" />
                       <StatCard icon="🏢" label="Empresas Visitadas" value={stats.empresasUnicas}   color="blue"  sub="Locales únicos" />
                     </div>
                     <div className="dpro-kpi-grid">
                       <StatCard icon="❤️" label="Favoritos"        value={stats.favoritosCount}  color="purple" sub="Guardados" />
                       <StatCard icon="📊" label="Total de Tickets" value={tickets.length}          color="teal"   sub="Histórico" />
                     </div>
+
+                    {error && <div className="dpro-empty"><div className="dpro-empty-text">{error}</div></div>}
 
                     {topEmpresa && (
                       <>

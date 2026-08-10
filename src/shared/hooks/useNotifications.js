@@ -20,13 +20,23 @@ export const useNotifications = () => {
   const noLeidas = notificaciones.filter(n => !n.leida).length;
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setNotificaciones([]);
+      setCargando(false);
+      return undefined;
+    }
+
     setCargando(true);
     const unsubscribe = suscribirseNotificaciones(user.uid, (data) => {
       setNotificaciones(data);
       setCargando(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, [user]);
 
   useEffect(() => {

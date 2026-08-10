@@ -12,6 +12,8 @@ import {
   Timestamp,
   onSnapshot,
   limit,
+  getCountFromServer,
+  writeBatch,
 } from 'firebase/firestore';
 import { logError } from '../utils/errorHandler';
 
@@ -132,16 +134,16 @@ export const marcarTodoComoLeido = async (usuarioId) => {
     const q = query(
       collection(db, 'notificaciones'),
       where('usuarioId', '==', usuarioId),
-      where('leida', '==', false),
-      limit(100)
+      where('leida', '==', false)
     );
 
     const snapshot = await getDocs(q);
-    const batch = snapshot.docs.map(doc =>
-      updateDoc(doc.ref, { leida: true })
-    );
+    const batch = writeBatch(db);
+    snapshot.docs.forEach((docSnap) => {
+      batch.update(docSnap.ref, { leida: true });
+    });
 
-    await Promise.all(batch);
+    await batch.commit();
   } catch (error) {
     logError(error, { accion: 'marcarTodoComoLeido', usuarioId });
     throw error;
@@ -166,12 +168,11 @@ export const obtenerConteoNoLeidas = async (usuarioId) => {
     const q = query(
       collection(db, 'notificaciones'),
       where('usuarioId', '==', usuarioId),
-      where('leida', '==', false),
-      limit(100)
+      where('leida', '==', false)
     );
 
-    const snapshot = await getDocs(q);
-    return snapshot.docs.length;
+    const snapshot = await getCountFromServer(q);
+    return snapshot.data().count;
   } catch (error) {
     logError(error, { accion: 'obtenerConteoNoLeidas', usuarioId });
     return 0;

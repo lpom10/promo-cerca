@@ -27,7 +27,7 @@ export const obtenerTicketsEmpresa = async (empresaId) => {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (err) {
-    logError('obtenerTicketsEmpresa', err);
+    logError(err, { accion: 'obtenerTicketsEmpresa' });
     throw err;
   }
 };
@@ -44,7 +44,7 @@ export const canjearTicket = async (ticketId, empresaId) => {
     const result = await canjearTicketCallable({ ticketId, empresaId });
     return result.data;
   } catch (err) {
-    logError('canjearTicket', err);
+    logError(err, { accion: 'canjearTicket' });
     throw err;
   }
 };
@@ -74,7 +74,7 @@ export const obtenerEstadisticasTicketsPromocion = async (promocionId) => {
       tasaCanjeamiento: totalTickets > 0 ? (ticketsCanjeados / totalTickets * 100).toFixed(2) : 0,
     };
   } catch (err) {
-    logError('obtenerEstadisticasTicketsPromocion', err);
+    logError(err, { accion: 'obtenerEstadisticasTicketsPromocion' });
     throw err;
   }
 };

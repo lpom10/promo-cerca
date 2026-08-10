@@ -87,9 +87,14 @@ const PerfilEmpresa = () => {
         <div className="empresa-perfil-info-header">
           <h1>{form.negocio || 'Mi Negocio'}</h1>
           <p>{form.direccion || 'Dirección no especificada'}</p>
-          <span className={`empresa-perfil-estado ${datosEmpresa.estado}`}>
-            {datosEmpresa.estado === 'aprobado' ? '✓ Aprobado' : '⏳ Pendiente'}
-          </span>
+          <div className="empresa-perfil-actions">
+            <span className={`empresa-perfil-estado ${datosEmpresa.estado}`}>
+              {datosEmpresa.estado === 'aprobado' ? '✓ Aprobado' : '⏳ Pendiente'}
+            </span>
+            <button className="empresa-perfil-btn-logout" onClick={handleLogout}>
+              Cerrar sesión
+            </button>
+          </div>
         </div>
       </div>
 

@@ -1,15 +1,16 @@
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { PATHS } from '../../../router/paths';
+import { getDashboardPathByRole } from '../../../router/dashboardPaths';
 import styles from './Navbar.module.css';
 
 const Navbar = () => {
-  const { user, userType } = useAuth();
+  const { user, userType, userStatus } = useAuth();
 
   const dashboardPath =
-    userType === 'admin'   ? PATHS.admin.dashboard :
-    userType === 'empresa' ? PATHS.empresa.dashboard :
-    PATHS.cliente.dashboard;
+    userType === 'empresa' && userStatus !== 'aprobado'
+      ? PATHS.empresa.perfil
+      : getDashboardPathByRole(userType) || PATHS.home;
 
   return (
     <nav className={styles.navbar}>

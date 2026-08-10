@@ -18,7 +18,7 @@ export const useCanjeTickets = () => {
       setTickets(datos);
       setError(null);
     } catch (err) {
-      logError('cargarTickets', err);
+      logError(err, { accion: 'cargarTickets' });
       setError(err.message);
     } finally {
       setLoading(false);

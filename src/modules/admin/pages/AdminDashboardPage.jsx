@@ -11,7 +11,7 @@ const AdminDashboardPage = () => {
   const {
     activeTab, setActiveTab,
     loading,
-    solicitudes, empresasAprobadas, pagosPendientes,
+    empresasPendientes, empresasAprobadas, pagosPendientes,
     promosRevision, todasPromociones, stats,
     handleLogout,
     handleAprobarEmpresa, handleRechazarEmpresa, handleEliminarEmpresa,
@@ -73,7 +73,7 @@ const AdminDashboardPage = () => {
 
       <div className="admin-tabs">
         {[
-          { id: 'solicitudes',   label: `Solicitudes (${solicitudes.length})` },
+          { id: 'solicitudes',   label: `Solicitudes (${empresasPendientes.length})` },
           { id: 'empresas',      label: 'Empresas Aprobadas' },
           { id: 'revisiones',    label: `Revisiones (${promosRevision.length})` },
           { id: 'suscripciones', label: `Suscripciones (${pagosPendientes.length})` },
@@ -96,11 +96,11 @@ const AdminDashboardPage = () => {
         {activeTab === 'solicitudes' && (
           <div className="solicitudes-section">
             <h2>Solicitudes Pendientes de Aprobación</h2>
-            {loading ? <p>Cargando...</p> : solicitudes.length === 0 ? (
+            {loading ? <p>Cargando...</p> : empresasPendientes.length === 0 ? (
               <p className="info-texto">No hay solicitudes pendientes</p>
             ) : (
               <div className="solicitudes-list">
-                {solicitudes.map(s => (
+                {empresasPendientes.map(s => (
                   <div key={s.id} className="solicitud-card">
                     <div className="solicitud-info">
                       <h3>{s.negocio}</h3>
