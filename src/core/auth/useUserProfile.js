@@ -29,7 +29,9 @@ export const useUserProfile = (user = null) => {
 
   useEffect(() => {
     if (!user?.uid) {
-      setProfile(DEFAULT_PROFILE);
+      Promise.resolve().then(() => {
+        setProfile(DEFAULT_PROFILE);
+      });
       return undefined;
     }
 
@@ -100,7 +102,9 @@ export const useUserProfile = (user = null) => {
       );
     };
 
-    setProfile((prev) => ({ ...prev, loading: true, error: null }));
+    Promise.resolve().then(() => {
+      setProfile((prev) => ({ ...prev, loading: true, error: null }));
+    });
     subscribeToCollection('usuarios');
 
     return () => {

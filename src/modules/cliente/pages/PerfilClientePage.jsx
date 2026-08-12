@@ -5,10 +5,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { actualizarPerfilCliente, actualizarPerfilClienteAuth, obtenerPerfilCliente } from '../services/clienteService';
 import { logError } from '../../../shared/utils/errorHandler';
 import { obtenerFavoritos, eliminarPromocionFavorita, eliminarEmpresaFavorita } from '../services/favoritosService';
-import '../../../styles/perfil.css';
+import '../styles/perfil-cliente.css';
 
 const PerfilCliente = () => {
-  const { user, userDetails, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [datosUsuario, setDatosUsuario] = useState(null);
   const [editando, setEditando] = useState(false);

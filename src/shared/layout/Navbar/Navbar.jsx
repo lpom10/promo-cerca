@@ -1,7 +1,7 @@
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { PATHS } from '../../../router/paths';
-import { getDashboardPathByRole } from '../../../router/dashboardPaths';
+import { PATHS } from '../../../app/router/paths';
+import { getDashboardPathByRole } from '../../../app/router/dashboardPaths';
 import styles from './Navbar.module.css';
 
 const Navbar = () => {

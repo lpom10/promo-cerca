@@ -11,7 +11,7 @@ export const setupSecurityHeaders = () => {
   cspMeta.httpEquiv = 'Content-Security-Policy';
   cspMeta.content = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://apis.google.com https://*.googleapis.com",
+    "script-src 'self' https://cdn.jsdelivr.net https://apis.google.com https://*.googleapis.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
     "img-src 'self' data: https:",
     "font-src 'self' https://fonts.gstatic.com",

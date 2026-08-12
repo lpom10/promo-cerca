@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useUserProfile } from '../../core/auth/useUserProfile';
 import { useAuth } from '../../shared/hooks/useAuth';
 import { Spinner } from '../../shared/ui';
-import { PATHS } from '../../router/paths';
+import { PATHS } from './paths';
 import { logError } from '../../shared/utils/errorHandler';
 
 const ProtectedRoute = ({ redirectTo = PATHS.login }) => {
@@ -11,12 +11,12 @@ const ProtectedRoute = ({ redirectTo = PATHS.login }) => {
   const { role, loading: profileLoading } = useUserProfile(user);
   const location = useLocation();
   const navigate = useNavigate();
-  const [hasLoggedOut, setHasLoggedOut] = useState(false);
+  const hasLoggedOutRef = useRef(false);
   const loading = authLoading || profileLoading;
 
   useEffect(() => {
-    if (!loading && user && role === null && !hasLoggedOut) {
-      setHasLoggedOut(true);
+    if (!loading && user && role === null && !hasLoggedOutRef.current) {
+      hasLoggedOutRef.current = true;
 
       const handleInvalidRole = async () => {
         try {
@@ -30,9 +30,9 @@ const ProtectedRoute = ({ redirectTo = PATHS.login }) => {
 
       handleInvalidRole();
     }
-  }, [loading, user, role, logout, navigate, hasLoggedOut]);
+  }, [loading, user, role, logout, navigate]);
 
-  if (loading || (user && role === null && !hasLoggedOut)) {
+  if (loading || (user && role === null)) {
     return <Spinner fullScreen />;
   }
 

@@ -10,7 +10,7 @@ service firebase.storage {
 
     function esImagenValida() {
       return request.resource.size < 5 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*');
+        && request.resource.contentType.matches('image/(jpeg|png|webp|gif|pjpeg)');
     }
 
     function isPromoPublico() {

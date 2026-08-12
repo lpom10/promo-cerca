@@ -9,14 +9,30 @@ import {
   deleteDoc,
   doc,
   Timestamp,
-  increment,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
-import { obtenerActivaPorEstado, obtenerEstadoInicialPromocion } from '../../../shared/utils/promocionModeracion';
 
 const sanitizarNombreArchivo = (nombre) => nombre.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
+
+const removeUndefinedValues = (obj) =>
+  Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== undefined));
+
+const buildPromocionPayload = (data = {}) => removeUndefinedValues({
+  titulo: data.titulo,
+  descripcion: data.descripcion,
+  descuento: typeof data.descuento === 'number' ? data.descuento : data.descuento ? Number(data.descuento) : null,
+  precioOriginal: typeof data.precioOriginal === 'number' ? data.precioOriginal : data.precioOriginal ? Number(data.precioOriginal) : null,
+  precioDescuento: typeof data.precioDescuento === 'number' ? data.precioDescuento : data.precioDescuento ? Number(data.precioDescuento) : null,
+  fechaInicio: data.fechaInicio || null,
+  fechaFin: data.fechaFin || null,
+  categoria: data.categoria || '',
+  imagen: data.imagen || data.imagenUrl || '',
+  imagenUrl: data.imagen || data.imagenUrl || '',
+  ticketsMaximos: data.ticketsMaximos != null ? Number(data.ticketsMaximos) : null,
+  fechaHoraExpiracion: data.fechaHoraExpiracion || null,
+});
 
 export const subirImagenPromocion = async (file, empresaId) => {
   try {
@@ -60,11 +76,12 @@ export const crearPromocion = async (empresaId, datosPromocion) => {
     if (!empresaId) throw new Error('Empresa ID es requerido');
     if (!datosPromocion?.titulo) throw new Error('Título de promoción es requerido');
 
-    const estadoInicial = obtenerEstadoInicialPromocion(datosPromocion);
+    const datosSeguros = buildPromocionPayload(datosPromocion);
+    const estadoInicial = 'pendiente';
     const docRef = await addDoc(collection(db, 'promociones'), {
-      ...datosPromocion,
+      ...datosSeguros,
       empresaId,
-      activa: obtenerActivaPorEstado(estadoInicial),
+      activa: false,
       estado: estadoInicial,
       creadoEn: Timestamp.now(),
       createdAt: Timestamp.now(),
@@ -73,8 +90,8 @@ export const crearPromocion = async (empresaId, datosPromocion) => {
       ticketsGenerados: 0,
       ticketsCanjeados: 0,
     });
-    
-    return { id: docRef.id, ...datosPromocion, empresaId };
+
+    return { id: docRef.id, empresaId, estado: estadoInicial, activa: false, ...datosSeguros };
   } catch (err) {
     logError(err, { accion: 'crearPromocion' });
     throw err;
@@ -85,8 +102,9 @@ export const crearPromocion = async (empresaId, datosPromocion) => {
 export const actualizarPromocion = async (promocionId, datosActualizacion) => {
   try {
     if (!promocionId) throw new Error('Promoción ID es requerido');
+    const datosSeguros = buildPromocionPayload(datosActualizacion);
     await updateDoc(doc(db, 'promociones', promocionId), {
-      ...datosActualizacion,
+      ...datosSeguros,
       actualizadoEn: Timestamp.now(),
     });
     return { exito: true };

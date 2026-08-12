@@ -6,7 +6,7 @@ import PerfilEmpresa from '../components/PerfilEmpresa/PerfilEmpresa';
 import GestorSuscripcion from '../components/GestorSuscripcion/GestorSuscripcion';
 import { Spinner, ErrorBoundary } from '../../../shared/ui';
 import '../../../shared/ui/dashboard-pro.css';
-import { formatCurrency } from '../../../core/firebase/firestoreUtils';
+import { formatCurrency } from '../../../shared/services/firestoreUtils';
 
 const TABS = [
   { id: 'resumen',      icon: '📊', label: 'Resumen' },

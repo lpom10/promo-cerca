@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { PATHS } from '../../router/paths';
+import { PATHS } from './paths';
 import { Spinner } from '../../shared/ui';
 import ProtectedRoute from './ProtectedRoute';
 import RoleGuard from './RoleGuard';

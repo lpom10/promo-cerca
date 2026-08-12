@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import '../../../styles/tickets.css';
+import '../styles/tickets-cliente.css';
 
 const VisualizarTicket = ({ ticket, onClose, promocion }) => {
   const [copied, setCopied] = useState(false);
@@ -18,35 +18,69 @@ const VisualizarTicket = ({ ticket, onClose, promocion }) => {
     const fecha = new Date(ticket?.fechaGeneracion?.toDate?.() || ticket?.fechaGeneracion || Date.now()).toLocaleDateString('es-ES');
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(ticket.codigo || '')}`;
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Ticket ${ticket?.codigo || ''}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 24px; background: #fffdfb; color: #111827; }
-            .card { border: 2px solid #f59e0b; border-radius: 20px; padding: 24px; max-width: 700px; margin: 0 auto; background: #fff; }
-            h1 { font-size: 24px; margin: 0 0 8px; color: #fb4c23; text-align: center; }
-            h2 { font-size: 20px; margin: 6px 0; text-align: center; }
-            .sub { color: #64748b; text-align: center; margin-bottom: 16px; }
-            .qr { text-align: center; margin: 18px 0; }
-            .code { text-align: center; font-size: 28px; font-weight: 700; letter-spacing: 4px; margin: 12px 0 8px; }
-            .footer { text-align: center; color: #64748b; font-size: 14px; margin-top: 18px; }
-          </style>
-        </head>
-        <body>
-          <div class="card">
-            <h1>Promo Cerca</h1>
-            <h2>${ticket?.promocionTitulo || 'Ticket'}</h2>
-            <div class="sub">${ticket?.empresaNombre || 'Empresa'}</div>
-            <div class="qr"><img src="${qrUrl}" alt="QR" width="220" height="220" /></div>
-            <div class="code">${ticket?.codigo || ''}</div>
-            <div class="sub">Generado el ${fecha}</div>
-            <div class="footer">Presenta este ticket en el local · Verifica antes de canjear</div>
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    const doc = printWindow.document;
+    doc.open();
+    // Title
+    doc.title = `Ticket ${ticket?.codigo || ''}`;
+
+    // Styles (safer than writing raw HTML)
+    const style = doc.createElement('style');
+    style.textContent = `
+      body { font-family: Arial, sans-serif; margin: 0; padding: 24px; background: #fffdfb; color: #111827; }
+      .card { border: 2px solid #f59e0b; border-radius: 20px; padding: 24px; max-width: 700px; margin: 0 auto; background: #fff; }
+      h1 { font-size: 24px; margin: 0 0 8px; color: #fb4c23; text-align: center; }
+      h2 { font-size: 20px; margin: 6px 0; text-align: center; }
+      .sub { color: #64748b; text-align: center; margin-bottom: 16px; }
+      .qr { text-align: center; margin: 18px 0; }
+      .code { text-align: center; font-size: 28px; font-weight: 700; letter-spacing: 4px; margin: 12px 0 8px; }
+      .footer { text-align: center; color: #64748b; font-size: 14px; margin-top: 18px; }
+    `;
+    doc.head.appendChild(style);
+
+    // Container
+    const container = doc.createElement('div');
+    container.className = 'card';
+
+    const h1 = doc.createElement('h1');
+    h1.textContent = 'Promo Cerca';
+    container.appendChild(h1);
+
+    const h2 = doc.createElement('h2');
+    h2.textContent = ticket?.promocionTitulo || 'Ticket';
+    container.appendChild(h2);
+
+    const sub = doc.createElement('div');
+    sub.className = 'sub';
+    sub.textContent = ticket?.empresaNombre || 'Empresa';
+    container.appendChild(sub);
+
+    const qrDiv = doc.createElement('div');
+    qrDiv.className = 'qr';
+    const img = doc.createElement('img');
+    img.setAttribute('src', qrUrl);
+    img.setAttribute('alt', 'QR');
+    img.setAttribute('width', '220');
+    img.setAttribute('height', '220');
+    qrDiv.appendChild(img);
+    container.appendChild(qrDiv);
+
+    const codeDiv = doc.createElement('div');
+    codeDiv.className = 'code';
+    codeDiv.textContent = ticket?.codigo || '';
+    container.appendChild(codeDiv);
+
+    const fechaDiv = doc.createElement('div');
+    fechaDiv.className = 'sub';
+    fechaDiv.textContent = `Generado el ${fecha}`;
+    container.appendChild(fechaDiv);
+
+    const footer = doc.createElement('div');
+    footer.className = 'footer';
+    footer.textContent = 'Presenta este ticket en el local · Verifica antes de canjear';
+    container.appendChild(footer);
+
+    doc.body.appendChild(container);
+    doc.close();
     printWindow.focus();
     setTimeout(() => printWindow.print(), 250);
   };
@@ -64,7 +98,7 @@ const VisualizarTicket = ({ ticket, onClose, promocion }) => {
             {/* 🛡️ MEJORA: Generación automática de QR para escaneo rápido */}
             <div className="qr-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '25px', padding: '15px', background: '#fff', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
               <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${ticket.codigo}`} 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(ticket.codigo || '')}`} 
                 alt="Código QR del Ticket"
                 style={{ width: '180px', height: '180px', marginBottom: '10px' }}
               />

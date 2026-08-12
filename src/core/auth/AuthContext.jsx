@@ -1,7 +1,6 @@
 import React from 'react';
-import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth, db } from '../../firebase';
+import { auth } from '../../firebase';
 import { Spinner } from '../../shared/ui';
 import { logError } from '../../shared/utils/errorHandler';
 

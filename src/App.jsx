@@ -1,7 +1,7 @@
-import { AuthProvider } from './shared/context/AuthContext';
+import { AuthProvider } from './core/auth/AuthContext';
 import ErrorBoundary from './shared/ui/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
-import AppRoutes from './router/AppRoutes';
+import AppRoutes from './app/router/AppRoutes';
 import './App.css';
 
 function App() {

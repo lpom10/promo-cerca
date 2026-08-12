@@ -56,18 +56,23 @@ exports.aprobarPagoCallable = onCall(async (request) => {
     throw new HttpsError('permission-denied', 'Solo un administrador puede aprobar pagos.');
   }
 
-  const pago = data?.pago ?? data;
-  if (!pago?.id) {
+  const pagoId = data?.pago?.id ?? data?.id;
+  if (!pagoId) {
     throw new HttpsError('invalid-argument', 'Falta el identificador del pago.');
   }
 
-  const pagoRef = db.collection('pagos').doc(pago.id);
+  const pagoRef = db.collection('pagos').doc(pagoId);
   const pagoSnap = await pagoRef.get();
   if (!pagoSnap.exists) {
     throw new HttpsError('not-found', 'El pago no existe.');
   }
 
   const pagoData = pagoSnap.data();
+  const plan = getPlanInfo(pagoData.planId);
+  if (!plan) {
+    throw new HttpsError('failed-precondition', 'El pago tiene un plan inválido.');
+  }
+
   const fechaInicio = new Date();
   const fechaVencimiento = new Date(fechaInicio);
   fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
@@ -86,11 +91,11 @@ exports.aprobarPagoCallable = onCall(async (request) => {
 
   const suscripcionPayload = {
     empresaId: pagoData.empresaId,
-    planId: pago.planId ?? pagoData.planId,
-    planNombre: pago.planNombre || pago.plan?.nombre || 'Plan',
+    planId: pagoData.planId,
+    planNombre: plan.nombre,
     estado: 'activa',
-    precio: pago.monto || pago.precio || pagoData.monto || pagoData.precio,
-    duracion: 30,
+    precio: plan.precio,
+    duracion: plan.duracion,
     fechaInicio,
     fechaVencimiento,
     proximoRenovacion: fechaVencimiento,
@@ -113,12 +118,12 @@ exports.aprobarPagoCallable = onCall(async (request) => {
     tipo: 'empresa_aprobada',
     titulo: 'Suscripción activada',
     mensaje: 'Tu comprobante fue aprobado y tu suscripción ya está activa.',
-    datos: { pagoId: pago.id, planId: pago.planId ?? pagoData.planId },
+    datos: { pagoId, planId: pagoData.planId },
     leida: false,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  return { ok: true, pagoId: pago.id };
+  return { ok: true, pagoId };
 });
 
 exports.rechazarPagoCallable = onCall(async (request) => {
@@ -174,7 +179,7 @@ exports.crearSuscripcionPendienteCallable = onCall(async (request) => {
   if (!planId || typeof planId !== 'string') {
     throw new HttpsError('invalid-argument', 'Plan ID inválido.');
   }
-  if (request.auth.uid !== empresaId && !(await isAdmin(request.auth.uid))) {
+  if (auth.uid !== empresaId && !(await isAdmin(auth.uid))) {
     throw new HttpsError('permission-denied', 'No puedes crear un pago para otra empresa.');
   }
 
@@ -381,12 +386,13 @@ exports.crearTicketCallable = onCall(async (request) => {
   return { ok: true, ticket: { id: ticketId, ...resultado.ticket } };
 });
 
-exports.registrarVisualizacionCallable = onCall(async (request) => {
-  const { data } = request;
+exports.registrarVisualizacionCallable = onCall({ enforceAppCheck: true }, async (request) => {
+  const { data, auth } = request;
+  ensureAuthenticated(request);
 
   const promocionId = data?.promocionId;
   const empresaId = data?.empresaId;
-  const usuarioId = data?.usuarioId || null;
+  const usuarioId = auth.uid;
 
   if (!promocionId || typeof promocionId !== 'string') {
     throw new HttpsError('invalid-argument', 'Promoción ID inválido.');
@@ -420,11 +426,11 @@ exports.crearNotificacionSegura = onCall(async (request) => {
   const payload = data || {};
   const usuarioId = payload.usuarioId;
   const tipo = payload.tipo;
-  const titulo = payload.titulo;
-  const mensaje = payload.mensaje;
+  const titulo = sanitizeUserString(payload.titulo, '');
+  const mensaje = sanitizeUserString(payload.mensaje, '');
 
   if (!usuarioId || !tipo || !titulo || !mensaje) {
-    throw new HttpsError('invalid-argument', 'Faltan datos para crear la notificación.');
+    throw new HttpsError('invalid-argument', 'Faltan datos válidos para crear la notificación.');
   }
 
   if (!(await canSendNotification(auth.uid, payload))) {

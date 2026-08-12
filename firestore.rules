@@ -78,15 +78,47 @@ service cloud.firestore {
         && (request.auth.uid == request.resource.data.empresaId || isAdmin())
         && request.resource.data.empresaId is string
         && request.resource.data.titulo is string
+        && request.resource.data.titulo.size() <= 150
         && request.resource.data.descripcion is string
-        && request.resource.data.activa is bool
-        && request.resource.data.estado is string
+        && request.resource.data.descripcion.size() <= 2000
+        && request.resource.data.categoria is string
+        && request.resource.data.imagen is string
+        && request.resource.data.imagenUrl is string
+        && request.resource.data.descuento is number
+        && (request.resource.data.precioOriginal is number || request.resource.data.precioOriginal == null)
+        && (request.resource.data.precioDescuento is number || request.resource.data.precioDescuento == null)
+        && (request.resource.data.ticketsMaximos is number || request.resource.data.ticketsMaximos == null)
+        && (request.resource.data.fechaHoraExpiracion is timestamp || request.resource.data.fechaHoraExpiracion == null)
+        && request.resource.data.fechaInicio is timestamp
+        && request.resource.data.fechaFin is timestamp
+        && request.resource.data.vistas == 0
+        && request.resource.data.ticketsGenerados == 0
+        && request.resource.data.ticketsCanjeados == 0
+        && request.resource.data.activa == false
+        && request.resource.data.estado == 'pendiente'
         && request.resource.data.createdAt is timestamp;
       // Las visualizaciones se incrementan solo desde la función callable segura,
       // no desde el cliente directo, para evitar spam de actualizaciones de contador.
       allow update: if isAdmin()
         || (isOwner(resource.data.empresaId)
-          && request.resource.data.visualizaciones == resource.data.visualizaciones);
+          && request.resource.data.visualizaciones == resource.data.visualizaciones
+          && request.resource.data.estado == resource.data.estado
+          && request.resource.data.activa == resource.data.activa
+          && request.resource.data.empresaId == resource.data.empresaId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'titulo',
+            'descripcion',
+            'descuento',
+            'precioOriginal',
+            'precioDescuento',
+            'fechaInicio',
+            'fechaFin',
+            'categoria',
+            'imagen',
+            'imagenUrl',
+            'ticketsMaximos',
+            'fechaHoraExpiracion'
+          ]));
       allow delete: if isOwner(resource.data.empresaId) || isAdmin();
     }
 
@@ -203,7 +235,8 @@ service cloud.firestore {
     }
 
     match /vistas/{vistaId} {
-      allow create: if request.resource.data.promocionId is string
+      allow create: if isAuthenticated()
+        && request.resource.data.promocionId is string
         && request.resource.data.promocionId.size() > 0
         && request.resource.data.empresaId is string
         && request.resource.data.empresaId.size() > 0

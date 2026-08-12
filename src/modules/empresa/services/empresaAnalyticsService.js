@@ -1,7 +1,5 @@
-import { collection, query, where, getDocs, getCountFromServer, orderBy } from 'firebase/firestore';
-import { db } from '../../../firebase';
 import { logError } from '../../../shared/utils/errorHandler';
-import { fetchDocsByField, fetchCollection, formatTimestamp } from '../../../core/firebase/firestoreUtils';
+import { fetchDocsByField } from '../../../shared/services/firestoreUtils';
 
 const normalizeNumber = (value) => Number(value || 0);
 
